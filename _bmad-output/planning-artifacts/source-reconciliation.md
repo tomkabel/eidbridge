@@ -9,7 +9,7 @@ updated: 2026-11-18
 
 ## Coverage and authority
 
-Every live eidbridge issue and every project-relevant source proposal has a disposition. The machine-readable traceability register (`research/traceability.json`, local only) holds exact issue criteria/notes/body hashes and mappings; the manifest (`research/source-manifest.json`, local only) hashes all accessible input files. The 30 issue specifications, 9 opportunities, 14 comparative capabilities, 15 plan milestones, 54 canonical signals and 10 forecasts are reconciled separately to avoid counting the same idea repeatedly.
+Every live eidbridge issue and every project-relevant source proposal has a disposition. The machine-readable [traceability register](research/traceability.json) holds exact issue criteria/notes/body hashes and mappings; the [manifest](research/source-manifest.json) hashes all accessible input files. The 30 issue specifications, 9 opportunities, 14 comparative capabilities, 15 plan milestones, 54 canonical signals and 10 forecasts are reconciled separately to avoid counting the same idea repeatedly.
 
 Source authority: user instruction → live GitHub wording/state/labels retrieved on 2026-11-18 → canonical research tables and finalized recommendations frozen 2026-11-16 → drafts/shards. Architecture resolutions are explicit proposed planning decisions, not historical source facts. No issues/comments/labels/milestones were changed remotely. No claim is made that all supporting raw payloads were manually re-read or every original research assertion independently revalidated. They are preserved by hashes for audit.
 

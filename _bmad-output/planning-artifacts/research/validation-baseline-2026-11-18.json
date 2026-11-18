@@ -1,0 +1,947 @@
+{
+  "verifier": "eidbridge-bmad-coverage-2026-11-18",
+  "verifier_sha256": "eedb2568b67cfe502e109cf11cc0221725bc6bfc74613e12c374a42b760b771e",
+  "verdict": "FAIL",
+  "scope": "PROXY ONLY: structural/source preservation, not semantic or implementation proof",
+  "counts": {
+    "issues": 0,
+    "opportunities": 0,
+    "capabilities": 0,
+    "milestones": 0,
+    "signals": 0,
+    "forecasts": 0,
+    "research_items": 0,
+    "manifest_sources": 0,
+    "story_headings": 0
+  },
+  "failures": [
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/product-brief-eidbridge-2026-11-18.md"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/prd.md"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/addendum.md"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/architecture.md"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/ux-design-specification.md"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/epics.md"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/roadmap.md"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/source-reconciliation.md"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/implementation-readiness-report-2026-11-18.md"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/research/source-manifest.json"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/research/traceability.json"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/research/competitive-watch.csv"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/implementation-artifacts/sprint-status.yaml"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/docs/project-overview.md"
+    },
+    {
+      "code": "MISSING_ARTIFACT",
+      "detail": "/home/notroot/Documents/eidbridge/tools/verify_bmad_artifacts.py"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/research/traceability.json: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/research/traceability.json'"
+    },
+    {
+      "code": "JSON",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/research/traceability.json: Expecting value: line 1 column 1 (char 0)"
+    },
+    {
+      "code": "ISSUE_COVERAGE",
+      "detail": "{'expected': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30], 'actual': []}"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/prd.md: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/prd.md'"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/epics.md: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/epics.md'"
+    },
+    {
+      "code": "OPPORTUNITIES_COVERAGE",
+      "detail": "{'missing': ['OPP-01', 'OPP-02', 'OPP-03', 'OPP-04', 'OPP-05', 'OPP-06', 'OPP-07', 'OPP-08', 'OPP-09'], 'extra': []}"
+    },
+    {
+      "code": "CAPABILITIES_COVERAGE",
+      "detail": "{'missing': ['S1', 'S10', 'S11', 'S12', 'S13', 'S14', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9'], 'extra': []}"
+    },
+    {
+      "code": "MILESTONES_COVERAGE",
+      "detail": "{'missing': ['ms:skid:SK-W1-M1', 'ms:skid:SK-W1-M2', 'ms:skid:SK-W1-M3', 'ms:skid:SK-W2-M1', 'ms:skid:SK-W2-M2', 'ms:skid:SK-W2-M3', 'ms:skid:SK-W2-M4', 'ms:skid:SK-W3-M1', 'ms:skid:SK-W3-M2', 'ms:skid:SK-W3-M3', 'ms:skid:SK-W3-M4', 'ms:skid:SK-W4-M1', 'ms:skid:SK-W4-M2', 'ms:skid:SK-W4-M3', 'ms:skid:SK-W4-M4'], 'extra': []}"
+    },
+    {
+      "code": "SIGNALS_COVERAGE",
+      "detail": "{'missing': ['S-A-01', 'S-A-02', 'S-A-03', 'S-A-04', 'S-A-05', 'S-A-06', 'S-A-07', 'S-A-08', 'S-A-09', 'S-A-10', 'S-A-11', 'S-A-12', 'S-A-13', 'S-A-14', 'S-A-15', 'S-A-16', 'S-A-17', 'S-B-01', 'S-B-02', 'S-B-03', 'S-B-04', 'S-B-05', 'S-B-06', 'S-B-07', 'S-B-08', 'S-B-09', 'S-B-10', 'S-B-11', 'S-B-12', 'S-B-13', 'S-B-14', 'S-B-15', 'S-B-16', 'S-B-17', 'S-B-18', 'S-B-19', 'S-B-20', 'S-B-21', 'S-B-22', 'S-C-01', 'S-C-02', 'S-C-03', 'S-C-04', 'S-C-05', 'S-C-06', 'S-C-07', 'S-C-08', 'S-C-09', 'S-C-10', 'S-C-11', 'S-C-12', 'S-C-13', 'S-C-14', 'S-C-15'], 'extra': []}"
+    },
+    {
+      "code": "FORECASTS_COVERAGE",
+      "detail": "{'missing': ['F01', 'F02', 'F03', 'F04', 'F05', 'F06', 'F07', 'F08', 'F09', 'F10'], 'extra': []}"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "skidsolutions.eu/proposal.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "skidsolutions.eu/plan_30d.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "skidsolutions.eu/compliance.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "skidsolutions.eu/distribution.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "skidsolutions.eu/demand.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "skidsolutions.eu/procurement.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "skidsolutions.eu/oss_inventory.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "skidsolutions.eu/analysis_phase3.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "eideasy.com/RECOMMENDATION.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "eideasy.com/legal/contributions-checklist.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "rankings/RANKING.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "glazer.ee/deliverable/recommendation.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "glazer.ee/deliverable/plan-30d.md"
+    },
+    {
+      "code": "RESEARCH_SOURCE_UNMAPPED",
+      "detail": "glazer.ee/deliverable/compliance.md"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/research/competitive-watch.csv: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/research/competitive-watch.csv'"
+    },
+    {
+      "code": "WATCH_COVERAGE",
+      "detail": "[]"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.forecast_id"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.predicted_event"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.event_type"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.probability"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.forecast_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.expected_announcement_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.expected_launch_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.resolution_deadline"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.supporting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.contradicting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.alternative_hypotheses"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.falsification_criteria"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.resolution_rule"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.outcome"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.resolved_at"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F01.brier_score"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.forecast_id"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.predicted_event"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.event_type"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.probability"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.forecast_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.expected_announcement_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.expected_launch_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.resolution_deadline"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.supporting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.contradicting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.alternative_hypotheses"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.falsification_criteria"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.resolution_rule"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.outcome"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.resolved_at"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F02.brier_score"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.forecast_id"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.predicted_event"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.event_type"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.probability"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.forecast_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.expected_announcement_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.expected_launch_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.resolution_deadline"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.supporting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.contradicting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.alternative_hypotheses"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.falsification_criteria"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.resolution_rule"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.outcome"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.resolved_at"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F03.brier_score"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.forecast_id"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.predicted_event"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.event_type"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.probability"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.forecast_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.expected_announcement_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.expected_launch_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.resolution_deadline"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.supporting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.contradicting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.alternative_hypotheses"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.falsification_criteria"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.resolution_rule"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.outcome"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.resolved_at"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F04.brier_score"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.forecast_id"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.predicted_event"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.event_type"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.probability"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.forecast_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.expected_announcement_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.expected_launch_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.resolution_deadline"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.supporting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.contradicting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.alternative_hypotheses"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.falsification_criteria"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.resolution_rule"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.outcome"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.resolved_at"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F05.brier_score"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.forecast_id"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.predicted_event"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.event_type"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.probability"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.forecast_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.expected_announcement_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.expected_launch_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.resolution_deadline"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.supporting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.contradicting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.alternative_hypotheses"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.falsification_criteria"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.resolution_rule"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.outcome"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.resolved_at"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F06.brier_score"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.forecast_id"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.predicted_event"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.event_type"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.probability"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.forecast_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.expected_announcement_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.expected_launch_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.resolution_deadline"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.supporting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.contradicting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.alternative_hypotheses"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.falsification_criteria"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.resolution_rule"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.outcome"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.resolved_at"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F07.brier_score"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.forecast_id"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.predicted_event"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.event_type"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.probability"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.forecast_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.expected_announcement_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.expected_launch_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.resolution_deadline"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.supporting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.contradicting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.alternative_hypotheses"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.falsification_criteria"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.resolution_rule"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.outcome"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.resolved_at"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F08.brier_score"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.forecast_id"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.predicted_event"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.event_type"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.probability"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.forecast_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.expected_announcement_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.expected_launch_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.resolution_deadline"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.supporting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.contradicting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.alternative_hypotheses"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.falsification_criteria"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.resolution_rule"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.outcome"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.resolved_at"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F09.brier_score"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.forecast_id"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.predicted_event"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.event_type"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.probability"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.forecast_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.expected_announcement_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.expected_launch_date"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.resolution_deadline"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.supporting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.contradicting_signal_ids"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.alternative_hypotheses"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.falsification_criteria"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.resolution_rule"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.outcome"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.resolved_at"
+    },
+    {
+      "code": "WATCH_SOURCE_DRIFT",
+      "detail": "F10.brier_score"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/research/source-manifest.json: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/research/source-manifest.json'"
+    },
+    {
+      "code": "JSON",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/research/source-manifest.json: Expecting value: line 1 column 1 (char 0)"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "skidsolutions.eu/proposal.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "skidsolutions.eu/plan_30d.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "skidsolutions.eu/compliance.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "skidsolutions.eu/distribution.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "skidsolutions.eu/demand.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "skidsolutions.eu/procurement.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "skidsolutions.eu/oss_inventory.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "skidsolutions.eu/analysis_phase3.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "eideasy.com/RECOMMENDATION.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "eideasy.com/legal/contributions-checklist.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "rankings/RANKING.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "glazer.ee/deliverable/recommendation.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "glazer.ee/deliverable/plan-30d.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "glazer.ee/deliverable/compliance.md"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "skidsolutions.eu/opportunities.csv"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "skidsolutions.eu/signals.csv"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "skidsolutions.eu/forecasts.csv"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "rankings/inventory.csv"
+    },
+    {
+      "code": "MANIFEST_SOURCE_OMITTED",
+      "detail": "rankings/capabilities.csv"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/product-brief-eidbridge-2026-11-18.md: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/product-brief-eidbridge-2026-11-18.md'"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/prd.md: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/prd.md'"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/addendum.md: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/addendum.md'"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/architecture.md: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/architecture.md'"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/ux-design-specification.md: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/ux-design-specification.md'"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/epics.md: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/epics.md'"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/roadmap.md: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/roadmap.md'"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/source-reconciliation.md: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/source-reconciliation.md'"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/implementation-readiness-report-2026-11-18.md: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/_bmad-output/planning-artifacts/implementation-readiness-report-2026-11-18.md'"
+    },
+    {
+      "code": "READ",
+      "detail": "/home/notroot/Documents/eidbridge/docs/project-overview.md: [Errno 2] No such file or directory: '/home/notroot/Documents/eidbridge/docs/project-overview.md'"
+    }
+  ]
+}

@@ -1,0 +1,226 @@
+[
+  {
+    "lens": "adversarial",
+    "location": "architecture.md:229,289; epics.md:579",
+    "trigger_condition": "Demo kid must have a demo- prefix while every kid must equal its JWK thumbprint.",
+    "guard_snippet": "Define and test one mode-aware kid rule, including an explicit demo exception.",
+    "potential_consequence": "Demo key-format and environment tests require incompatible values."
+  },
+  {
+    "lens": "adversarial",
+    "location": "epics.md:423; architecture.md:318",
+    "trigger_condition": "Wrong-then-correct and correct-then-wrong exchanges both require a familyless tombstone.",
+    "guard_snippet": "Split sequences: initial failure leaves no family; initial success retains the family and subsequent replay revokes it.",
+    "potential_consequence": "The criterion can erase the successful exchange replay-revocation association."
+  },
+  {
+    "lens": "adversarial",
+    "location": "architecture.md:356; addendum.md:378; epics.md Story 3.2",
+    "trigger_condition": "HTTPS-only redirect registration conflicts with the required HTTP localhost demo RP.",
+    "guard_snippet": "Choose a narrowly scoped demo loopback exception or an HTTPS demo topology and test registration.",
+    "potential_consequence": "The specified demo cannot complete its authorization round-trip."
+  },
+  {
+    "lens": "adversarial",
+    "location": "architecture.md:201,329,411; epics.md:471",
+    "trigger_condition": "Cookie expiry alternates between flow_ttl and flow_ttl plus 30 seconds.",
+    "guard_snippet": "Define one absolute flow expiration and derive cookie expiry, cleanup and tests from it.",
+    "potential_consequence": "The browser loses its binding while its server flow remains live."
+  },
+  {
+    "lens": "adversarial",
+    "location": "architecture.md:321,386; epics.md:538",
+    "trigger_condition": "Backward wall-clock steps extend token acceptance beyond monotonic revocation retention.",
+    "guard_snippet": "Define rollback handling or process-relative token deadlines; test a revoked token after deny-list expiry while wall time precedes exp.",
+    "potential_consequence": "A revoked token can become usable again."
+  },
+  {
+    "lens": "adversarial",
+    "location": "architecture.md:229-230; prd.md NFR-007",
+    "trigger_condition": "Production must reject historical demo keys but cannot access their demo-volume fingerprint history.",
+    "guard_snippet": "Provide accessible durable fingerprint history or explicitly narrow the guarantee to known supplied history and fixtures.",
+    "potential_consequence": "The asserted imported-demo-key rejection cannot be established."
+  },
+  {
+    "lens": "adversarial",
+    "location": "architecture.md ADR-009 Upstream HTTP and Upstream session",
+    "trigger_condition": "Bounded HTTP transport rules omit upstream session initialization.",
+    "guard_snippet": "Apply timeouts, response caps and no-redirect rules to initialization too; define failure transitions.",
+    "potential_consequence": "Initialization can retain capacity indefinitely or bypass transport safeguards."
+  },
+  {
+    "lens": "adversarial",
+    "location": "architecture.md:383; ADR-009 Capacity model",
+    "trigger_condition": "The bounded notification target map has no full-map or entry-retention rule.",
+    "guard_snippet": "Define capacity, normalization, retention and fail-closed admission; test target churn.",
+    "potential_consequence": "Churn can reset push limits or block login without a recovery rule."
+  },
+  {
+    "lens": "adversarial",
+    "location": "architecture.md:416; ADR-009 capacity reservations",
+    "trigger_condition": "The fifth flow expires a cookie without specifying server-flow resource handling.",
+    "guard_snippet": "Specify cancellation and resource release, or deliberate retention to timeout; test the chosen behavior.",
+    "potential_consequence": "Unreachable sessions and reservations continue consuming capacity."
+  },
+  {
+    "lens": "adversarial",
+    "location": "architecture.md:197,318; epics.md:410",
+    "trigger_condition": "LoadAndDelete conflicts with retained consumed entries required by the replay design.",
+    "guard_snippet": "Use one atomic consume operation preserving the family tombstone, or specify race-free separate-store publication.",
+    "potential_consequence": "A concurrent replay can fail to find the issued token family."
+  },
+  {
+    "lens": "adversarial",
+    "location": "architecture.md:393-394",
+    "trigger_condition": "The shared cap equates pending concurrency with reservations, codes and long-lived tombstones.",
+    "guard_snippet": "Size each population using its arrival rate and residence time, or document the intentional throughput limit.",
+    "potential_consequence": "Successful login tombstones can reject new authorizations despite idle upstream capacity."
+  },
+  {
+    "lens": "adversarial",
+    "location": "epics.md:1143; architecture.md:381",
+    "trigger_condition": "The doctor story still permits optional readyz integration.",
+    "guard_snippet": "Supersede optional readyz integration; keep upstream diagnostics in the opt-in doctor command.",
+    "potential_consequence": "Deferred implementation can restore the readiness behavior the architecture retired."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "architecture.md ADR-008 Access token, ADR-009 Clock; epics.md Story 2.6",
+    "trigger_condition": "Wall clock moves backwards and replay-denial entries subsequently expire.",
+    "guard_snippet": "Enforce monotonic token deadlines or invalidate the sealing epoch on unsafe rollback; test beyond deny-list expiry.",
+    "potential_consequence": "A replay-revoked token becomes usable again."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "architecture.md ADR-008 Replay; ADR-009 Capacity model",
+    "trigger_condition": "A code is replayed when the separate bounded deny-list is full.",
+    "guard_snippet": "Reserve revocation capacity per code or record revocation in its reserved tombstone; preserve unexpired revocations.",
+    "potential_consequence": "Issued tokens remain usable because family revocation cannot be recorded."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "architecture.md ADR-009 Notification abuse; epics.md Story 2.5",
+    "trigger_condition": "New identifiers arrive after the bounded target-bucket map fills.",
+    "guard_snippet": "Refuse new entries without upstream pushes, preserve active buckets and define idle expiry.",
+    "potential_consequence": "Eviction resets abuse limits or undefined admission blocks legitimate login."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "architecture.md ADR-008 Client authentication; epics.md Story 2.4",
+    "trigger_condition": "Two requests concurrently present the same otherwise valid private_key_jwt assertion.",
+    "guard_snippet": "Atomically insert-if-absent jti and enforce the per-client cap under the same lock; test concurrency.",
+    "potential_consequence": "Both requests can pass a non-atomic replay check."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "architecture.md Flow state machine; ADR-010 Web2App return",
+    "trigger_condition": "The callback precedes the poll response containing signature.userChallenge.",
+    "guard_snippet": "Validate available bindings immediately; retain the bounded verifier and compare when the signed poll result arrives.",
+    "potential_consequence": "The callback-first path cannot perform its required verifier comparison."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "architecture.md ADR-010 Flow-scoped endpoints and Web2App return",
+    "trigger_condition": "Cookie rotation overlaps an original-tab request carrying the retired binding token.",
+    "guard_snippet": "Reject retired bindings without state changes and render the continue-in-other-tab notice; test overlapping requests.",
+    "potential_consequence": "An in-flight request can disrupt completion or show the wrong recovery page."
+  },
+  {
+    "lens": "structure",
+    "Pass": "structure",
+    "Original Text": "epics.md \u00a7Execution packets and parent-story closure (631 words, lines 1291\u20131314)",
+    "Revised Text": "MOVE after Overview and readiness; link story packet references.",
+    "Changes": "Execution semantics follow almost the entire 16,022-word document; establish them before stories. 0 words removed."
+  },
+  {
+    "lens": "structure",
+    "Pass": "structure",
+    "Original Text": "implementation-readiness-report \u00a7Architecture remediation (285 words)",
+    "Revised Text": "MOVE immediately after Verdict.",
+    "Changes": "Put corrected-but-not-rejudged status and current open matters before historical coverage. 0 words removed."
+  },
+  {
+    "lens": "structure",
+    "Pass": "structure",
+    "Original Text": "prd.md \u00a7Initial release boundary (89), \u00a7Success and counter-metrics (114), \u00a7Constraints, assumptions and open decisions (181 words)",
+    "Revised Text": "MOVE scope and success after vision; decisions before features.",
+    "Changes": "Readers need delivery boundaries and gates before all 30 requirements. 0 words removed across 384 measured words."
+  },
+  {
+    "lens": "structure",
+    "Pass": "structure",
+    "Original Text": "README.md \u00a7Continue work (141 words), after 376-word planning index",
+    "Revised Text": "MOVE next-action paragraph below introduction; keep verification commands separately findable.",
+    "Changes": "Immediate action is buried beneath the evidence catalog. 0 words removed."
+  },
+  {
+    "lens": "structure",
+    "Pass": "structure",
+    "Original Text": "architecture.md \u00a7Decision index (294 words); \u00a7Status and authority (79 words)",
+    "Revised Text": "MOVE Status and authority before the index.",
+    "Changes": "Define proposal status and source authority before decision labels. 0 words removed."
+  },
+  {
+    "lens": "structure",
+    "Pass": "structure",
+    "Original Text": "architecture.md \u00a7ADR-008 (1,206 words)",
+    "Revised Text": "MOVE existing tables under descriptive subheadings for rules, bounds, claims, parameters and deviations.",
+    "Changes": "Adds heading-based navigation without removing rules. A few heading words added."
+  },
+  {
+    "lens": "structure",
+    "Pass": "structure",
+    "Original Text": "roadmap.md \u00a7Gates for every deferred GitHub issue (374 words), after 1,188 words of source inventories",
+    "Revised Text": "MOVE after Dependency-ordered increments.",
+    "Changes": "Place activation gates beside the delivery sequence. 0 words removed."
+  },
+  {
+    "lens": "structure",
+    "Pass": "structure",
+    "Original Text": "epics.md \u00a7Non-functional requirements (527 words); addendum.md (5,399 words)",
+    "Revised Text": "PRESERVE source material and local NFR reinforcement; identify PRD authority beside its copy.",
+    "Changes": "Safety reinforcement and source fidelity justify retention. 0 words removed."
+  },
+  {
+    "lens": "prose",
+    "Pass": "prose",
+    "Original Text": "readiness \u00a7Architecture remediation: Outside judges, run in this order:",
+    "Revised Text": "Independent checks and reviews were run in this order:",
+    "Changes": "Clarifies that the table records completed activity."
+  },
+  {
+    "lens": "prose",
+    "Pass": "prose",
+    "Original Text": "readiness \u00a7Verdict: Full developer-ready planning for every deferred high-effort feature is intentionally gated on demand and a smaller verified decomposition.",
+    "Revised Text": "Before a deferred high-effort feature is ready for development, confirm demand and split it into smaller, independently verifiable stories.",
+    "Changes": "Replaces an abstract noun chain with prerequisites and timing."
+  },
+  {
+    "lens": "prose",
+    "Pass": "prose",
+    "Original Text": "epics \u00a7Execution packets: The identifier DAG checks earlier-first prerequisite availability only.",
+    "Revised Text": "The identifier-based directed acyclic graph checks only that each listed prerequisite has an earlier identifier.",
+    "Changes": "Defines the acronym and the limited ordering check."
+  },
+  {
+    "lens": "prose",
+    "Pass": "prose",
+    "Original Text": "readiness \u00a7Coverage result: K=1 subjective review cap; repair limit Kmax=3 for mechanical failures.",
+    "Revised Text": "For the source-integration pass, subjective review was capped at one pass (K=1), and mechanical repairs at three rounds (Kmax=3).",
+    "Changes": "Defines symbols and separates historical limits from later reviews."
+  },
+  {
+    "lens": "prose",
+    "Pass": "prose",
+    "Original Text": "UX \u00a7Components: Bound CSS override cannot hide mandatory warnings or remove keyboard focus.",
+    "Revised Text": "Consider: A permitted CSS override must not hide mandatory warnings or remove keyboard focus?",
+    "Changes": "Clarify the undefined phrase; confirm intended customization policy."
+  },
+  {
+    "lens": "prose",
+    "Pass": "prose",
+    "Original Text": "addendum introduction: This preserves source proposals and notes too detailed for the PRD. They are proposed, not implemented.",
+    "Revised Text": "This addendum preserves source proposals and notes too detailed for the PRD. The proposed functionality is not implemented.",
+    "Changes": "Clarifies referents without altering preserved source proposals."
+  }
+]

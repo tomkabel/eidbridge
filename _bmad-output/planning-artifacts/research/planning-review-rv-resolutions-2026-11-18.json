@@ -1,0 +1,226 @@
+[
+  {
+    "id": "A1",
+    "status": "addressed-in-planning",
+    "location": "ADR-007 Key persistence; Story 2.4 TestSigningKeyParametersAndFileMode",
+    "resolution": "Mode-specific demo prefix and production thumbprint rule.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "A2",
+    "status": "addressed-in-planning",
+    "location": "ADR-008 Authorization code; Story 2.4 TestFailedExchangeLeavesFamilylessTombstone",
+    "resolution": "Split initial-failure and initial-success histories; never erase successful family.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "A3",
+    "status": "addressed-in-planning",
+    "location": "ADR-008 Standards deviations; Story 2.4 TestDemoLoopbackRedirectPolicy; addendum #14",
+    "resolution": "Exact static localhost HTTP callback exception is demo-only.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "A4",
+    "status": "addressed-in-planning",
+    "location": "ADR-010 Flow cookie; Story 2.5 TestFlowCookieAttributes",
+    "resolution": "One creation-time absolute deadline; reload and rotation use remaining lifetime.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "A5",
+    "status": "addressed-in-planning",
+    "location": "ADR-009 Clock; Story 2.6 TestDenyListLifetimeSurvivesWallClockStep",
+    "resolution": "Authenticated monotonic token deadline prevents rollback resurrection.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "A6",
+    "status": "addressed-in-planning",
+    "location": "ADR-003 configuration invariants; NFR-007; Story 2.7 TestProductionRejectsDemoKeyFingerprint",
+    "resolution": "Reject known supplied/fixture history; require fresh production keys and disclose unknowable provenance.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "A7",
+    "status": "addressed-in-planning",
+    "location": "ADR-009 Upstream HTTP; Story 2.5 TestSessionInitTransportBounds",
+    "resolution": "All outbound operations bounded, including init; no blind retry on uncertain creation.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "A8",
+    "status": "addressed-in-planning",
+    "location": "ADR-009 Notification abuse; Story 2.5 TestTargetBucketFullMapAndChurn",
+    "resolution": "Canonical target, full-map refusal, active debt preservation, bounded idle expiry.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "A9",
+    "status": "addressed-in-planning",
+    "location": "ADR-010 Cookie cap; Story 2.5 TestAbsoluteFlowDeadlineAndEvictionRace",
+    "resolution": "Cancel matched nonterminal victim locally; release unfilled capacity; preserve issued codes.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "A10",
+    "status": "addressed-in-planning",
+    "location": "ADR-002 Data lifecycle; ADR-008 Authorization code; Story 2.4 concurrency AC",
+    "resolution": "Atomic consume retains tombstone and publishes family before unlock.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "A11",
+    "status": "addressed-in-planning",
+    "location": "ADR-009 Capacity model; Story 2.5 TestCodeCapacityUnderSustainedExchange",
+    "resolution": "Independent code capacity sized for all populations and retention, including indexes.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "A12",
+    "status": "addressed-in-planning",
+    "location": "Story 7.3 TestDoctorNeverControlsReadiness; ADR-009 Readiness",
+    "resolution": "Explicitly supersede upstream readiness integration.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "E1",
+    "status": "addressed-in-planning",
+    "location": "Same resolution as A5",
+    "resolution": "Retained separately as independent lens finding.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "E2",
+    "status": "addressed-in-planning",
+    "location": "ADR-008 Replay; ADR-009 Tombstone cap; Story 2.4 TestReplayAtFullCapacityUsesReservedTombstone",
+    "resolution": "Revocation flag stored in reserved tombstone; no separate deny-list allocation.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "E3",
+    "status": "addressed-in-planning",
+    "location": "Same resolution as A8",
+    "resolution": "Retained separately as independent lens finding.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "E4",
+    "status": "addressed-in-planning",
+    "location": "ADR-008 Client authentication; Story 2.4 TestConcurrentClientAssertionReplayRejected",
+    "resolution": "Atomic jti insert-if-absent with capacity check under same lock.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "E5",
+    "status": "addressed-in-planning",
+    "location": "ADR-010 Web2App return; state machine; Story 2.5 TestCallbackFirstRetainsVerifierUntilSignedResult",
+    "resolution": "Defer unavailable verifier comparison; retain bounded secret until signed result; both required.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "E6",
+    "status": "addressed-in-planning",
+    "location": "ADR-010 Flow-scoped endpoints; Story 2.5 TestRetiredBindingCannotDisruptCompletion",
+    "resolution": "Old binding hash identifies notice-only stale requests without authority or state changes.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "S1",
+    "status": "addressed-in-planning",
+    "location": "epics.md Execution packets and parent-story closure",
+    "resolution": "Moved before inventory and stories; linked all packet references.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "S2",
+    "status": "addressed-in-planning",
+    "location": "readiness Architecture remediation",
+    "resolution": "Moved immediately after Verdict.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "S3",
+    "status": "addressed-in-planning",
+    "location": "prd.md initial sections",
+    "resolution": "Scope and success follow vision; gates precede feature catalog.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "S4",
+    "status": "addressed-in-planning",
+    "location": "README.md Continue work; Verify planning artifacts",
+    "resolution": "Next action precedes catalog; verification has its own section.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "S5",
+    "status": "addressed-in-planning",
+    "location": "architecture.md Status and authority",
+    "resolution": "Moved before Decision index.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "S6",
+    "status": "addressed-in-planning",
+    "location": "architecture.md ADR-008",
+    "resolution": "Five descriptive table subheadings added.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "S7",
+    "status": "addressed-in-planning",
+    "location": "roadmap.md Gates for every deferred GitHub issue",
+    "resolution": "Moved after delivery increments.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "S8",
+    "status": "addressed-in-planning",
+    "location": "epics.md Non-functional requirements; addendum.md",
+    "resolution": "Preserved source and NFR reinforcement; stated PRD authority and sync policy.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "P1",
+    "status": "addressed-in-planning",
+    "location": "readiness Architecture remediation",
+    "resolution": "Independent checks and reviews wording.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "P2",
+    "status": "addressed-in-planning",
+    "location": "readiness Verdict",
+    "resolution": "Explicit demand and decomposition prerequisites.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "P3",
+    "status": "addressed-in-planning",
+    "location": "epics Execution packets",
+    "resolution": "Expanded DAG and explained its limited ordering check.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "P4",
+    "status": "addressed-in-planning",
+    "location": "readiness Coverage result",
+    "resolution": "Defined historical source-integration review/repair limits.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "P5",
+    "status": "addressed-in-planning",
+    "location": "UX Components and layout contract",
+    "resolution": "Permitted CSS override must preserve warnings and focus.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  },
+  {
+    "id": "P6",
+    "status": "addressed-in-planning",
+    "location": "addendum introduction",
+    "resolution": "Explicit subjects replace unclear pronouns.",
+    "implementation_evidence": "Acceptance contract only; product tests not implemented or run"
+  }
+]

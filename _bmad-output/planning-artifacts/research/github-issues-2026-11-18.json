@@ -1,0 +1,505 @@
+{
+  "repository": "tomkabel/eidbridge",
+  "retrieved_at": "2026-11-18",
+  "query": {
+    "state": "all",
+    "per_page": 100,
+    "page": 1
+  },
+  "complete": true,
+  "issues": [
+    {
+      "number": 1,
+      "title": "Scaffold Go module with CI, licence checks and release automation",
+      "body": "## Summary\nCreate the repository skeleton for `eidbridge` (single Go binary), a CI pipeline that gates every PR, and a tag-driven release pipeline that publishes binaries and a container image.\n\n## Motivation\nEverything else in the roadmap lands on top of this. Integrators evaluating an authentication component need reproducible builds, checksummed artifacts and a dependency licence report before they will run it in front of their IdP.\n\n## Proposed solution\nLayout:\n```\ncmd/eidbridge/        main binary\ninternal/smartid/     RP API v3 client\ninternal/oidc/        OIDC provider surface\ninternal/authn/       method-neutral authenticator interface\ndocs/spec-pins/       pinned copies/links of the protocol versions implemented\nexamples/             IdP and app integration examples\nscripts/              e2e helpers\n```\n- `go.mod` (current stable Go), `LICENSE-MIT` + `LICENSE-APACHE` (dual licence; Apache-2.0 for the explicit patent grant), `NOTICE`, `README.md` skeleton.\n- `.github/workflows/ci.yml`: `gofmt -l` (fail on output), `go vet ./...`, `go test -race ./...`, build matrix `linux/amd64`, `linux/arm64`, `go-licenses report ./...` with a deny-list for non-permissive licences.\n- `.github/dependabot.yml` for `gomod`, `github-actions` and `docker`.\n- `.goreleaser.yaml`: static binaries (`CGO_ENABLED=0`) for linux/darwin amd64/arm64, `checksums.txt`, SBOM, multi-arch image `ghcr.io/tomkabel/eidbridge:<tag>` built from a distroless/scratch `Dockerfile` (target < 20 MB).\n- `.github/workflows/release.yml` triggered on `v*` tags.\n- `docs/spec-pins/README.md` records the Smart-ID RP API version implemented (3.2.x) with links to the public spec; no vendored third-party doc text.\n\n## Acceptance criteria\n- [ ] `go build ./... && go vet ./... && go test ./...` passes locally and in CI on an empty skeleton\n- [ ] CI fails on unformatted code and on a dependency with a disallowed licence\n- [ ] Pushing tag `v0.0.1-rc1` produces GitHub Release binaries, `checksums.txt` and a pullable `ghcr.io/tomkabel/eidbridge:v0.0.1-rc1`\n- [ ] Image size < 20 MB, runs as non-root\n- [ ] Dependabot opens a PR on a pinned dependency bump\n- [ ] README shows a CI status badge\n\n## Out of scope\n- Application logic, Docker Compose demo (separate issue)\n- Publishing to any registry other than GitHub Releases and GHCR\n\n## Notes\nEffort: ~4 h. No dependencies. Keep dependencies to stdlib plus a minimal, permissively licensed set; every addition must appear in the `go-licenses` report.",
+      "state": "open",
+      "labels": [
+        "enhancement"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/1",
+      "created_at": "2026-11-17T14:53:45Z",
+      "updated_at": "2026-11-17T14:53:45Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 2,
+      "title": "Spike Smart-ID v3 device-link login against the public demo env",
+      "body": "## Summary\nBuild a throwaway `cmd/sidspike` that completes one Smart-ID RP API v3 device-link authentication against the public demo environment, end to end, and record the outcome before any production code is written.\n\n## Motivation\nThe whole project assumes a relying party can develop against `https://sid.demo.sk.ee/smart-id-rp/v3/` using the documented public demo relying party (UUID `00000000-0000-4000-8000-000000000000`, name `DEMO`) and a self-registered Smart-ID demo app account, with no contract. If that is false, the architecture changes. Validate the riskiest assumption first, with a time cap.\n\n## Proposed solution\n`cmd/sidspike/main.go` (deleted or moved to `internal/smartid` tests after the spike):\n1. Generate a random challenge, create an anonymous device-link authentication session.\n2. Build the dynamic device link from the returned session token/secret, render it as a QR in the terminal, refresh per the spec's timing rules.\n3. Poll session status until `COMPLETE`.\n4. Verify the returned signature over the challenge and validate the authentication certificate chain against the demo CA.\n5. Print `AUTHENTICATED` plus subject fields; exit 0.\n\nFallback ladder, decided up front:\n1. Device-link rejected for the demo RP → use the v3 notification-based flow; device-link goes behind a flag.\n2. Demo env refuses anonymous access → use the Mobile-ID REST demo as the first method, Smart-ID behind the authenticator interface.\n3. Both fail → build against recorded fixtures and Web eID only; publish the finding.\n\nWrite the result to `docs/adr/0001-spike-outcome.md`.\n\n## Acceptance criteria\n- [ ] `go run ./cmd/sidspike` exits 0 with `AUTHENTICATED` and a verified certificate for a demo account, or the ADR documents which fallback was taken and why\n- [ ] Captured request/response pairs (with demo data only) saved as test fixtures under `internal/smartid/testdata/`\n- [ ] ADR states whether the demo env offers a scriptable test endpoint usable in CI\n\n## Out of scope\n- OIDC, web UI, configuration, production endpoints\n\n## Notes\nEffort: 6 h hard cap. Depends on: \"Scaffold Go module with CI, licence checks and release automation\". Implement clean-room from the published protocol spec; do not copy from LGPL-licensed demo applications or unlicensed documentation repositories. If demo account registration requires a contract or payment, stop and write a post-mortem instead.",
+      "state": "open",
+      "labels": [
+        "enhancement"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/2",
+      "created_at": "2026-11-17T14:53:50Z",
+      "updated_at": "2026-11-17T14:53:50Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 3,
+      "title": "Implement Smart-ID RP API v3 client with signature verification",
+      "body": "## Summary\nAdd `internal/smartid`: a Go client for Smart-ID RP API v3 that creates device-link authentication sessions, polls status, and cryptographically verifies the result, with a demo/production endpoint switch.\n\n## Motivation\nThe response from the RP API is only trustworthy after the relying party verifies the signature over its own challenge and validates the certificate chain and certificate level. Getting this wrong is an authentication bypass. Existing Go wrappers are stale or do not cover v3 device-link flows, so the bridge needs its own, tested client.\n\n## Proposed solution\n```go\npackage smartid\n\ntype Config struct {\n    BaseURL        string // demo or production RP API v3 URL\n    RPUUID, RPName string\n    TrustAnchors   *x509.CertPool // CA roots for auth certs\n    HTTPClient     *http.Client   // TLS settings from the pinning issue\n    CertLevel      string         // QUALIFIED | ADVANCED\n}\n\nfunc (c *Client) StartDeviceLink(ctx context.Context, req AuthRequest) (*Session, error)\nfunc (s *Session) DeviceLink(now time.Time) (string, error) // dynamic link / QR payload\nfunc (c *Client) Poll(ctx context.Context, sessionID string) (*Status, error)\nfunc (c *Client) Verify(st *Status, challenge []byte) (*Identity, error)\n\ntype Identity struct {\n    Country, IDCode, GivenName, Surname string\n    Cert *x509.Certificate\n}\n```\n- Challenge: crypto/rand, length per spec; never reused.\n- `Verify`: check signature algorithm allow-list, signature over the protocol-defined payload, certificate chain to `TrustAnchors`, validity period, key usage, certificate level >= requested, and that the identity in the cert matches the response.\n- Long-poll with `timeoutMs`, context cancellation, bounded retries on 5xx only.\n- Typed errors for user refusal, timeout, wrong VC, account problems, so the UI can show specific messages.\n\n## Acceptance criteria\n- [ ] `go test ./internal/smartid/` passes using recorded fixtures (from the spike) with no network\n- [ ] Negative tests: tampered signature, wrong challenge, expired cert, untrusted chain, lower cert level — all rejected\n- [ ] Live test against the demo env runs only when `EIDBRIDGE_LIVE=1`\n- [ ] Fuzz test for response JSON parsing (`go test -fuzz`)\n- [ ] Coverage of `Verify` >= 90%\n\n## Out of scope\n- Notification-based flow (separate issue), signing sessions, RP API v1/v2\n\n## Notes\nEffort: ~4 h. Depends on: \"Spike Smart-ID v3 device-link login against the public demo env\". Pin the implemented protocol version in `docs/spec-pins/`. Official MIT-licensed clients may be consulted and reused with the licence notice kept in `NOTICE`.",
+      "state": "open",
+      "labels": [
+        "enhancement"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/3",
+      "created_at": "2026-11-17T14:53:55Z",
+      "updated_at": "2026-11-17T14:53:55Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 4,
+      "title": "Support Smart-ID v3 notification-based authentication flow",
+      "body": "## Summary\nAdd the v3 notification-based authentication flow (push to a known user's device by national identity number or document number) next to device-link, selectable per request.\n\n## Motivation\nDevice-link (QR / Web2App) is the default, but some relying parties already know the user's identity code (returning users, call-centre or kiosk flows) and want a push to the phone without a QR. It is also the fallback if device-link sessions turn out to be restricted for a given relying party.\n\n## Proposed solution\n- `internal/smartid`: `StartNotification(ctx, NotificationRequest)` where the request carries a semantics identifier (`PNOEE-...`, `PNOLV-...`, `PNOLT-...`) or document number, the challenge, and interaction parameters (display text, verification-code choice).\n- Return the verification code derived from the challenge so the login page can display it; the user compares it on the phone.\n- Same `Poll` / `Verify` path as device-link; `Verify` additionally checks the returned identity matches the requested one.\n- Login page: optional \"Enter personal code\" form, shown only when `EIDBRIDGE_SMARTID_FLOWS` includes `notification`.\n- Input validation: country prefix allow-list, identity code checksum validation before any outbound call.\n\n```\nEIDBRIDGE_SMARTID_FLOWS=device-link,notification   # default: device-link\n```\n\n## Acceptance criteria\n- [ ] Fixture-based tests for notification session create/poll/verify\n- [ ] Test that a response for a different identity than requested is rejected\n- [ ] Invalid identity codes are rejected locally without an outbound request\n- [ ] Entered identity codes are never logged unredacted (covered by the log redaction tests)\n- [ ] Live demo test behind `EIDBRIDGE_LIVE=1`\n\n## Out of scope\n- Signing sessions, Mobile-ID\n\n## Notes\nEffort: ~3 h. Depends on: \"Implement Smart-ID RP API v3 client with signature verification\", \"Redact personal identity codes at the log sink\". Notification flow accepts a user-typed identifier, so rate limiting per client IP on the login form is required to avoid push spam to arbitrary users.",
+      "state": "open",
+      "labels": [
+        "enhancement"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/4",
+      "created_at": "2026-11-17T14:54:00Z",
+      "updated_at": "2026-11-17T14:54:00Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 5,
+      "title": "Define a method-neutral authenticator interface for eID backends",
+      "body": "## Summary\nIntroduce `internal/authn` with a small interface that every eID method (Smart-ID now; Mobile-ID, Web eID, EUDI Wallet later) implements, so the OIDC layer and login page never import a method package directly.\n\n## Motivation\nRelying parties in the Baltics routinely need more than one method. If the OIDC provider is coupled to Smart-ID types, every later method is a rewrite of the provider and the claims mapping. A narrow interface keeps the OIDC surface stable and lets methods be enabled by configuration.\n\n## Proposed solution\n```go\npackage authn\n\ntype Method interface {\n    Name() string                                  // \"smartid\", \"mobileid\", \"webeid\", ...\n    Start(ctx context.Context, r StartRequest) (*Pending, error)\n    Poll(ctx context.Context, p *Pending) (Result, error)\n}\n\ntype Pending struct {\n    ID        string\n    UI        UIHint   // QR payload, verification code, or browser-side challenge\n    ExpiresAt time.Time\n}\n\ntype Result struct {\n    Done     bool\n    Identity *Identity // set only after full cryptographic verification\n    Err      error     // typed: ErrUserRefused, ErrTimeout, ...\n}\n\ntype Identity struct {\n    Method, Country, IDCode, GivenName, Surname string\n    LoA       string            // \"high\" | \"substantial\"\n    Extra     map[string]string // method-specific, mapped to claims only if allow-listed\n}\n```\n- Registry built from config: `EIDBRIDGE_METHODS=smartid`.\n- `Identity` is produced only by the method after verification; the OIDC layer treats it as trusted input.\n- Contract test suite in `internal/authn/authntest` that every method must pass (start, poll to completion, refusal, timeout, verification failure).\n\n## Acceptance criteria\n- [ ] Smart-ID client wrapped as `authn.Method`; OIDC package imports only `internal/authn`\n- [ ] `authntest.Run(t, method)` contract suite passes for Smart-ID with fixtures\n- [ ] A fake method in tests proves a second backend needs no OIDC changes\n- [ ] Interface documented in `docs/architecture.md` with a versioning note (internal, may change before v1.0)\n\n## Out of scope\n- Implementing additional methods (separate deferred issues)\n- Exposing the interface as a public Go API or plugin ABI\n\n## Notes\nEffort: ~2 h. Depends on: \"Implement Smart-ID RP API v3 client with signature verification\". Keep it internal until at least two real methods exist; the second implementation will reveal what the interface got wrong.",
+      "state": "open",
+      "labels": [
+        "enhancement"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/5",
+      "created_at": "2026-11-17T14:54:05Z",
+      "updated_at": "2026-11-17T14:54:05Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 6,
+      "title": "Expose eID logins as a standard OpenID Connect provider",
+      "body": "## Summary\nAdd `internal/oidc`: a minimal OpenID Connect provider (authorization code flow with PKCE) so Keycloak, authentik, Zitadel, Ory and plain OIDC client libraries can consume eID logins as an ordinary external identity provider, with no plugin code.\n\n## Motivation\nEvery IdP and most web frameworks already speak OIDC. Making the bridge an OIDC provider means one integration covers them all, and the IdP keeps ownership of users, sessions and account linking. The alternative, a plugin per IdP, has historically been abandoned within a year.\n\n## Proposed solution\nEndpoints:\n```\nGET  /.well-known/openid-configuration\nGET  /jwks.json\nGET  /authorize      code flow only; state, nonce, PKCE S256 required\nPOST /token          client_secret_basic / client_secret_post / private_key_jwt\nGET  /userinfo\n```\n- Signing: RS256 (ES256 optional), key from file or generated at start; `kid` rotation by keeping old keys in JWKS until expiry.\n- Clients from static config:\n```yaml\nclients:\n  - id: keycloak\n    secret_file: /run/secrets/keycloak\n    redirect_uris: [https://kc.example/realms/main/broker/eid/endpoint]\n```\n- Claims: `sub` = stable pairwise or public identifier derived from country+ID code (configurable `sub_mode: public|pairwise`), `given_name`, `family_name`, `country`, `eid_method`, `acr` (LoA), optional `personal_code` only if the client is allow-listed for it.\n- Authorization codes single-use, 60 s TTL, bound to client, redirect URI and PKCE verifier; in-memory store.\n- Exact-match redirect URI validation; no implicit or hybrid flow.\n\n## Acceptance criteria\n- [ ] `go test ./internal/oidc/` covers discovery, code exchange, PKCE failure, code replay, wrong redirect URI, expired code\n- [ ] ID token validates with `github.com/coreos/go-oidc` in a test client\n- [ ] `curl /.well-known/openid-configuration | jq` returns a valid discovery document\n- [ ] OpenID Foundation conformance suite \"Basic OP\" plan run locally; results recorded in `docs/conformance.md`\n\n## Out of scope\n- Dynamic client registration, refresh tokens, logout endpoints, user database\n\n## Notes\nEffort: ~3-4 h. Depends on: \"Define a method-neutral authenticator interface for eID backends\". Prefer a small, audited OIDC library over hand-rolled JWT code if one fits without pulling in a large dependency tree.",
+      "state": "open",
+      "labels": [
+        "enhancement"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/6",
+      "created_at": "2026-11-17T14:54:10Z",
+      "updated_at": "2026-11-17T14:54:10Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 7,
+      "title": "Wire eidbridge binary with login page, QR and Web2App flows",
+      "body": "## Summary\n`cmd/eidbridge` wires configuration, the enabled authenticator methods and the OIDC provider, and serves the end-user login page: cross-device QR and same-device Web2App for Smart-ID device-link.\n\n## Motivation\nThe bridge is only useful if a user arriving from the IdP redirect sees a working, accessible login page on both desktop (scan QR) and mobile (tap to open the app), and if operators can configure it with environment variables alone.\n\n## Proposed solution\n- `cmd/eidbridge/main.go`: parse config, build `authn` registry, mount `internal/oidc`, serve `internal/web`.\n- `internal/web`: server-rendered HTML (`html/template`, embedded via `embed`), no JS framework. Small JS only to refresh the dynamic QR and poll `/flow/{id}/status`.\n- Same-device detection by user agent hint plus an explicit \"Open on this device\" button.\n- Show verification code / error states from typed `authn` errors.\n- Strict headers: CSP without `unsafe-inline`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`.\n- Flow state in memory, keyed by an unguessable ID, bound to the OIDC authorize request; expires with the session.\n\nConfiguration (env, or `--config file.yaml`):\n```\nEIDBRIDGE_LISTEN=:8080\nEIDBRIDGE_ISSUER=https://eid.example.com\nEIDBRIDGE_METHODS=smartid\nEIDBRIDGE_SMARTID_ENV=demo|production\nEIDBRIDGE_RP_UUID=...            # required in production\nEIDBRIDGE_RP_NAME=...\nEIDBRIDGE_SIGNING_KEY_FILE=/run/secrets/oidc.pem\n```\n`--demo` sets demo endpoints and the public demo relying party. Health endpoints: `/healthz`, `/readyz`.\n`docs/configuration.md` lists every option with defaults.\n\n## Acceptance criteria\n- [ ] `go run ./cmd/eidbridge --demo` serves a QR on `http://localhost:8080` and completes a login with the demo app\n- [ ] Startup fails with a clear error if production mode lacks RP UUID/name or signing key\n- [ ] Page passes axe-core accessibility checks with no serious violations\n- [ ] `docs/configuration.md` generated or checked in CI against the config struct\n\n## Out of scope\n- Branding/theming beyond a CSS override file\n- No vendor logos or UI imitating any eID app\n\n## Notes\nEffort: ~3 h. Depends on: \"Expose eID logins as a standard OpenID Connect provider\", \"Implement Smart-ID RP API v3 client with signature verification\".",
+      "state": "open",
+      "labels": [
+        "enhancement"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/7",
+      "created_at": "2026-11-17T14:54:14Z",
+      "updated_at": "2026-11-17T14:54:14Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 8,
+      "title": "Pin RP API TLS certificates and make trust anchors configurable",
+      "body": "## Summary\nHarden the outbound HTTPS connection to the RP API: pin the server certificates or public keys as recommended by the protocol documentation, use a modern cipher configuration, and load authentication-certificate trust anchors from config.\n\n## Motivation\nThe RP API documentation asks relying parties to pin the API server certificate. A bridge that silently trusts the system CA store weakens the chain for every integrator. Server-side TLS policy changes (cipher suite removals) and certificate renewals also break pinned clients, so pins must be updatable without a rebuild.\n\n## Proposed solution\n- `internal/tlspin`: builds an `*http.Client` whose `tls.Config.VerifyPeerCertificate` checks SPKI SHA-256 pins in addition to normal chain validation.\n- Pins and CA bundles shipped in `trust/` for demo and production, overridable:\n```\nEIDBRIDGE_SMARTID_TLS_PINS=sha256/AAA...,sha256/BBB...   # current + next\nEIDBRIDGE_SMARTID_AUTH_CA_DIR=/etc/eidbridge/trust/smartid\n```\n- `tls.Config{MinVersion: tls.VersionTLS12}` with Go's default modern suites; no legacy suites re-enabled.\n- Startup self-check: one TLS handshake to the configured endpoint; on pin mismatch log an actionable error naming the expected and observed SPKI hashes (no personal data involved).\n- `eidbridge trust show` subcommand prints the active pins and CA subjects.\n\n## Acceptance criteria\n- [ ] Unit test with a local `httptest.NewTLSServer`: matching pin succeeds, mismatching pin fails\n- [ ] Pin rotation: two pins configured, either accepted\n- [ ] Production mode refuses to start with an empty pin set unless `EIDBRIDGE_SMARTID_TLS_PINS=disabled` is set explicitly, which logs a warning\n- [ ] `docs/security.md` documents how to update pins and CA bundles after a certificate renewal\n\n## Out of scope\n- OCSP/AIA checking of end-user authentication certificates (tracked with the Web eID work; Smart-ID responses are verified against trust anchors)\n\n## Notes\nEffort: ~2 h. Depends on: \"Implement Smart-ID RP API v3 client with signature verification\". Risk: pins in a release go stale on server cert renewal; the maintenance runbook issue covers tracking renewals and shipping patch releases.",
+      "state": "open",
+      "labels": [
+        "security"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/8",
+      "created_at": "2026-11-17T14:54:20Z",
+      "updated_at": "2026-11-17T14:54:20Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 9,
+      "title": "Redact personal identity codes at the log sink",
+      "body": "## Summary\nEnsure national personal identity codes, certificates, signatures and session secrets never reach logs in full. Redaction happens in the log handler itself and cannot be disabled by configuration.\n\n## Motivation\nThe bridge handles given name, surname, country and national personal code for every login, plus certificates that embed the same data. Personal codes are high-risk identifiers in Estonia, Latvia and Lithuania. Logs get shipped to third-party aggregators, kept for months and read by many people; redacting at the call site is error-prone, so the guarantee has to sit at the sink.\n\n## Proposed solution\n- Use `log/slog` everywhere; wrap the handler in `internal/logx.RedactingHandler`.\n- Redaction rules applied to every attribute value and message string:\n  - Semantics identifiers / personal codes (`PNOEE-38001085718`, bare 11-digit EE/LT codes, LV `DDMMYY-NNNNN`) → `PNOEE-****`.\n  - PEM blocks and long base64 strings (> 64 chars) → `[redacted:base64 len=N]`.\n  - Known sensitive keys (`sessionSecret`, `signature`, `cert`, `id_token`, `code`) → `[redacted]`.\n- Typed `logx.Personal(string)` value implementing `slog.LogValuer` for intentional references; always renders masked.\n- No certificates, signatures or session hashes at INFO. DEBUG level prints a startup banner: \"DEBUG logging may contain personal data\".\n- No config flag to turn redaction off.\n\n## Acceptance criteria\n- [ ] Table-driven tests for each identifier format and for PEM/base64 masking\n- [ ] Integration test: full fixture login at DEBUG level; captured log output contains no fixture personal code, cert or signature\n- [ ] CI step `grep -rn \"personalCode\\|IDCode\" internal/ | grep -v logx` reviewed: no raw logging calls\n- [ ] `docs/security.md` documents what is logged at each level\n\n## Out of scope\n- Redacting data in the OIDC tokens themselves (claims are controlled by client allow-lists)\n\n## Notes\nEffort: ~2 h. Depends on: \"Scaffold Go module with CI, licence checks and release automation\". Regex masking is a backstop; the primary control is not passing identity data to the logger at all.",
+      "state": "open",
+      "labels": [
+        "security"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/9",
+      "created_at": "2026-11-17T14:54:24Z",
+      "updated_at": "2026-11-17T14:54:24Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 10,
+      "title": "Enforce no telemetry and zero data retention by default",
+      "body": "## Summary\nGuarantee the binary makes no outbound connections other than to configured eID endpoints, keeps login state in memory only, and deletes it as soon as the flow completes or expires. Publish the security policy.\n\n## Motivation\nRelying parties are the data controllers for their users' logins. A self-hosted bridge that never phones home and stores nothing keeps the project author out of the processing chain and makes the integrator's DPIA simple. These properties must be enforced and tested, not just promised.\n\n## Proposed solution\n- No analytics, crash reporting, update checks or version beacons. Outbound HTTP only via clients built from configured method endpoints; a test asserts no other `http.Client` is constructed.\n- `internal/store`: in-memory map with TTL (default = flow timeout + 30 s), deleted on completion, failure or expiry; no persistence, no database in v1. Memory bound: max pending flows (default 10 000) with 503 when exceeded.\n- Cookies: only a single short-lived, `HttpOnly; Secure; SameSite=Lax` flow cookie; nothing persistent for end users.\n- `SECURITY.md`: supported versions, private vulnerability reporting via GitHub Security Advisories, response targets.\n- `docs/security.md`: threat model summary, retention = 0, what crosses the network, deployment hardening (run behind TLS-terminating proxy, read-only filesystem, non-root).\n- README note: hosting this bridge for third parties makes the host a processor under GDPR with its own obligations.\n\n## Acceptance criteria\n- [ ] Test: after a completed fixture login and after TTL expiry, the store holds zero entries for that flow\n- [ ] Network test in CI (container with egress blocked except a mock RP API) completes a login; no other egress attempted\n- [ ] `SECURITY.md` and `docs/security.md` present and linked from README\n- [ ] GitHub private vulnerability reporting enabled\n\n## Out of scope\n- Shared session store for multi-replica deployments (revisit only on demand; sticky sessions documented instead)\n\n## Notes\nEffort: ~2 h. Depends on: \"Wire eidbridge binary with login page, QR and Web2App flows\". Prometheus metrics, if added later, must be pull-only, opt-in and contain counts only.",
+      "state": "open",
+      "labels": [
+        "security"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/10",
+      "created_at": "2026-11-17T14:54:29Z",
+      "updated_at": "2026-11-17T14:54:29Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 11,
+      "title": "Warn on demo environment use and block demo credentials in prod",
+      "body": "## Summary\nMake it impossible to accidentally serve real users through the eID demo environments: loud startup and page warnings in demo mode, and a hard failure if production mode is combined with demo endpoints or the public demo relying-party identity.\n\n## Motivation\nDemo mode is the zero-config default so anyone can try the bridge in minutes. The same convenience is a foot-gun: a deployment left in demo mode accepts demo-app accounts that prove nothing about a real person. The public demo relying party is meant for development and CI only.\n\n## Proposed solution\n- Detect demo mode when `EIDBRIDGE_SMARTID_ENV=demo`, `--demo`, the RP UUID equals the public demo UUID `00000000-0000-4000-8000-000000000000`, or the base URL host is a known demo host (`sid.demo.sk.ee`, `tsp.demo.sk.ee`).\n- Demo mode:\n  - WARN log at startup and every 10 minutes: \"DEMO ENVIRONMENT - identities are not real; do not use for production users\".\n  - Persistent banner on the login page.\n  - ID tokens carry `acr: \"demo\"` and claim `eid_env: \"demo\"` so the IdP side can reject them.\n- `EIDBRIDGE_MODE=production` plus any demo indicator → exit non-zero with an explanation.\n- Production mode with a mixed config (prod endpoint, demo CA bundle or vice versa) → exit non-zero.\n\n## Acceptance criteria\n- [ ] Unit tests for each detection rule\n- [ ] `EIDBRIDGE_MODE=production ./eidbridge --demo` exits non-zero with a clear message\n- [ ] Demo banner visible on the login page (template test)\n- [ ] ID tokens issued in demo mode contain `acr=demo`\n- [ ] `docs/keycloak.md` shows how to reject `acr=demo` on production realms\n\n## Out of scope\n- Testing against restricted account types that require arrangements with the service operator\n\n## Notes\nEffort: ~1 h. Depends on: \"Wire eidbridge binary with login page, QR and Web2App flows\". Known demo hosts live in one table in `internal/config/demo.go`; update it when endpoints change.",
+      "state": "open",
+      "labels": [
+        "security"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/11",
+      "created_at": "2026-11-17T14:54:34Z",
+      "updated_at": "2026-11-17T14:54:34Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 12,
+      "title": "Add unofficial-project notice, trademark policy and clean-room rules",
+      "body": "## Summary\nDocument the project's legal stance on every user-facing surface: unofficial and not affiliated with any eID scheme operator, nominative use of scheme names only, clean-room implementation from published specs, and integrators bring their own production agreements.\n\n## Motivation\nIntegrators and their legal reviewers need to know up front what the bridge is and is not: it is RP-side software, not a certified identity provider, and it does not resell or meter eID transactions. Contributors need clear rules so that no incompatibly licensed code or proprietary documentation text enters the repo.\n\n## Proposed solution\n- README and login page footer: \"Unofficial, community-maintained software. Not affiliated with, endorsed by or certified by the operators of Smart-ID, Mobile-ID, the Estonian ID-card or any EUDI Wallet.\"\n- `docs/legal.md`:\n  - Scheme names are used only to describe compatibility (\"compatible with Smart-ID RP API v3\"); no logos, brand colours or UI imitating scheme apps; scheme names never in package, image or module names.\n  - Production use requires the integrator's own relying-party agreement with the scheme operator; the project ships no production credentials and does not broker, resell or meter transactions.\n  - Toward the scheme the bridge is an ordinary relying party; toward the integrator's apps it is an OIDC provider. It is not a scheme-certified identity provider.\n  - No claims of eIDAS or EUDI compliance for the integrator's service.\n- `CONTRIBUTING.md` clean-room rules: implement from published protocol specifications; MIT-licensed official client code may be reused with its notice preserved in `NOTICE`; never copy from LGPL-licensed demo apps or from unlicensed documentation repositories (link, do not vendor); DCO sign-off required.\n- `NOTICE` file maintained for any reused MIT code.\n\n## Acceptance criteria\n- [ ] Disclaimer present in README, login page template and container image labels (`org.opencontainers.image.description`)\n- [ ] `docs/legal.md` and `CONTRIBUTING.md` merged and linked from README\n- [ ] DCO check enabled on PRs\n- [ ] CI check that no file under `docs/spec-pins/` contains copied spec text beyond links and version metadata\n\n## Out of scope\n- Formal legal opinion; flag material questions for qualified Estonian counsel\n\n## Notes\nEffort: ~1.5 h. No code dependencies. If a trademark complaint arrives, comply first (rename/rewording), discuss later.",
+      "state": "open",
+      "labels": [
+        "documentation"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/12",
+      "created_at": "2026-11-17T14:54:39Z",
+      "updated_at": "2026-11-17T14:54:39Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 13,
+      "title": "Document end-to-end personal data flow for integrator DPIAs",
+      "body": "## Summary\nAdd `docs/data-flow.md`: a field-by-field map of every piece of personal data the bridge receives, holds, emits and discards, written so an integrator can paste it into their records of processing or DPIA.\n\n## Motivation\nThe relying party is the GDPR controller for its users' logins and must describe the processing. Data protection officers ask the same questions for every authentication component: which fields, where they go, how long they live, who sees them. Answering once in the repo removes that friction and makes misconfiguration visible.\n\n## Proposed solution\n`docs/data-flow.md` containing:\n- Sequence diagram (Mermaid): browser → IdP → eidbridge → eID service → eidbridge → IdP.\n- Table per field:\n\n| Field | Source | Held where | Retention | Leaves bridge to | Logged |\n|---|---|---|---|---|---|\n| Given name, surname | auth cert / API response | memory (flow) | until code exchange | IdP via ID token | no |\n| Personal identity code | API response / user input (notification flow) | memory (flow) | until code exchange | IdP only if client allow-listed | masked |\n| Authentication certificate | API response | memory | verification only | never | never |\n| Client IP, user agent | HTTP request | memory | request | never | access log, configurable |\n\n- Roles: integrator = controller; eID service operator processes under its own agreement with the integrator; project authors receive nothing (no telemetry).\n- Note that operating the bridge on behalf of third parties makes the operator a processor requiring a DPA.\n- Configuration knobs that change the flow (`sub_mode`, claim allow-lists, access log) and their effect.\n\n## Acceptance criteria\n- [ ] `docs/data-flow.md` merged and linked from README and `docs/security.md`\n- [ ] Every claim emitted by `internal/oidc` appears in the table (CI test compares claim names in code against the doc table)\n- [ ] Mermaid diagram renders on GitHub\n\n## Out of scope\n- Legal advice or template DPIA text for a specific sector\n\n## Notes\nEffort: ~1.5 h. Depends on: \"Expose eID logins as a standard OpenID Connect provider\", \"Redact personal identity codes at the log sink\", \"Enforce no telemetry and zero data retention by default\". Update the table whenever a method is added.",
+      "state": "open",
+      "labels": [
+        "documentation"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/13",
+      "created_at": "2026-11-17T14:54:44Z",
+      "updated_at": "2026-11-17T14:54:44Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 14,
+      "title": "Ship a zero-config docker compose demo with a sample relying party",
+      "body": "## Summary\nProvide `docker-compose.yml` that starts the bridge in demo mode plus a tiny sample relying party, so a new user can clone the repo and complete a demo-app login in under five minutes with no accounts or keys.\n\n## Motivation\nEvaluating eID integration usually starts with contracts, keys and a week of reading. A one-command demo shows the full OIDC round-trip immediately and doubles as the reference configuration for real deployments.\n\n## Proposed solution\n- `docker-compose.yml`:\n  - `eidbridge` (image from GHCR or local build) with `--demo`, issuer `http://localhost:8081`.\n  - `demo-rp`: minimal Go OIDC client in `examples/demo-rp/` on `http://localhost:8080` that redirects to the bridge and renders the decoded ID token claims.\n- Signing key generated on first start into a named volume; client secret pre-set for the demo client only.\n- `scripts/e2e-demo.sh`: brings the stack up, drives the flow with recorded fixtures through a mock upstream (`EIDBRIDGE_SMARTID_BASE_URL` override), asserts claims page content, tears down.\n- README \"Quick start\":\n```\ngit clone https://github.com/tomkabel/eidbridge && cd eidbridge\ndocker compose up\n# open http://localhost:8080, scan the QR with the Smart-ID demo app\n```\nplus single-binary instructions from GitHub Releases.\n- README screenshot of a completed demo login (no real personal data).\n\n## Acceptance criteria\n- [ ] From a clean clone, `docker compose up` reaches a QR page with no extra steps\n- [ ] Manual check: demo-app scan completes and claims are shown, in under 5 minutes wall time\n- [ ] `scripts/e2e-demo.sh` runs in CI against the fixture upstream and passes\n- [ ] Demo banner from the demo-guard issue visible\n\n## Out of scope\n- Production deployment manifests (Helm, systemd) until requested\n\n## Notes\nEffort: ~3 h. Depends on: \"Wire eidbridge binary with login page, QR and Web2App flows\", \"Warn on demo environment use and block demo credentials in prod\", \"Scaffold Go module with CI, licence checks and release automation\". The live demo-app check stays manual unless the demo environment offers a scriptable test endpoint (see spike ADR).",
+      "state": "open",
+      "labels": [
+        "enhancement"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/14",
+      "created_at": "2026-11-17T14:54:49Z",
+      "updated_at": "2026-11-17T14:54:49Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 15,
+      "title": "Add config-only IdP integration guides with e2e tests per IdP",
+      "body": "## Summary\nWrite configuration-only guides for adding the bridge as an external OIDC identity provider in Keycloak, authentik, Zitadel and Ory (Kratos/Hydra), each backed by a compose-based end-to-end test that runs in CI.\n\n## Motivation\nSelf-hosted IdPs are where most small and mid-size relying parties manage users. None of them ships Baltic eID login, and past plugin-based attempts were abandoned. A tested \"Add OIDC provider\" recipe gets eID into an existing realm in minutes and stays working across IdP upgrades because CI catches regressions.\n\n## Proposed solution\n- `docs/idp/keycloak.md`, `authentik.md`, `zitadel.md`, `ory.md`: exact UI steps and equivalent API/CLI/Terraform snippets, claim/attribute mappers (`given_name`, `family_name`, `country`, `acr`), first-login flow recommendations (link by stable `sub`, never by name), rejecting `acr=demo` in production realms.\n- `examples/idp/<name>/docker-compose.yml`: IdP container + bridge (fixture upstream) + preconfigured realm/tenant import (e.g. Keycloak `realm-export.json`).\n- `test/e2e/idp_test.go` (build tag `e2e`): Playwright-Go or chromedp drives IdP login page → \"Sign in with eID\" → bridge → fixture completion → asserts the IdP user exists with mapped attributes.\n- CI matrix job `e2e-idp` across Keycloak (current + previous major), authentik, Zitadel, Ory; nightly plus on release tags.\n\n## Acceptance criteria\n- [ ] Following `docs/idp/keycloak.md` on a fresh Keycloak container results in a logged-in user via the demo environment (verified manually once, screenshot in doc)\n- [ ] `go test -tags e2e ./test/e2e/...` passes for all four IdPs in CI with fixture upstream\n- [ ] Each guide lists the IdP version tested and the date\n- [ ] README links each guide\n\n## Out of scope\n- Java SPI or IdP-native plugins (separate deferred issue)\n- Submitting listings to IdP catalogues\n\n## Notes\nEffort: ~6 h (Keycloak first at ~3 h, others ~1 h each). Depends on: \"Expose eID logins as a standard OpenID Connect provider\", \"Ship a zero-config docker compose demo with a sample relying party\". Risk: IdP UI churn; prefer API/import-based config in tests so docs drift is caught.",
+      "state": "open",
+      "labels": [
+        "documentation",
+        "enhancement"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/15",
+      "created_at": "2026-11-17T14:54:54Z",
+      "updated_at": "2026-11-17T14:54:54Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 16,
+      "title": "Localize the login page for Estonian, Latvian, Lithuanian, English",
+      "body": "## Summary\nTranslate all end-user strings on the login page and error states into Estonian, Latvian, Lithuanian, English and Russian, selected via the OIDC `ui_locales` parameter or `Accept-Language`.\n\n## Motivation\nEnd users of Baltic eID schemes expect their own language. Error messages such as \"request refused on device\" or \"verification code mismatch\" are exactly where a confused user abandons the login. The RP API also accepts an interaction language for on-device texts, which should match.\n\n## Proposed solution\n- `internal/web/i18n/{en,et,lv,lt,ru}.json` message catalogs; lookup via `golang.org/x/text/language` matcher.\n- Locale precedence: `ui_locales` from the authorize request → `Accept-Language` → `EIDBRIDGE_DEFAULT_LOCALE` (default `en`).\n- Pass the chosen language to method interaction parameters where supported (display text language for Smart-ID).\n- Custom display text per OIDC client (`clients[].display_text`), length-validated against protocol limits.\n- Language switcher links on the page; `lang` attribute set on `<html>`.\n\n## Acceptance criteria\n- [ ] Test: every key in `en.json` exists in all other catalogs (CI fails on missing keys)\n- [ ] `ui_locales=et` renders Estonian page; unknown locale falls back to default\n- [ ] Interaction display text exceeding protocol limits is rejected at config load\n- [ ] Native-speaker review noted in PR for each language\n\n## Out of scope\n- Right-to-left layouts, per-tenant theming\n\n## Notes\nEffort: ~2 h plus translation review. Depends on: \"Wire eidbridge binary with login page, QR and Web2App flows\". README may also get an Estonian translation later; keep the English README authoritative.",
+      "state": "open",
+      "labels": [
+        "enhancement"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/16",
+      "created_at": "2026-11-17T14:54:59Z",
+      "updated_at": "2026-11-17T14:54:59Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 17,
+      "title": "Add a maintenance runbook for upstream API, TLS and key changes",
+      "body": "## Summary\nWrite `docs/api-tracking.md`: how the project tracks and responds to upstream changes that break relying parties (RP API minor versions, TLS policy changes, server certificate renewals, demo key and CA rotations), with a release checklist for each.\n\n## Motivation\nAn unmaintained eID connector is a security and availability hazard for its users: a cipher-suite removal or a server certificate renewal silently breaks every pinned client. The value of a shared OSS bridge is that each upstream change is absorbed once, in the open, for everyone. That needs a written process, not memory.\n\n## Proposed solution\n`docs/api-tracking.md` covering:\n- Sources to watch: RP API changelog and spec repo releases, scheme operator technical announcements, demo environment pages, CA repository for new issuing CAs.\n- Per change type: what breaks, how to detect (failing nightly live test, pin mismatch error), which files to update (`docs/spec-pins/`, `trust/`, `internal/smartid`), release type (patch for pins/CA, minor for API changes).\n- Nightly GitHub Actions job `live-demo.yml`: handshake + pin check against demo endpoints, and the live demo test when a scriptable path exists; opens an issue on failure.\n- `CHANGELOG.md` (Keep a Changelog) with an \"Upstream compatibility\" section per release.\n- Support policy: latest minor gets fixes; pins and CA updates back-ported one minor.\n\n## Acceptance criteria\n- [ ] `docs/api-tracking.md` and `CHANGELOG.md` merged\n- [ ] Nightly workflow runs and auto-opens an issue on a simulated pin mismatch (tested with a bogus pin on a branch)\n- [ ] Release checklist template in `.github/ISSUE_TEMPLATE/upstream-change.md`\n\n## Out of scope\n- A hosted monitoring service (see deferred health-check issue)\n\n## Notes\nEffort: ~2 h. Depends on: \"Pin RP API TLS certificates and make trust anchors configurable\", \"Scaffold Go module with CI, licence checks and release automation\".",
+      "state": "open",
+      "labels": [
+        "documentation"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/17",
+      "created_at": "2026-11-17T14:55:04Z",
+      "updated_at": "2026-11-17T14:55:04Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 18,
+      "title": "Add Django and FastAPI examples that log in through the bridge",
+      "body": "## Summary\nAdd `examples/django/` and `examples/fastapi/` showing how a Python web app uses eID login through the bridge with standard OIDC client libraries, plus a test that runs each against the fixture stack.\n\n## Motivation\nMany relying parties have no central IdP and want eID login directly in their web app. Because the bridge speaks OIDC, they need no eID-specific code at all; a working example in their framework proves that and saves a day of trial and error with claims and redirect URIs.\n\n## Proposed solution\n- `examples/django/`: `mozilla-django-oidc` configured for the bridge issuer; user created/linked by `sub`; template shows `given_name`, `family_name`, `country`, `acr`.\n- `examples/fastapi/`: `authlib` Starlette integration, same claims.\n- Each with `docker-compose.yml` reusing the bridge fixture service, and `README.md` with the five config values to change for production.\n- `examples/test_examples.py` (pytest): spins up the stack, drives the login through the fixture upstream with `httpx` following redirects, asserts the claims page.\n- CI job `examples` running pytest on changes under `examples/` or `internal/oidc/`.\n\n## Acceptance criteria\n- [ ] `pytest examples/` passes locally and in CI\n- [ ] Neither example contains eID-protocol code; only OIDC client configuration\n- [ ] Examples reject `acr=demo` when `PRODUCTION=1`\n\n## Out of scope\n- A Python package for the eID protocol itself (separate deferred issue)\n- Other frameworks (Rails, Laravel, Spring) until requested\n\n## Notes\nEffort: ~2 h. Depends on: \"Ship a zero-config docker compose demo with a sample relying party\".",
+      "state": "open",
+      "labels": [
+        "documentation"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/18",
+      "created_at": "2026-11-17T14:55:08Z",
+      "updated_at": "2026-11-17T14:55:08Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 19,
+      "title": "Add Mobile-ID authentication via the MID REST API",
+      "body": "## Summary\nImplement `internal/mobileid` as a second `authn.Method`: Mobile-ID authentication through the MID REST API (phone number + personal code, verification code, poll, signature and certificate verification).\n\n## Motivation\nMobile-ID remains in use in Estonia and Lithuania, especially among users without a smartphone app. Relying parties that serve the general public usually need it alongside Smart-ID, and today that means a second, separate integration.\n\n## Proposed solution\n```go\npackage mobileid\ntype Config struct {\n    BaseURL, RPUUID, RPName string\n    TrustAnchors *x509.CertPool\n    HTTPClient   *http.Client // pinned, via internal/tlspin\n}\nfunc (c *Client) Start(ctx, phone, idCode string, hash []byte, lang string) (*Session, error)\nfunc (c *Client) Poll(ctx, sessionID string) (*Status, error)\nfunc (c *Client) Verify(st *Status, hash []byte) (*authn.Identity, error)\n```\n- Verification code computed from the hash and shown on the login page.\n- Input form for phone number (E.164, country allow-list) and personal code with checksum validation; rate-limited per IP and per phone number.\n- Demo environment support with the public demo relying party; demo-guard rules extended to the MID demo host.\n- Passes the `authntest` contract suite.\n\n## Acceptance criteria\n- [ ] `go test ./internal/mobileid/` with recorded fixtures, including tampered signature and identity mismatch cases\n- [ ] `authntest.Run` passes\n- [ ] `EIDBRIDGE_METHODS=smartid,mobileid` serves both on one login page\n- [ ] Data-flow doc updated with phone number field\n\n## Out of scope\n- Mobile-ID signing\n\n## Notes\nEffort: ~8-10 h. Depends on: \"Define a method-neutral authenticator interface for eID backends\", \"Let users choose among multiple enabled eID methods\". Deferred: v1 is one method done well; start once the Smart-ID path is stable and at least a few deployments ask for it. Note the demo environment rotates its keys/certs occasionally; covered by the maintenance runbook.",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/19",
+      "created_at": "2026-11-17T14:55:14Z",
+      "updated_at": "2026-11-17T14:55:14Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 20,
+      "title": "Let users choose among multiple enabled eID methods",
+      "body": "## Summary\nWhen more than one method is enabled, show a method selection step on the login page and let OIDC clients restrict or preselect methods via standard request parameters.\n\n## Motivation\nA single OIDC provider fronting Smart-ID, Mobile-ID, ID-card and later the EUDI Wallet is the main reason to run one bridge instead of several integrations. Relying parties also need control: some apps require LoA high only, some want to skip the chooser.\n\n## Proposed solution\n- Login page renders one tab/button per enabled method, remembering the last choice in a short-lived, first-party, non-identifying cookie (opt-in via `EIDBRIDGE_REMEMBER_METHOD=true`).\n- Client control:\n  - `acr_values` (e.g. `urn:eidbridge:loa:high`) filters methods by LoA.\n  - `login_hint=method:smartid` preselects and skips the chooser.\n  - Per-client `allowed_methods` in config.\n- ID token: `amr` (e.g. `[\"smartid\"]`), `acr` per actual method LoA.\n- Discovery document advertises `acr_values_supported`.\n\n## Acceptance criteria\n- [ ] Tests: `acr_values` filtering, `login_hint` preselect, per-client restriction, `amr` in token\n- [ ] Single enabled method still skips the chooser\n- [ ] Accessible keyboard navigation across method choices\n\n## Out of scope\n- Step-up authentication within an existing IdP session\n\n## Notes\nEffort: ~3 h. Depends on: \"Define a method-neutral authenticator interface for eID backends\". Deferred until a second method exists (Mobile-ID or Web eID); with one method this is dead code.",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/20",
+      "created_at": "2026-11-17T14:55:19Z",
+      "updated_at": "2026-11-17T14:55:19Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 21,
+      "title": "Add ID-card login via Web eID token validation in Go",
+      "body": "## Summary\nImplement `internal/webeid`: ID-card authentication using the Web eID browser extension protocol, including a Go library for validating Web eID authentication tokens (challenge nonce, signature, certificate chain, revocation).\n\n## Motivation\nEstonian ID-cards (and other smart-card eIDs supported by Web eID) remain a high-assurance method for many users and public-sector services. There is no maintained Go implementation of Web eID token validation, so Go services cannot accept ID-card login without a Java or .NET sidecar.\n\n## Proposed solution\n- `pkg/webeid` (public Go package, usable standalone):\n```go\ntype Validator struct {\n    TrustedCAs   *x509.CertPool\n    SiteOrigin   string\n    OCSP         OCSPConfig // AIA or designated responder, timeout, cache\n    AllowedPolicies []asn1.ObjectIdentifier\n}\nfunc (v *Validator) Validate(tok AuthToken, nonce []byte) (*x509.Certificate, error)\n```\n- Nonce endpoint: crypto/rand, single-use, bound to the flow, short TTL.\n- Checks: token format version, origin binding, signature over origin+nonce hash, chain to configured CAs, validity, key usage and certificate policies, OCSP status with nonce, responder cert validation.\n- Login page loads the Web eID JS library (vendored, MIT) to obtain the token.\n- `internal/webeid` adapts the validator to `authn.Method`.\n\n## Acceptance criteria\n- [ ] Test vectors: valid token, wrong origin, replayed nonce, expired cert, revoked cert (mock OCSP), untrusted CA\n- [ ] Fuzz tests on token parsing\n- [ ] Manual login with a test ID-card and the Web eID extension documented\n- [ ] `authntest.Run` passes\n\n## Out of scope\n- Signing with ID-card, trusted list (TSL) parsing for all EU CAs in the first iteration\n\n## Notes\nEffort: ~80-100 h (spec stack, OCSP and trust-chain handling). Deferred: exceeds the initial scope by far; unblock when the Smart-ID path is stable and there is a concrete deployment needing ID-card. Depends on: \"Let users choose among multiple enabled eID methods\". Security-critical: request an external review before release.",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/21",
+      "created_at": "2026-11-17T14:55:23Z",
+      "updated_at": "2026-11-17T14:55:23Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 22,
+      "title": "Accept EUDI Wallet presentations via OpenID4VP as a login method",
+      "body": "## Summary\nAdd an `authn.Method` that requests a PID presentation from an EUDI Wallet over OpenID for Verifiable Presentations (OpenID4VP) and maps the verified attributes to the same OIDC claims as the national eID methods.\n\n## Motivation\nEU Digital Identity Wallets are being rolled out, and relying parties will need to accept them next to national schemes. Putting the wallet behind the same OIDC surface means the integrator's IdP and apps do not change when the wallet arrives; users simply see another method.\n\n## Proposed solution\n- `internal/eudi`: verifier role per OpenID4VP (same-device and cross-device QR), presentation definition / DCQL query for PID attributes (given name, family name, birth date, nationality, personal identifier where available).\n- Credential formats: SD-JWT VC first, mdoc (ISO 18013-5) second.\n- Verification: issuer signature against configured trust lists, holder binding (key binding JWT / device auth), nonce and audience, status list revocation.\n- Verifier identity: relying-party access certificate / client_id scheme configured per deployment.\n- Claim mapping table in config; `amr: [\"eudi_pid\"]`.\n- Interop testing against the EU reference wallet and verifier test environments.\n\n## Acceptance criteria\n- [ ] Presentation from the EU reference wallet verified end to end in a test environment\n- [ ] Negative tests: wrong nonce, revoked credential, untrusted issuer, missing key binding\n- [ ] `authntest.Run` passes\n- [ ] Docs state clearly the bridge does not confer any regulatory compliance on the integrator's service\n\n## Out of scope\n- Issuing credentials, wallet-side features, QEAA attestations\n\n## Notes\nEffort: 60+ h and ongoing spec tracking. Deferred: OpenID4VP, HAIP and the ARF are still moving, wallet acceptance obligations for private relying parties are not yet in force, and mainstream IdPs may add native support. Unblock when the reference specs stabilise and a national wallet is available for testing. Depends on: \"Let users choose among multiple enabled eID methods\".",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/22",
+      "created_at": "2026-11-17T14:55:28Z",
+      "updated_at": "2026-11-17T14:55:28Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 23,
+      "title": "Build an EUDI Wallet relying-party conformance test harness",
+      "body": "## Summary\nA test harness (`cmd/eudi-conformance`) that exercises a relying-party verifier implementation against the EUDI Wallet protocol profiles and reports pass/fail per requirement, usable for the bridge's own wallet method and for other verifiers.\n\n## Motivation\nRelying parties preparing for wallet acceptance have no lightweight, self-hostable way to check their verifier against the profiles they must follow. A harness also keeps the bridge's own OpenID4VP method honest as specs change.\n\n## Proposed solution\n- Simulated wallet that produces valid and deliberately malformed presentations (SD-JWT VC, mdoc): wrong nonce, bad key binding, expired/revoked credentials, unexpected disclosures.\n- Test catalog as data (`conformance/cases/*.yaml`) referencing spec sections by version.\n- Runner targets an OpenID4VP verifier endpoint, collects results, emits JUnit XML and a Markdown report.\n- Version matrix: one test catalog per pinned spec version.\n\n## Acceptance criteria\n- [ ] Runs against the bridge's EUDI method in CI and produces a JUnit report\n- [ ] At least the core positive flow plus 10 negative cases implemented\n- [ ] Each case links the spec section and version it checks\n\n## Out of scope\n- Certification claims of any kind; wallet-side conformance\n\n## Notes\nEffort: well over 60 h plus continuous spec tracking. Deferred: a half-finished harness against a moving spec is worse than none. Unblock only after \"Accept EUDI Wallet presentations via OpenID4VP as a login method\" ships and the specs are stable enough to pin.",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/23",
+      "created_at": "2026-11-17T14:55:33Z",
+      "updated_at": "2026-11-17T14:55:33Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 24,
+      "title": "Provide a native Keycloak identity provider SPI for eidbridge",
+      "body": "## Summary\nPackage a Keycloak Identity Provider SPI (Java, separate `keycloak-spi/` module or repo) that preconfigures the bridge as an identity provider with eID-specific mappers and admin UI fields.\n\n## Motivation\nThe generic OIDC provider setup already works in Keycloak without code. A native SPI could still help some operators: one-click setup, built-in claim mappers for country and personal code, first-broker-login flows tuned for eID identity linking, and validation of `acr=demo` tokens.\n\n## Proposed solution\n- `keycloak-spi/` Maven project, Apache-2.0, targeting the current Keycloak LTS-like major.\n- `EidbridgeIdentityProviderFactory` extending the OIDC provider with fixed defaults (PKCE, `acr` checks) and an \"eID\" admin page.\n- Mappers: country, LoA, personal code (opt-in).\n- Testcontainers-based integration test with the bridge fixture stack.\n- Published as a release jar; compatibility table per Keycloak version.\n\n## Acceptance criteria\n- [ ] Jar deploys into Keycloak `providers/`; provider appears in admin console\n- [ ] Testcontainers e2e login passes for the two latest Keycloak majors\n- [ ] Docs explain when the plain OIDC guide is enough\n\n## Out of scope\n- SPIs for other IdPs\n\n## Notes\nEffort: 20+ h (Java/Keycloak ramp) plus per-release upkeep. Deferred: the config-only guide covers the use case and previous SPI-based eID plugins went unmaintained after Keycloak API changes. Unblock if at least three users request it with a concrete gap the OIDC guide cannot close. Depends on: \"Add config-only IdP integration guides with e2e tests per IdP\".",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/24",
+      "created_at": "2026-11-17T14:55:38Z",
+      "updated_at": "2026-11-17T14:55:38Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 25,
+      "title": "Publish a minimal Python client for Smart-ID RP API v3",
+      "body": "## Summary\nA small Python package (`python/` in this repo) implementing Smart-ID RP API v3 session create, poll and verify, for apps that want to call the API directly instead of going through the bridge. Same pattern could later extend to other languages lacking a client.\n\n## Motivation\nOfficial clients exist for Java and PHP; Python has no maintained client at all. Some teams cannot run an extra service and want a library. A Python client also gives the project an independent second implementation to cross-check the Go verifier against shared fixtures.\n\n## Proposed solution\n- Package name without scheme trademarks in the distribution name (e.g. `eidbridge-rp`), module `eidbridge_rp`.\n- API:\n```python\nclient = RPClient(base_url, rp_uuid, rp_name, trust_anchors, pins)\nsession = client.start_device_link(challenge=..., cert_level=\"QUALIFIED\")\nlink = session.device_link(now)\nstatus = client.poll(session.id)\nidentity = client.verify(status, challenge)\n```\n- Deps: `httpx`, `cryptography` only. Typed, `py.typed`.\n- Shares `internal/smartid/testdata/` fixtures; CI runs both Go and Python against them.\n- Same log-redaction and no-telemetry rules as the bridge.\n\n## Acceptance criteria\n- [ ] `pip install` from built wheel; `python -c \"import eidbridge_rp\"` works\n- [ ] pytest against shared fixtures incl. negative verification cases\n- [ ] Release workflow publishes to PyPI via trusted publishing\n\n## Out of scope\n- Django/Flask integration packages (the OIDC examples cover frameworks)\n- Node client (a maintained third-party one exists; link it from README)\n\n## Notes\nEffort: ~4-6 h initial, ongoing upkeep per API change. Deferred: two codebases double protocol maintenance; the OIDC path already serves Python apps. Unblock when at least two users ask for a direct library. Depends on: \"Implement Smart-ID RP API v3 client with signature verification\".",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/25",
+      "created_at": "2026-11-17T14:55:43Z",
+      "updated_at": "2026-11-17T14:55:43Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 26,
+      "title": "Add an eidbridge doctor command for upstream connectivity checks",
+      "body": "## Summary\n`eidbridge doctor` checks the configured upstream eID endpoints from the operator's own network: DNS, TLS handshake and negotiated cipher, pin match, server certificate expiry, CA bundle validity, API reachability and latency. Optional `/readyz` integration.\n\n## Motivation\nWhen logins start failing after an upstream TLS policy change or certificate renewal, operators need a quick, local diagnosis instead of reading stack traces. The same checks can warn days ahead about expiring pins or CA certificates.\n\n## Proposed solution\n```\n$ eidbridge doctor\nsmartid  demo  sid.demo.sk.ee  tls1.3 TLS_AES_128_GCM_SHA256  pin OK  cert expires in 212d  rtt 41ms  OK\ntrust    smartid CA bundle: 3 certs, earliest expiry 2029-01-02                                       OK\n```\n- Exit code non-zero on any failure; `--json` output.\n- `EIDBRIDGE_READYZ_UPSTREAM=true` makes `/readyz` include a cached (5 min) handshake result.\n- Warns when a pinned cert expires within 30 days.\n- Optional Prometheus gauge for cert expiry days (pull-only, opt-in, no personal data).\n\n## Acceptance criteria\n- [ ] Tests with `httptest` TLS servers for pin mismatch, expiring cert, unreachable host\n- [ ] `--json` schema documented\n- [ ] No outbound calls beyond configured endpoints\n\n## Out of scope\n- A hosted monitoring service or status page\n\n## Notes\nEffort: ~4 h. Deferred: no operator has asked yet; the pin-mismatch startup error and nightly CI check cover the basics. Unblock on the first user report of an upstream-change outage that the existing error messages did not explain. Depends on: \"Pin RP API TLS certificates and make trust anchors configurable\".",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/26",
+      "created_at": "2026-11-17T14:55:47Z",
+      "updated_at": "2026-11-17T14:55:47Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 27,
+      "title": "Ship a mock RP API server and test identities for offline testing",
+      "body": "## Summary\n`cmd/eidmock`: a local mock of the Smart-ID (and later Mobile-ID) RP API that completes, refuses or times out sessions on command, signs responses with a generated test CA, and ships a set of synthetic test identities.\n\n## Motivation\nIntegrators want deterministic CI for their login flows without a phone, demo-app account or network access to the demo environment. The bridge's own e2e tests already need a fixture upstream; promoting it to a documented tool helps every downstream project test failure paths (user refused, timeout, wrong verification code) that are hard to trigger by hand.\n\n## Proposed solution\n- Implements the subset of RP API v3 endpoints the bridge uses; responses signed with a test CA generated at start (`--ca-out` writes the trust bundle).\n- Control API: `POST /_mock/sessions/{id}/complete|refuse|timeout`, or scripted scenarios via `--scenario scenarios.yaml` keyed by test identity.\n- Synthetic identities with valid-checksum personal codes in a reserved fake range, clearly marked as test data.\n- Container image `ghcr.io/tomkabel/eidbridge-mock`.\n- Bridge flag `EIDBRIDGE_SMARTID_ENV=mock` trusts only the mock CA and forces demo-guard behaviour.\n\n## Acceptance criteria\n- [ ] Bridge e2e and IdP e2e suites run against the mock in CI with no external network\n- [ ] Each scenario (complete, refuse, timeout, wrong VC) covered by a test\n- [ ] Mock refuses to start bound to a non-loopback address unless `--allow-remote`\n\n## Out of scope\n- Simulating real identities or real CA certificates\n\n## Notes\nEffort: ~6 h. Deferred: the initial e2e work uses recorded fixtures; promote to a standalone tool when external users ask for offline testing. Depends on: \"Implement Smart-ID RP API v3 client with signature verification\". Implement from the published spec only.",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/27",
+      "created_at": "2026-11-17T14:55:52Z",
+      "updated_at": "2026-11-17T14:55:52Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 28,
+      "title": "Support document signing sessions alongside authentication",
+      "body": "## Summary\nExtend the bridge with an API for creating signing sessions (Smart-ID, later Mobile-ID and ID-card) and returning signatures that integrators can embed into ASiC-E/XAdES or PAdES containers.\n\n## Motivation\nMany relying parties that authenticate with Baltic eID also need users to sign contracts or applications. Having one self-hosted component for both avoids a second integration with different configuration and trust settings.\n\n## Proposed solution\n- New authenticated API (client credentials, separate from OIDC login):\n```\nPOST /api/v1/sign        {method, user_ref, digest_alg, digest}\nGET  /api/v1/sign/{id}   -> {state, signature, signer_cert}\n```\n- Bridge signs nothing itself; it relays the digest and verifies the returned signature against the signer certificate.\n- Container building left to existing libraries (e.g. DigiDoc libraries), documented in `docs/signing.md` with an example.\n- Same redaction, retention-0 and demo-guard rules.\n\n## Acceptance criteria\n- [ ] Fixture tests for signing session create/poll/verify\n- [ ] Example produces a valid ASiC-E container verified by an independent validator\n- [ ] API requires client authentication; unauthenticated requests rejected\n\n## Out of scope\n- Qualified signature creation devices, timestamping, long-term validation, any claim of qualified-signature status\n\n## Notes\nEffort: 40+ h including container example and validation. Deferred: legally heavier than authentication, and authentication-only keeps scope and liability small. Unblock after v1 authentication is stable and a deployment needs signing. Depends on: \"Implement Smart-ID RP API v3 client with signature verification\".",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/28",
+      "created_at": "2026-11-17T14:55:57Z",
+      "updated_at": "2026-11-17T14:55:57Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 29,
+      "title": "Support legacy Smart-ID RP API v2 for existing relying parties",
+      "body": "## Summary\nAdd an RP API v2 backend (notification flow by identity code, verification code display) behind the same `authn.Method` interface, selectable with `EIDBRIDGE_SMARTID_API=v2`.\n\n## Motivation\nSome relying parties have existing agreements and configurations tied to the older API generation and cannot migrate immediately. Supporting v2 would let them adopt the bridge first and switch API versions later with a config change.\n\n## Proposed solution\n- `internal/smartid/v2` with its own fixtures; shares verification helpers where the signature scheme matches.\n- Login page uses the identity-code form (no device-link in v2).\n- Startup warning that v2 is legacy and v3 is recommended.\n\n## Acceptance criteria\n- [ ] Fixture tests for v2 create/poll/verify incl. negative cases\n- [ ] `authntest.Run` passes for v2\n- [ ] Docs explain migration v2 to v3\n\n## Out of scope\n- RP API v1\n\n## Notes\nEffort: ~6 h plus doubled protocol maintenance. Deferred: v3 is current and building for legacy versions doubles upkeep for a shrinking user base. Unblock only if a concrete deployment cannot use v3. Depends on: \"Define a method-neutral authenticator interface for eID backends\".",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/29",
+      "created_at": "2026-11-17T14:56:02Z",
+      "updated_at": "2026-11-17T14:56:02Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    },
+    {
+      "number": 30,
+      "title": "Document or ship a WordPress login integration via the bridge",
+      "body": "## Summary\nEnable WordPress sites to offer eID login through the bridge, preferably by documenting configuration of an existing maintained OIDC login plugin, and only if that proves insufficient, shipping a thin plugin.\n\n## Motivation\nSmall organisations, municipalities and NGOs often run WordPress and have no IdP. Earlier eID WordPress plugins were abandoned and never supported Smart-ID. Because the bridge speaks OIDC, a generic OIDC plugin should be enough.\n\n## Proposed solution\n1. `docs/apps/wordpress.md`: configure a maintained OpenID Connect client plugin against the bridge; claim mapping to WP user fields; user matching by `sub`; rejecting `acr=demo`.\n2. `examples/wordpress/docker-compose.yml` (WordPress + DB + bridge mock) with a scripted login test.\n3. Only if needed: a minimal plugin adding defaults and an \"eID login\" button; GPL-compatible licence.\n\n## Acceptance criteria\n- [ ] Guide followed on a fresh WordPress container produces a logged-in user via the mock upstream\n- [ ] Example compose stack has an automated login test\n\n## Out of scope\n- WooCommerce checkout integration, signing\n\n## Notes\nEffort: ~3 h for the guide; 15+ h for a maintained plugin. Deferred: no demonstrated demand yet, and WordPress plugin maintenance is costly. Unblock when WordPress users ask. Depends on: \"Ship a mock RP API server and test identities for offline testing\".",
+      "state": "open",
+      "labels": [
+        "documentation",
+        "deferred"
+      ],
+      "html_url": "https://github.com/tomkabel/eidbridge/issues/30",
+      "created_at": "2026-11-17T14:56:08Z",
+      "updated_at": "2026-11-17T14:56:08Z",
+      "closed_at": null,
+      "comments": 0,
+      "milestone": null,
+      "assignees": []
+    }
+  ]
+}

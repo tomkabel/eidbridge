@@ -1,0 +1,18 @@
+{
+  "verifier": "eidbridge-bmad-coverage-2026-11-18",
+  "verifier_sha256": "eedb2568b67cfe502e109cf11cc0221725bc6bfc74613e12c374a42b760b771e",
+  "verdict": "PASS",
+  "scope": "PROXY ONLY: structural/source preservation, not semantic or implementation proof",
+  "counts": {
+    "issues": 30,
+    "opportunities": 9,
+    "capabilities": 14,
+    "milestones": 15,
+    "signals": 54,
+    "forecasts": 10,
+    "research_items": 94,
+    "manifest_sources": 1631,
+    "story_headings": 30
+  },
+  "failures": []
+}

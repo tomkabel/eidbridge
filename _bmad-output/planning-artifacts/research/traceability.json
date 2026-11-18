@@ -1,0 +1,2314 @@
+{
+  "created": "2026-11-18",
+  "issues": [
+    {
+      "number": 12,
+      "requirement_id": "FR-012",
+      "story_id": "1.1",
+      "epic_id": "E1",
+      "status": "backlog",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Disclaimer present in README, login page template and container image labels (`org.opencontainers.image.description`)",
+        "`docs/legal.md` and `CONTRIBUTING.md` merged and linked from README",
+        "DCO check enabled on PRs",
+        "CI check that no file under `docs/spec-pins/` contains copied spec text beyond links and version metadata"
+      ],
+      "original_body_sha256": "16581e49b3decfd33415dfe0116be4ce18ad81850ece9837a6de065fc03fde7d",
+      "source_spec": "_issues/skid/12-legal-notices-clean-room.md",
+      "original_notes": "Effort: ~1.5 h. No code dependencies. If a trademark complaint arrives, comply first (rename/rewording), discuss later.",
+      "github_state": "open",
+      "github_labels": [
+        "documentation"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence",
+      "integration_closure_after": [
+        "PACKET-INTEGRATION",
+        "PACKET-RELEASE"
+      ]
+    },
+    {
+      "number": 1,
+      "requirement_id": "FR-001",
+      "story_id": "1.2",
+      "epic_id": "E1",
+      "status": "backlog",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "`go build ./... && go vet ./... && go test ./...` passes locally and in CI on an empty skeleton",
+        "CI fails on unformatted code and on a dependency with a disallowed licence",
+        "Pushing tag `v0.0.1-rc1` produces GitHub Release binaries, `checksums.txt` and a pullable `ghcr.io/tomkabel/eidbridge:v0.0.1-rc1`",
+        "Image size < 20 MB, runs as non-root",
+        "Dependabot opens a PR on a pinned dependency bump",
+        "README shows a CI status badge"
+      ],
+      "original_body_sha256": "9f3c7991f6053e8c45c987fc611f56bd6149f9a8f8ea1946206747734af3cb33",
+      "source_spec": "_issues/skid/01-scaffold-ci-release.md",
+      "original_notes": "Effort: ~4 h. No dependencies. Keep dependencies to stdlib plus a minimal, permissively licensed set; every addition must appear in the `go-licenses` report.",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence",
+      "integration_closure_after": [
+        "PACKET-INTEGRATION",
+        "PACKET-RELEASE"
+      ]
+    },
+    {
+      "number": 9,
+      "requirement_id": "FR-009",
+      "story_id": "1.3",
+      "epic_id": "E1",
+      "status": "backlog",
+      "depends_on": [
+        "1.2"
+      ],
+      "acceptance_criteria": [
+        "Table-driven tests for each identifier format and for PEM/base64 masking",
+        "Integration test: full fixture login at DEBUG level; captured log output contains no fixture personal code, cert or signature",
+        "CI step `grep -rn \"personalCode\\|IDCode\" internal/ | grep -v logx` reviewed: no raw logging calls",
+        "`docs/security.md` documents what is logged at each level"
+      ],
+      "original_body_sha256": "fc4ca4402a1a3625e748f4ec36c290eb251181cc1e0fad5dd81ad7566e2ecef2",
+      "source_spec": "_issues/skid/09-pii-log-redaction.md",
+      "original_notes": "Effort: ~2 h. Depends on: \"Scaffold Go module with CI, licence checks and release automation\". Regex masking is a backstop; the primary control is not passing identity data to the logger at all.",
+      "github_state": "open",
+      "github_labels": [
+        "security"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence",
+      "integration_closure_after": [
+        "PACKET-INTEGRATION",
+        "PACKET-RELEASE"
+      ]
+    },
+    {
+      "number": 2,
+      "requirement_id": "FR-002",
+      "story_id": "1.4",
+      "epic_id": "E1",
+      "status": "backlog",
+      "depends_on": [
+        "1.2",
+        "1.3",
+        "1.1"
+      ],
+      "acceptance_criteria": [
+        "`go run ./cmd/sidspike` exits 0 with `AUTHENTICATED` and a verified certificate for a demo account, or the ADR documents which fallback was taken and why",
+        "Captured request/response pairs (with demo data only) saved as test fixtures under `internal/smartid/testdata/`",
+        "ADR states whether the demo env offers a scriptable test endpoint usable in CI"
+      ],
+      "original_body_sha256": "5872a1837503fd5fc7b0330fd607ed0abe9211578c081e3870b2c8181dfba9bd",
+      "source_spec": "_issues/skid/02-smartid-device-link-spike.md",
+      "original_notes": "Effort: 6 h hard cap. Depends on: \"Scaffold Go module with CI, licence checks and release automation\". Implement clean-room from the published protocol spec; do not copy from LGPL-licensed demo applications or unlicensed documentation repositories. If demo account registration requires a contract or payment, stop and write a post-mortem instead.",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 3,
+      "requirement_id": "FR-003",
+      "story_id": "2.1",
+      "epic_id": "E2",
+      "status": "backlog",
+      "depends_on": [
+        "1.4"
+      ],
+      "acceptance_criteria": [
+        "`go test ./internal/smartid/` passes using recorded fixtures (from the spike) with no network",
+        "Negative tests: tampered signature, wrong challenge, expired cert, untrusted chain, lower cert level — all rejected",
+        "Live test against the demo env runs only when `EIDBRIDGE_LIVE=1`",
+        "Fuzz test for response JSON parsing (`go test -fuzz`)",
+        "Coverage of `Verify` >= 90%"
+      ],
+      "original_body_sha256": "586b0557bd92b86ac6ccdff88f714314208336feac909f8cf6b9cb72011b2c1f",
+      "source_spec": "_issues/skid/03-smartid-rp-v3-client.md",
+      "original_notes": "Effort: ~4 h. Depends on: \"Spike Smart-ID v3 device-link login against the public demo env\". Pin the implemented protocol version in `docs/spec-pins/`. Official MIT-licensed clients may be consulted and reused with the licence notice kept in `NOTICE`.",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 8,
+      "requirement_id": "FR-008",
+      "story_id": "2.2",
+      "epic_id": "E2",
+      "status": "backlog",
+      "depends_on": [
+        "2.1"
+      ],
+      "acceptance_criteria": [
+        "Unit test with a local `httptest.NewTLSServer`: matching pin succeeds, mismatching pin fails",
+        "Pin rotation: two pins configured, either accepted",
+        "Production mode refuses to start with an empty pin set unless `EIDBRIDGE_SMARTID_TLS_PINS=disabled` is set explicitly, which logs a warning",
+        "`docs/security.md` documents how to update pins and CA bundles after a certificate renewal"
+      ],
+      "original_body_sha256": "f7779e4aee424c5c31022888525ea57415d601754b1b17d03a599473bef33222",
+      "source_spec": "_issues/skid/08-tls-pinning-trust-anchors.md",
+      "original_notes": "Effort: ~2 h. Depends on: \"Implement Smart-ID RP API v3 client with signature verification\". Risk: pins in a release go stale on server cert renewal; the maintenance runbook issue covers tracking renewals and shipping patch releases.",
+      "github_state": "open",
+      "github_labels": [
+        "security"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence",
+      "integration_closure_after": [
+        "PACKET-INTEGRATION",
+        "PACKET-RELEASE"
+      ]
+    },
+    {
+      "number": 5,
+      "requirement_id": "FR-005",
+      "story_id": "2.3",
+      "epic_id": "E2",
+      "status": "backlog",
+      "depends_on": [
+        "2.1"
+      ],
+      "acceptance_criteria": [
+        "Smart-ID client wrapped as `authn.Method`; OIDC package imports only `internal/authn`",
+        "`authntest.Run(t, method)` contract suite passes for Smart-ID with fixtures",
+        "A fake method in tests proves a second backend needs no OIDC changes",
+        "Interface documented in `docs/architecture.md` with a versioning note (internal, may change before v1.0)"
+      ],
+      "original_body_sha256": "1777a0e8893f0393d2b930a005104a3bd576c020612d283300064e6185085a17",
+      "source_spec": "_issues/skid/05-authenticator-interface.md",
+      "original_notes": "Effort: ~2 h. Depends on: \"Implement Smart-ID RP API v3 client with signature verification\". Keep it internal until at least two real methods exist; the second implementation will reveal what the interface got wrong.",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence",
+      "integration_closure_after": [
+        "PACKET-INTEGRATION",
+        "PACKET-RELEASE"
+      ]
+    },
+    {
+      "number": 6,
+      "requirement_id": "FR-006",
+      "story_id": "2.4",
+      "epic_id": "E2",
+      "status": "backlog",
+      "depends_on": [
+        "2.3"
+      ],
+      "acceptance_criteria": [
+        "`go test ./internal/oidc/` covers discovery, code exchange, PKCE failure, code replay, wrong redirect URI, expired code",
+        "ID token validates with `github.com/coreos/go-oidc` in a test client",
+        "`curl /.well-known/openid-configuration | jq` returns a valid discovery document",
+        "OpenID Foundation conformance suite \"Basic OP\" plan run locally; results recorded in `docs/conformance.md`"
+      ],
+      "original_body_sha256": "3789b987d98855f71089971d6d9cf5c84404a289a8973bbbe8307e28c055b031",
+      "source_spec": "_issues/skid/06-oidc-provider.md",
+      "original_notes": "Effort: ~3-4 h. Depends on: \"Define a method-neutral authenticator interface for eID backends\". Prefer a small, audited OIDC library over hand-rolled JWT code if one fits without pulling in a large dependency tree.",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence",
+      "integration_closure_after": [
+        "PACKET-INTEGRATION",
+        "PACKET-RELEASE"
+      ]
+    },
+    {
+      "number": 7,
+      "requirement_id": "FR-007",
+      "story_id": "2.5",
+      "epic_id": "E2",
+      "status": "backlog",
+      "depends_on": [
+        "2.4",
+        "2.1",
+        "2.2"
+      ],
+      "acceptance_criteria": [
+        "`go run ./cmd/eidbridge --demo` serves a QR on `http://localhost:8080` and completes a login with the demo app",
+        "Startup fails with a clear error if production mode lacks RP UUID/name or signing key",
+        "Page passes axe-core accessibility checks with no serious violations",
+        "`docs/configuration.md` generated or checked in CI against the config struct"
+      ],
+      "original_body_sha256": "b9d0e42753f64b00ccf6f804571794790779d792352775dc43121913a11641b5",
+      "source_spec": "_issues/skid/07-binary-login-page-config.md",
+      "original_notes": "Effort: ~3 h. Depends on: \"Expose eID logins as a standard OpenID Connect provider\", \"Implement Smart-ID RP API v3 client with signature verification\".",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 10,
+      "requirement_id": "FR-010",
+      "story_id": "2.6",
+      "epic_id": "E2",
+      "status": "backlog",
+      "depends_on": [
+        "2.5"
+      ],
+      "acceptance_criteria": [
+        "Test: after a completed fixture login and after TTL expiry, the store holds zero entries for that flow",
+        "Network test in CI (container with egress blocked except a mock RP API) completes a login; no other egress attempted",
+        "`SECURITY.md` and `docs/security.md` present and linked from README",
+        "GitHub private vulnerability reporting enabled"
+      ],
+      "original_body_sha256": "7fc5a5ae343c824c5aa506473f24f6d0acde25d8985c4bf338c068b7cfca9418",
+      "source_spec": "_issues/skid/10-no-telemetry-zero-retention.md",
+      "original_notes": "Effort: ~2 h. Depends on: \"Wire eidbridge binary with login page, QR and Web2App flows\". Prometheus metrics, if added later, must be pull-only, opt-in and contain counts only.",
+      "github_state": "open",
+      "github_labels": [
+        "security"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 11,
+      "requirement_id": "FR-011",
+      "story_id": "2.7",
+      "epic_id": "E2",
+      "status": "backlog",
+      "depends_on": [
+        "2.5"
+      ],
+      "acceptance_criteria": [
+        "Unit tests for each detection rule",
+        "`EIDBRIDGE_MODE=production ./eidbridge --demo` exits non-zero with a clear message",
+        "Demo banner visible on the login page (template test)",
+        "ID tokens issued in demo mode contain `acr=demo`",
+        "`docs/keycloak.md` shows how to reject `acr=demo` on production realms"
+      ],
+      "original_body_sha256": "99ad970121fb96864023ccba38d934ddf2b94954e1cd29bbde783bf9ea2e69dc",
+      "source_spec": "_issues/skid/11-demo-env-guard.md",
+      "original_notes": "Effort: ~1 h. Depends on: \"Wire eidbridge binary with login page, QR and Web2App flows\". Known demo hosts live in one table in `internal/config/demo.go`; update it when endpoints change.",
+      "github_state": "open",
+      "github_labels": [
+        "security"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 4,
+      "requirement_id": "FR-004",
+      "story_id": "2.8",
+      "epic_id": "E2",
+      "status": "backlog",
+      "depends_on": [
+        "2.1",
+        "1.3",
+        "2.5"
+      ],
+      "acceptance_criteria": [
+        "Fixture-based tests for notification session create/poll/verify",
+        "Test that a response for a different identity than requested is rejected",
+        "Invalid identity codes are rejected locally without an outbound request",
+        "Entered identity codes are never logged unredacted (covered by the log redaction tests)",
+        "Live demo test behind `EIDBRIDGE_LIVE=1`"
+      ],
+      "original_body_sha256": "a5e1d0c200648f71e25b0d04cd5f0fcf4f1a40d9e85461f66d5e1c15656566c2",
+      "source_spec": "_issues/skid/04-smartid-notification-flow.md",
+      "original_notes": "Effort: ~3 h. Depends on: \"Implement Smart-ID RP API v3 client with signature verification\", \"Redact personal identity codes at the log sink\". Notification flow accepts a user-typed identifier, so rate limiting per client IP on the login form is required to avoid push spam to arbitrary users.",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 13,
+      "requirement_id": "FR-013",
+      "story_id": "3.1",
+      "epic_id": "E3",
+      "status": "backlog",
+      "depends_on": [
+        "2.4",
+        "1.3",
+        "2.6"
+      ],
+      "acceptance_criteria": [
+        "`docs/data-flow.md` merged and linked from README and `docs/security.md`",
+        "Every claim emitted by `internal/oidc` appears in the table (CI test compares claim names in code against the doc table)",
+        "Mermaid diagram renders on GitHub"
+      ],
+      "original_body_sha256": "7344f0e7f81ab470bbbde5f5e7ccf43a2feb1694d817920c8e35de37ea71c0d5",
+      "source_spec": "_issues/skid/13-data-flow-doc.md",
+      "original_notes": "Effort: ~1.5 h. Depends on: \"Expose eID logins as a standard OpenID Connect provider\", \"Redact personal identity codes at the log sink\", \"Enforce no telemetry and zero data retention by default\". Update the table whenever a method is added.",
+      "github_state": "open",
+      "github_labels": [
+        "documentation"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 14,
+      "requirement_id": "FR-014",
+      "story_id": "3.2",
+      "epic_id": "E3",
+      "status": "backlog",
+      "depends_on": [
+        "2.5",
+        "2.7",
+        "1.2",
+        "2.6"
+      ],
+      "acceptance_criteria": [
+        "From a clean clone, `docker compose up` reaches a QR page with no extra steps",
+        "Manual check: demo-app scan completes and claims are shown, in under 5 minutes wall time",
+        "`scripts/e2e-demo.sh` runs in CI against the fixture upstream and passes",
+        "Demo banner from the demo-guard issue visible"
+      ],
+      "original_body_sha256": "056454f9ecf2543b66873ce9d2aeb3751ede76604559fdea8f0a9309f4380564",
+      "source_spec": "_issues/skid/14-compose-quickstart.md",
+      "original_notes": "Effort: ~3 h. Depends on: \"Wire eidbridge binary with login page, QR and Web2App flows\", \"Warn on demo environment use and block demo credentials in prod\", \"Scaffold Go module with CI, licence checks and release automation\". The live demo-app check stays manual unless the demo environment offers a scriptable test endpoint (see spike ADR).",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 16,
+      "requirement_id": "FR-016",
+      "story_id": "3.3",
+      "epic_id": "E3",
+      "status": "backlog",
+      "depends_on": [
+        "2.5"
+      ],
+      "acceptance_criteria": [
+        "Test: every key in `en.json` exists in all other catalogs (CI fails on missing keys)",
+        "`ui_locales=et` renders Estonian page; unknown locale falls back to default",
+        "Interaction display text exceeding protocol limits is rejected at config load",
+        "Native-speaker review noted in PR for each language"
+      ],
+      "original_body_sha256": "448c680c73bf61e96d40e4d57136d1c1c2b7e376153e6cda37d9b9552a5a8a7d",
+      "source_spec": "_issues/skid/16-login-page-i18n.md",
+      "original_notes": "Effort: ~2 h plus translation review. Depends on: \"Wire eidbridge binary with login page, QR and Web2App flows\". README may also get an Estonian translation later; keep the English README authoritative.",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 17,
+      "requirement_id": "FR-017",
+      "story_id": "3.4",
+      "epic_id": "E3",
+      "status": "backlog",
+      "depends_on": [
+        "2.2",
+        "1.2"
+      ],
+      "acceptance_criteria": [
+        "`docs/api-tracking.md` and `CHANGELOG.md` merged",
+        "Nightly workflow runs and auto-opens an issue on a simulated pin mismatch (tested with a bogus pin on a branch)",
+        "Release checklist template in `.github/ISSUE_TEMPLATE/upstream-change.md`"
+      ],
+      "original_body_sha256": "6fa9c78e52470167bb411f68889bfbb0fa35d2e423cad2e16b9dea723832acb4",
+      "source_spec": "_issues/skid/17-protocol-change-tracking.md",
+      "original_notes": "Effort: ~2 h. Depends on: \"Pin RP API TLS certificates and make trust anchors configurable\", \"Scaffold Go module with CI, licence checks and release automation\".",
+      "github_state": "open",
+      "github_labels": [
+        "documentation"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 15,
+      "requirement_id": "FR-015",
+      "story_id": "3.5",
+      "epic_id": "E3",
+      "status": "backlog",
+      "depends_on": [
+        "2.4",
+        "3.2"
+      ],
+      "acceptance_criteria": [
+        "Following `docs/idp/keycloak.md` on a fresh Keycloak container results in a logged-in user via the demo environment (verified manually once, screenshot in doc)",
+        "`go test -tags e2e ./test/e2e/...` passes for all four IdPs in CI with fixture upstream",
+        "Each guide lists the IdP version tested and the date",
+        "README links each guide"
+      ],
+      "original_body_sha256": "513ee3f4869794742fa3821f7a1c0441208a8e3a63ca310cf76e603b6efae424",
+      "source_spec": "_issues/skid/15-idp-integration-kits.md",
+      "original_notes": "Effort: ~6 h (Keycloak first at ~3 h, others ~1 h each). Depends on: \"Expose eID logins as a standard OpenID Connect provider\", \"Ship a zero-config docker compose demo with a sample relying party\". Risk: IdP UI churn; prefer API/import-based config in tests so docs drift is caught.",
+      "github_state": "open",
+      "github_labels": [
+        "documentation",
+        "enhancement"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 18,
+      "requirement_id": "FR-018",
+      "story_id": "3.6",
+      "epic_id": "E3",
+      "status": "backlog",
+      "depends_on": [
+        "3.2"
+      ],
+      "acceptance_criteria": [
+        "`pytest examples/` passes locally and in CI",
+        "Neither example contains eID-protocol code; only OIDC client configuration",
+        "Examples reject `acr=demo` when `PRODUCTION=1`"
+      ],
+      "original_body_sha256": "4c09f9ef897d5bbb86234d0d4016c8d6590f903623932f4c984c2426214b52c3",
+      "source_spec": "_issues/skid/18-framework-oidc-examples.md",
+      "original_notes": "Effort: ~2 h. Depends on: \"Ship a zero-config docker compose demo with a sample relying party\".",
+      "github_state": "open",
+      "github_labels": [
+        "documentation"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 20,
+      "requirement_id": "FR-020",
+      "story_id": "4.1",
+      "epic_id": "E4",
+      "status": "deferred",
+      "depends_on": [
+        "2.3",
+        "2.5"
+      ],
+      "acceptance_criteria": [
+        "Tests: `acr_values` filtering, `login_hint` preselect, per-client restriction, `amr` in token",
+        "Single enabled method still skips the chooser",
+        "Accessible keyboard navigation across method choices"
+      ],
+      "original_body_sha256": "42e5b1eff34a9202adde478b46f77abf2264bdc2d39539d4424fce18cc26f505",
+      "source_spec": "_issues/skid/20-method-chooser.md",
+      "original_notes": "Effort: ~3 h. Depends on: \"Define a method-neutral authenticator interface for eID backends\". Deferred until a second method exists (Mobile-ID or Web eID); with one method this is dead code.",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 19,
+      "requirement_id": "FR-019",
+      "story_id": "4.2",
+      "epic_id": "E4",
+      "status": "deferred",
+      "depends_on": [
+        "2.3",
+        "4.1"
+      ],
+      "acceptance_criteria": [
+        "`go test ./internal/mobileid/` with recorded fixtures, including tampered signature and identity mismatch cases",
+        "`authntest.Run` passes",
+        "`EIDBRIDGE_METHODS=smartid,mobileid` serves both on one login page",
+        "Data-flow doc updated with phone number field"
+      ],
+      "original_body_sha256": "045343eb61eeae74d20806a2709e51224f459093d1ee116d8346f8158b6f68e1",
+      "source_spec": "_issues/skid/19-mobile-id.md",
+      "original_notes": "Effort: ~8-10 h. Depends on: \"Define a method-neutral authenticator interface for eID backends\", \"Let users choose among multiple enabled eID methods\". Deferred: v1 is one method done well; start once the Smart-ID path is stable and at least a few deployments ask for it. Note the demo environment rotates its keys/certs occasionally; covered by the maintenance runbook.",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 21,
+      "requirement_id": "FR-021",
+      "story_id": "5.1",
+      "epic_id": "E5",
+      "status": "deferred",
+      "depends_on": [
+        "4.1"
+      ],
+      "acceptance_criteria": [
+        "Test vectors: valid token, wrong origin, replayed nonce, expired cert, revoked cert (mock OCSP), untrusted CA",
+        "Fuzz tests on token parsing",
+        "Manual login with a test ID-card and the Web eID extension documented",
+        "`authntest.Run` passes"
+      ],
+      "original_body_sha256": "cdfc7e126ee94cdcf6539c0bdd25f00b14c88078ac13be3f88b8a658f5e18f94",
+      "source_spec": "_issues/skid/21-web-eid-idcard.md",
+      "original_notes": "Effort: ~80-100 h (spec stack, OCSP and trust-chain handling). Deferred: exceeds the initial scope by far; unblock when the Smart-ID path is stable and there is a concrete deployment needing ID-card. Depends on: \"Let users choose among multiple enabled eID methods\". Security-critical: request an external review before release.",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 22,
+      "requirement_id": "FR-022",
+      "story_id": "6.1",
+      "epic_id": "E6",
+      "status": "deferred",
+      "depends_on": [
+        "4.1"
+      ],
+      "acceptance_criteria": [
+        "Presentation from the EU reference wallet verified end to end in a test environment",
+        "Negative tests: wrong nonce, revoked credential, untrusted issuer, missing key binding",
+        "`authntest.Run` passes",
+        "Docs state clearly the bridge does not confer any regulatory compliance on the integrator's service"
+      ],
+      "original_body_sha256": "61ca8691afd1063d5a6d118edc3ad599f1a5bc15757df17612333d629f220b54",
+      "source_spec": "_issues/skid/22-eudi-wallet-oid4vp.md",
+      "original_notes": "Effort: 60+ h and ongoing spec tracking. Deferred: OpenID4VP, HAIP and the ARF are still moving, wallet acceptance obligations for private relying parties are not yet in force, and mainstream IdPs may add native support. Unblock when the reference specs stabilise and a national wallet is available for testing. Depends on: \"Let users choose among multiple enabled eID methods\".",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 23,
+      "requirement_id": "FR-023",
+      "story_id": "6.2",
+      "epic_id": "E6",
+      "status": "deferred",
+      "depends_on": [
+        "6.1"
+      ],
+      "acceptance_criteria": [
+        "Runs against the bridge's EUDI method in CI and produces a JUnit report",
+        "At least the core positive flow plus 10 negative cases implemented",
+        "Each case links the spec section and version it checks"
+      ],
+      "original_body_sha256": "63362fcad049592420096a031ff5587dd88ea1f4c3fc012fde5522dab77745a3",
+      "source_spec": "_issues/skid/23-eudi-conformance-harness.md",
+      "original_notes": "Effort: well over 60 h plus continuous spec tracking. Deferred: a half-finished harness against a moving spec is worse than none. Unblock only after \"Accept EUDI Wallet presentations via OpenID4VP as a login method\" ships and the specs are stable enough to pin.",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 24,
+      "requirement_id": "FR-024",
+      "story_id": "7.1",
+      "epic_id": "E7",
+      "status": "deferred",
+      "depends_on": [
+        "3.5"
+      ],
+      "acceptance_criteria": [
+        "Jar deploys into Keycloak `providers/`; provider appears in admin console",
+        "Testcontainers e2e login passes for the two latest Keycloak majors",
+        "Docs explain when the plain OIDC guide is enough"
+      ],
+      "original_body_sha256": "cd692427d93cf9cf1a6afd4fbcca895b20ec047188f3c45a7225ef5fb59ae983",
+      "source_spec": "_issues/skid/24-keycloak-spi.md",
+      "original_notes": "Effort: 20+ h (Java/Keycloak ramp) plus per-release upkeep. Deferred: the config-only guide covers the use case and previous SPI-based eID plugins went unmaintained after Keycloak API changes. Unblock if at least three users request it with a concrete gap the OIDC guide cannot close. Depends on: \"Add config-only IdP integration guides with e2e tests per IdP\".",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 25,
+      "requirement_id": "FR-025",
+      "story_id": "7.2",
+      "epic_id": "E7",
+      "status": "deferred",
+      "depends_on": [
+        "2.1"
+      ],
+      "acceptance_criteria": [
+        "`pip install` from built wheel; `python -c \"import eidbridge_rp\"` works",
+        "pytest against shared fixtures incl. negative verification cases",
+        "Release workflow publishes to PyPI via trusted publishing"
+      ],
+      "original_body_sha256": "b9da51884f638e2bc91412a11d93501049d82482e12ec405993b72adbd2fffce",
+      "source_spec": "_issues/skid/25-python-rp-client.md",
+      "original_notes": "Effort: ~4-6 h initial, ongoing upkeep per API change. Deferred: two codebases double protocol maintenance; the OIDC path already serves Python apps. Unblock when at least two users ask for a direct library. Depends on: \"Implement Smart-ID RP API v3 client with signature verification\".",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 26,
+      "requirement_id": "FR-026",
+      "story_id": "7.3",
+      "epic_id": "E7",
+      "status": "deferred",
+      "depends_on": [
+        "2.2"
+      ],
+      "acceptance_criteria": [
+        "Tests with `httptest` TLS servers for pin mismatch, expiring cert, unreachable host",
+        "`--json` schema documented",
+        "No outbound calls beyond configured endpoints"
+      ],
+      "original_body_sha256": "a840be6bdfaaac35084b1ed8d482a4daaf4ccdfe7514416d2804eb288241cacd",
+      "source_spec": "_issues/skid/26-doctor-health-check.md",
+      "original_notes": "Effort: ~4 h. Deferred: no operator has asked yet; the pin-mismatch startup error and nightly CI check cover the basics. Unblock on the first user report of an upstream-change outage that the existing error messages did not explain. Depends on: \"Pin RP API TLS certificates and make trust anchors configurable\".",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 27,
+      "requirement_id": "FR-027",
+      "story_id": "7.4",
+      "epic_id": "E7",
+      "status": "deferred",
+      "depends_on": [
+        "2.1"
+      ],
+      "acceptance_criteria": [
+        "Bridge e2e and IdP e2e suites run against the mock in CI with no external network",
+        "Each scenario (complete, refuse, timeout, wrong VC) covered by a test",
+        "Mock refuses to start bound to a non-loopback address unless `--allow-remote`"
+      ],
+      "original_body_sha256": "f84dc531a09d124adb38527ffa7facf05710e78b061687139ed44b5d7a3f2390",
+      "source_spec": "_issues/skid/27-mock-rp-api-server.md",
+      "original_notes": "Effort: ~6 h. Deferred: the initial e2e work uses recorded fixtures; promote to a standalone tool when external users ask for offline testing. Depends on: \"Implement Smart-ID RP API v3 client with signature verification\". Implement from the published spec only.",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 29,
+      "requirement_id": "FR-029",
+      "story_id": "7.5",
+      "epic_id": "E7",
+      "status": "deferred",
+      "depends_on": [
+        "2.3"
+      ],
+      "acceptance_criteria": [
+        "Fixture tests for v2 create/poll/verify incl. negative cases",
+        "`authntest.Run` passes for v2",
+        "Docs explain migration v2 to v3"
+      ],
+      "original_body_sha256": "6281aea63c28e10416df175652626c02bfbeb7f6999e766e14154dfa9cbccc78",
+      "source_spec": "_issues/skid/29-legacy-rp-api.md",
+      "original_notes": "Effort: ~6 h plus doubled protocol maintenance. Deferred: v3 is current and building for legacy versions doubles upkeep for a shrinking user base. Unblock only if a concrete deployment cannot use v3. Depends on: \"Define a method-neutral authenticator interface for eID backends\".",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 30,
+      "requirement_id": "FR-030",
+      "story_id": "7.6",
+      "epic_id": "E7",
+      "status": "deferred",
+      "depends_on": [
+        "7.4"
+      ],
+      "acceptance_criteria": [
+        "Guide followed on a fresh WordPress container produces a logged-in user via the mock upstream",
+        "Example compose stack has an automated login test"
+      ],
+      "original_body_sha256": "ff556e75296e7237ae6a31a44a2acdeb6362ead81a58ae7be9d03abf73e4d8ef",
+      "source_spec": "_issues/skid/30-wordpress-plugin.md",
+      "original_notes": "Effort: ~3 h for the guide; 15+ h for a maintained plugin. Deferred: no demonstrated demand yet, and WordPress plugin maintenance is costly. Unblock when WordPress users ask. Depends on: \"Ship a mock RP API server and test identities for offline testing\".",
+      "github_state": "open",
+      "github_labels": [
+        "documentation",
+        "deferred"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    },
+    {
+      "number": 28,
+      "requirement_id": "FR-028",
+      "story_id": "8.1",
+      "epic_id": "E8",
+      "status": "deferred",
+      "depends_on": [
+        "2.1"
+      ],
+      "acceptance_criteria": [
+        "Fixture tests for signing session create/poll/verify",
+        "Example produces a valid ASiC-E container verified by an independent validator",
+        "API requires client authentication; unauthenticated requests rejected"
+      ],
+      "original_body_sha256": "3ab14b038195fc334822c9205ddd8d85d5c15ea4e9ac4ff86b8632b02c255704",
+      "source_spec": "_issues/skid/28-signing-sessions.md",
+      "original_notes": "Effort: 40+ h including container example and validation. Deferred: legally heavier than authentication, and authentication-only keeps scope and liability small. Unblock after v1 authentication is stable and a deployment needs signing. Depends on: \"Implement Smart-ID RP API v3 client with signature verification\".",
+      "github_state": "open",
+      "github_labels": [
+        "enhancement",
+        "deferred"
+      ],
+      "depends_on_semantics": "earlier prerequisite packets; full parent closure may wait for integrated regression/release evidence"
+    }
+  ],
+  "opportunities": [
+    {
+      "id": "OPP-04",
+      "name": "Go middleware for Smart-ID RP API v3 device-link flows + tiny OIDC shim",
+      "disposition": "adopt",
+      "artifact": "roadmap.md",
+      "rationale": "Initial Smart-ID/OIDC wedge, FR-001–014.",
+      "original_status": "ranked",
+      "original_priority": "0.031134"
+    },
+    {
+      "id": "OPP-09",
+      "name": "Config-only OIDC integration kits + e2e test fixtures for Keycloak/authentik/Zitadel",
+      "disposition": "adopt",
+      "artifact": "roadmap.md",
+      "rationale": "Config-only guides/fixtures, FR-015/018 after core.",
+      "original_status": "ranked",
+      "original_priority": "0.028560"
+    },
+    {
+      "id": "OPP-01",
+      "name": "Keycloak-only Smart-ID plugin without the generic OIDC bridge",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Generic OIDC first; native SPI only after three unmet user requests, #24.",
+      "original_status": "excluded",
+      "original_priority": "0.019895"
+    },
+    {
+      "id": "OPP-06",
+      "name": "RP API monitoring/health-check service (TLS cipher drift, cert pinning, latency)",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "No hosted monitor; local doctor only after diagnostic-gap outage, #26.",
+      "original_status": "excluded",
+      "original_priority": "0.010569"
+    },
+    {
+      "id": "OPP-02",
+      "name": "Python/Django + FastAPI connector package",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Supply gap is not demand; examples now, direct Python client after two asks, #25.",
+      "original_status": "excluded",
+      "original_priority": "0.006227"
+    },
+    {
+      "id": "OPP-03",
+      "name": "Authentigate-class OSS OIDC broker (Smart-ID + Mobile-ID + Web eID + EUDI)",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Umbrella multi-method product depends on core/backends, not an additional independent 60-hour task.",
+      "original_status": "excluded",
+      "original_priority": "0.004812"
+    },
+    {
+      "id": "OPP-08",
+      "name": "Web eID / ID-card token validation library (Go)",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "80–100-hour Web eID requires demand and external review, #21.",
+      "original_status": "excluded",
+      "original_priority": "0.003850"
+    },
+    {
+      "id": "OPP-05",
+      "name": "eIDAS 2.0 / EUDI wallet conformance harness",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "EUDI harness after wallet method and profile pinning, #23.",
+      "original_status": "excluded",
+      "original_priority": "0.003306"
+    },
+    {
+      "id": "OPP-07",
+      "name": "Smart-ID/Mobile-ID demo-environment and test-data toolkit",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Internal fixtures now; standalone toolkit after external demand, #27.",
+      "original_status": "excluded",
+      "original_priority": "0.002418"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "S1",
+      "name": "Self-hosted Smart-ID RP v3 → OIDC provider bridge",
+      "disposition": "adopt",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014, FR-016, FR-017. Stories: 1.2, 1.4, 2.1, 2.8, 2.3, 2.4, 2.5, 2.2, 1.3, 2.6, 2.7, 1.1, 3.1, 3.2, 3.3, 3.4. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "42.5",
+      "requirement_ids": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-007",
+        "FR-008",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-012",
+        "FR-013",
+        "FR-014",
+        "FR-016",
+        "FR-017"
+      ],
+      "story_ids": [
+        "1.2",
+        "1.4",
+        "2.1",
+        "2.8",
+        "2.3",
+        "2.4",
+        "2.5",
+        "2.2",
+        "1.3",
+        "2.6",
+        "2.7",
+        "1.1",
+        "3.1",
+        "3.2",
+        "3.3",
+        "3.4"
+      ]
+    },
+    {
+      "id": "S2",
+      "name": "Mobile-ID method beside Smart-ID in the same bridge",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-019. Stories: 4.2. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "9",
+      "requirement_ids": [
+        "FR-019"
+      ],
+      "story_ids": [
+        "4.2"
+      ]
+    },
+    {
+      "id": "S3",
+      "name": "Web eID / ID-card token validation in the bridge",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-021. Stories: 5.1. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "90",
+      "requirement_ids": [
+        "FR-021"
+      ],
+      "story_ids": [
+        "5.1"
+      ]
+    },
+    {
+      "id": "S4",
+      "name": "Multi-method broker: one OIDC issuer over Smart-ID, Mobile-ID and Web eID",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014, FR-016, FR-017, FR-019, FR-020, FR-021. Stories: 1.2, 1.4, 2.1, 2.8, 2.3, 2.4, 2.5, 2.2, 1.3, 2.6, 2.7, 1.1, 3.1, 3.2, 3.3, 3.4, 4.2, 4.1, 5.1. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "60",
+      "requirement_ids": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006",
+        "FR-007",
+        "FR-008",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-012",
+        "FR-013",
+        "FR-014",
+        "FR-016",
+        "FR-017",
+        "FR-019",
+        "FR-020",
+        "FR-021"
+      ],
+      "story_ids": [
+        "1.2",
+        "1.4",
+        "2.1",
+        "2.8",
+        "2.3",
+        "2.4",
+        "2.5",
+        "2.2",
+        "1.3",
+        "2.6",
+        "2.7",
+        "1.1",
+        "3.1",
+        "3.2",
+        "3.3",
+        "3.4",
+        "4.2",
+        "4.1",
+        "5.1"
+      ]
+    },
+    {
+      "id": "S5",
+      "name": "EUDI Wallet presentation method (OpenID4VP) in the bridge",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-022. Stories: 6.1. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "60",
+      "requirement_ids": [
+        "FR-022"
+      ],
+      "story_ids": [
+        "6.1"
+      ]
+    },
+    {
+      "id": "S6",
+      "name": "Keycloak SPI plugin for Smart-ID",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-024. Stories: 7.1. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "20",
+      "requirement_ids": [
+        "FR-024"
+      ],
+      "story_ids": [
+        "7.1"
+      ]
+    },
+    {
+      "id": "S7",
+      "name": "Config-only IdP integration guides with CI-executed examples",
+      "disposition": "adopt",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-015, FR-018. Stories: 3.5, 3.6. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "8",
+      "requirement_ids": [
+        "FR-015",
+        "FR-018"
+      ],
+      "story_ids": [
+        "3.5",
+        "3.6"
+      ]
+    },
+    {
+      "id": "S8",
+      "name": "Official Python RP client",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-025. Stories: 7.2. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "5",
+      "requirement_ids": [
+        "FR-025"
+      ],
+      "story_ids": [
+        "7.2"
+      ]
+    },
+    {
+      "id": "S9",
+      "name": "RP API health/monitoring check (doctor)",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-026. Stories: 7.3. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "4",
+      "requirement_ids": [
+        "FR-026"
+      ],
+      "story_ids": [
+        "7.3"
+      ]
+    },
+    {
+      "id": "S10",
+      "name": "Offline demo toolkit (mock RP API + test identities)",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-027. Stories: 7.4. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "6",
+      "requirement_ids": [
+        "FR-027"
+      ],
+      "story_ids": [
+        "7.4"
+      ]
+    },
+    {
+      "id": "S11",
+      "name": "EUDI conformance harness",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-023. Stories: 6.2. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "60",
+      "requirement_ids": [
+        "FR-023"
+      ],
+      "story_ids": [
+        "6.2"
+      ]
+    },
+    {
+      "id": "S12",
+      "name": "Signing sessions (authentication plus signing)",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-028. Stories: 8.1. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "40",
+      "requirement_ids": [
+        "FR-028"
+      ],
+      "story_ids": [
+        "8.1"
+      ]
+    },
+    {
+      "id": "S13",
+      "name": "Legacy RP API v1/v2 compatibility",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-029. Stories: 7.5. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "6",
+      "requirement_ids": [
+        "FR-029"
+      ],
+      "story_ids": [
+        "7.5"
+      ]
+    },
+    {
+      "id": "S14",
+      "name": "WordPress plugin or guide for Smart-ID",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "Complete umbrella scope: FR-030. Stories: 7.6. Shared requirements are not additive effort; original primary link was an anchor, not complete scope.",
+      "original_hours": "15",
+      "requirement_ids": [
+        "FR-030"
+      ],
+      "story_ids": [
+        "7.6"
+      ]
+    }
+  ],
+  "milestones": [
+    {
+      "id": "ms:skid:SK-W1-M1",
+      "name": "cmd/sidspike device-link spike",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W1-M1",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-002/Story 1.4; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W1-M2",
+      "name": "repo scaffold + CI",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W1-M2",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-001/Story 1.2; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W1-M3",
+      "name": "docs harvest / spec pins",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W1-M3",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-001/Story 1.2; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W2-M1",
+      "name": "internal/smartid RP v3 client",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W2-M1",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-003/Story 2.1; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W2-M2",
+      "name": "internal/oidc provider surface",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W2-M2",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-006/Story 2.4; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W2-M3",
+      "name": "cmd/eidbridge wiring",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W2-M3",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-007/Story 2.5; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W2-M4",
+      "name": "CI build matrix",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W2-M4",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-001/Story 1.2; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W3-M1",
+      "name": "Dockerfile + compose",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W3-M1",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-014/Story 3.2; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W3-M2",
+      "name": "README + docs/keycloak.md",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W3-M2",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-015/Story 3.5; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W3-M3",
+      "name": "release automation",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W3-M3",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-001/Story 1.2; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W3-M4",
+      "name": "hardening pass",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W3-M4",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-009/Story 1.3; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W4-M1",
+      "name": "smart-id-rp PyPI package",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W4-M1",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "FR-025/Story 7.2; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W4-M2",
+      "name": "django/fastapi examples",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W4-M2",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-018/Story 3.6; source estimate/date is a hypothesis."
+    },
+    {
+      "id": "ms:skid:SK-W4-M3",
+      "name": "launch artefacts",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W4-M3",
+      "disposition": "plan-only",
+      "artifact": "roadmap.md",
+      "rationale": "Prepare launch checklist only; public posts/publication are future human actions."
+    },
+    {
+      "id": "ms:skid:SK-W4-M4",
+      "name": "maintenance scaffolding",
+      "source": "skidsolutions.eu/plan_30d.md#SK-W4-M4",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "FR-017/Story 3.4; source estimate/date is a hypothesis."
+    }
+  ],
+  "research_items": [
+    {
+      "id": "SK-proposal",
+      "source": "skidsolutions.eu/proposal.md",
+      "locator": "Executive recommendation; Opportunity ranking; Thesis attack; Evidence gaps",
+      "disposition": "adopt",
+      "artifact": "product-brief-eidbridge-2026-11-18.md",
+      "rationale": "Retain OIDC wedge/counter-case; forecasts and prices are dated, not outcomes."
+    },
+    {
+      "id": "SK-plan_30d",
+      "source": "skidsolutions.eu/plan_30d.md",
+      "locator": "Weeks 1–4; fallback ladder; Do NOT build",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "Preserve 15 milestones, budgets/tests and exclusions; reconcile dates, effort and product pivots."
+    },
+    {
+      "id": "SK-compliance",
+      "source": "skidsolutions.eu/compliance.md",
+      "locator": "Sections 1–5",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "Adopt privacy, agreements, clean-room and claims constraints; legal/PDF interpretations remain unverified."
+    },
+    {
+      "id": "SK-distribution",
+      "source": "skidsolutions.eu/distribution.md",
+      "locator": "Exact hooks; Ecosystems; Launch mechanics; 90-day measurement; What NOT to do",
+      "disposition": "adapt",
+      "artifact": "roadmap.md",
+      "rationale": "Retain launch channels/metrics; no public comments/posts/catalogue PRs/publication executed."
+    },
+    {
+      "id": "SK-demand",
+      "source": "skidsolutions.eu/demand.md",
+      "locator": "Items found; Zero-result searches; Reading",
+      "disposition": "adopt",
+      "artifact": "product-brief-eidbridge-2026-11-18.md",
+      "rationale": "Four artifacts are three asks, not four customers; registry supply gap is not demand."
+    },
+    {
+      "id": "SK-procurement",
+      "source": "skidsolutions.eu/procurement.md",
+      "locator": "Current awards; Baseline",
+      "disposition": "context-only",
+      "artifact": "product-brief-eidbridge-2026-11-18.md",
+      "rationale": "State-service awards explain incumbent context, not available pipeline."
+    },
+    {
+      "id": "SK-oss_inventory",
+      "source": "skidsolutions.eu/oss_inventory.md",
+      "locator": "Connector table",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "Permissive reuse with notices; link maintained Node option; evaluate Go candidates before implementation."
+    },
+    {
+      "id": "SK-analysis_phase3",
+      "source": "skidsolutions.eu/analysis_phase3.md",
+      "locator": "Parent correction; Short seller; Thesis attack",
+      "disposition": "superseded-in-part",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Canonical forecast IDs and (1-p) formula in proposal/forecasts take precedence; retain counter-case."
+    },
+    {
+      "id": "SK-artefacts_b",
+      "source": "skidsolutions.eu/artefacts_b.md",
+      "locator": "Repo/release/package/host/version inventory",
+      "disposition": "context-only",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Dated inventory observations, not current library advice or product availability."
+    },
+    {
+      "id": "SK-notes_a",
+      "source": "skidsolutions.eu/notes_a.md",
+      "locator": "Failures/gaps; announced vs rumour",
+      "disposition": "retain-limitations",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Missing pages and forecasts cannot establish availability."
+    },
+    {
+      "id": "SK-notes_b",
+      "source": "skidsolutions.eu/notes_b.md",
+      "locator": "Failures; Coverage gaps",
+      "disposition": "retain-limitations",
+      "artifact": "source-reconciliation.md",
+      "rationale": "No verified v1/v2 EOL; archive tag is not sunset."
+    },
+    {
+      "id": "SK-notes_c",
+      "source": "skidsolutions.eu/notes_c.md",
+      "locator": "Inaccessible sources; Other caveats",
+      "disposition": "retain-limitations",
+      "artifact": "source-reconciliation.md",
+      "rationale": "LV/LT procurement, EWC membership and Reddit coverage remain unknown."
+    },
+    {
+      "id": "SK-signals_section",
+      "source": "skidsolutions.eu/signals_section.md",
+      "locator": "Signal tables",
+      "disposition": "deduplicate",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Represented by canonical signals.csv; summaries/shards are not independent evidence."
+    },
+    {
+      "id": "ADJ-01",
+      "source": "_issues/eideasy/01-x509-hash-signed-request-objects.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Future wallet signed request, x5c/x509_hash, audience/SAN/response-host binding and opt-in unsigned testing behind FR-022."
+    },
+    {
+      "id": "ADJ-02",
+      "source": "_issues/eideasy/02-conformance-suite-and-reference-interop.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "Honest versioned conformance evidence now; wallet execution only under FR-022/023."
+    },
+    {
+      "id": "ADJ-03",
+      "source": "_issues/eideasy/03-release-gated-verifier-deviation-table.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "Release requirement/status/evidence/fix deviation disclosure; no borrowed test results."
+    },
+    {
+      "id": "ADJ-04",
+      "source": "_issues/eideasy/04-verifier-scope-and-limits-statement.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "adapt",
+      "artifact": "product-brief-eidbridge-2026-11-18.md",
+      "rationale": "Assertion/trust limits and RP responsibilities, no QES/compliance claims."
+    },
+    {
+      "id": "ADJ-05",
+      "source": "_issues/eideasy/05-append-only-validation-audit-log.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Metadata audit conflicts with zero retention. Separate opt-in privacy ADR; local hash chain cannot prove truncation without external anchor."
+    },
+    {
+      "id": "ADJ-06",
+      "source": "_issues/eideasy/06-rp-registration-record-and-registrar-export.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Wallet per-RP intended-use/request ceilings and registrar export; no real submission or assumed national schema."
+    },
+    {
+      "id": "ADJ-07",
+      "source": "_issues/eideasy/07-dpia-outline-and-ropa-template.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "Extend FR-013 with purpose/location/lifetime/evidence and deployer-completed DPIA/RoPA aid."
+    },
+    {
+      "id": "ADJ-08",
+      "source": "_issues/eideasy/08-incident-runbook.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "FR-017 reason-code detect/contain/recover/notify, key compromise, stale trust and outage drills."
+    },
+    {
+      "id": "ADJ-09",
+      "source": "_issues/eideasy/09-production-deployment-guide.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "HTTPS, explicit proxy-header trust, size limits, refuse test keys and ordered operator checklist; no zk-specific infrastructure."
+    },
+    {
+      "id": "ADJ-10",
+      "source": "_issues/eideasy/10-release-artifacts-and-container-image.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "FR-001 source-build pins/checksum/SBOM/provenance and published-artifact smoke; reproducibility proved or variance disclosed."
+    },
+    {
+      "id": "ADJ-11",
+      "source": "_issues/eideasy/11-age-verification-integration-guide.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Future age predicate: not-proven does not mean underage or stable account identity."
+    },
+    {
+      "id": "ADJ-12",
+      "source": "_issues/eideasy/12-multiple-rp-identities-per-instance.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Future per-tenant keys/registration/ceilings, authenticated init/result and isolation; no hosted billing UI."
+    },
+    {
+      "id": "ADJ-13",
+      "source": "_issues/eideasy/13-openid4vp-to-oidc-bridge.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "Reuse eidbridge issuer through method adapter, no duplicate OIDC server; pairwise identity needs actual evidence."
+    },
+    {
+      "id": "ADJ-14",
+      "source": "_issues/eideasy/14-plain-pid-presentation-path.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Wallet gate: SD-JWT/KB-JWT disclosure and mdoc transcript/holder/issuer/status verification, memory-only values; cross-project handoff not implementation."
+    },
+    {
+      "id": "ADJ-15",
+      "source": "_issues/eideasy/15-lotl-trust-list-refresh.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Profile-specific signed atomic trust updates/freshness/rollback; LOTL not assumed sufficient for all wallet trust domains."
+    },
+    {
+      "id": "ADJ-16",
+      "source": "_issues/eideasy/16-pkcs11-key-backend.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Optional demand-gated PKCS11/SoftHSM backend; default static binary remains CGO free."
+    },
+    {
+      "id": "ADJ-17",
+      "source": "_issues/eideasy/17-cms-plugin-wallet-acceptance.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "defer",
+      "artifact": "roadmap.md",
+      "rationale": "WooCommerce checkout age gate is separate from #30 WordPress login, cross-project reference only."
+    },
+    {
+      "id": "ADJ-18",
+      "source": "_issues/eideasy/18-wallet-authorised-remote-signing.md",
+      "locator": "Summary; Proposed solution; Acceptance criteria; Notes",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "External CSC/QTSP transaction-bound orchestration differs from #28 digest relay; sandbox and legal review first."
+    },
+    {
+      "id": "EASY-NARR-1",
+      "source": "eideasy.com/RECOMMENDATION.md",
+      "locator": "Executive recommendation; C1–C5",
+      "disposition": "adapt",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Wallet candidates are gated alternatives; buyer interviews/raw demand precede expansion."
+    },
+    {
+      "id": "EASY-NARR-2",
+      "source": "eideasy.com/RECOMMENDATION.md",
+      "locator": "Scoring and sensitivity",
+      "disposition": "context-only",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Shipping-risk scores and adjacent proxy costs do not establish eidbridge ROI."
+    },
+    {
+      "id": "EASY-NARR-3",
+      "source": "eideasy.com/RECOMMENDATION.md",
+      "locator": "30-day plan",
+      "disposition": "defer",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Three buyer interviews and two-of-three rejection pivot rule belong to wallet project, not current MVP."
+    },
+    {
+      "id": "EASY-NARR-4",
+      "source": "eideasy.com/RECOMMENDATION.md",
+      "locator": "Legal; Evidence gaps",
+      "disposition": "retain-limitations",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Pricing/interop/legal interpretations not independently verified; no universal duty inferred."
+    },
+    {
+      "id": "EASY-NARR-5",
+      "source": "eideasy.com/RECOMMENDATION.md",
+      "locator": "Watch log; Automated pipeline",
+      "disposition": "plan-only",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Weekly evidence diff/manual decisions designed only, no autonomous cron deployment."
+    },
+    {
+      "id": "EASY-LEGAL-01",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 1",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Future wallet per-RP registration."
+    },
+    {
+      "id": "EASY-LEGAL-02",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 2",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Future registered claim ceiling."
+    },
+    {
+      "id": "EASY-LEGAL-03",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 3",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Metadata evidence requires separate retention decision."
+    },
+    {
+      "id": "EASY-LEGAL-04",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 4",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "Current data inventory/deployer DPIA aid."
+    },
+    {
+      "id": "EASY-LEGAL-05",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 5",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Future profile-specific trust freshness."
+    },
+    {
+      "id": "EASY-LEGAL-06",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 6",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Future minimal age predicate."
+    },
+    {
+      "id": "EASY-LEGAL-07",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 7",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "Current assertion/trust scope disclosure."
+    },
+    {
+      "id": "EASY-LEGAL-08",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 8",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "Current no-qualified-services claims."
+    },
+    {
+      "id": "EASY-LEGAL-09",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 9",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "Current versioned conformance disclosure."
+    },
+    {
+      "id": "EASY-LEGAL-10",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 10",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Future registrar export without submission."
+    },
+    {
+      "id": "EASY-LEGAL-11",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 11",
+      "disposition": "adapt",
+      "artifact": "architecture.md",
+      "rationale": "Current incident runbook."
+    },
+    {
+      "id": "EASY-LEGAL-12",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 12",
+      "disposition": "exclude",
+      "artifact": "architecture.md",
+      "rationale": "Qualified issuance/seals/QSCD outside product."
+    },
+    {
+      "id": "EASY-LEGAL-13",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 13",
+      "disposition": "exclude",
+      "artifact": "architecture.md",
+      "rationale": "Wallet certification outside product."
+    },
+    {
+      "id": "EASY-LEGAL-14",
+      "source": "eideasy.com/legal/contributions-checklist.md",
+      "locator": "checklist row 14",
+      "disposition": "defer",
+      "artifact": "architecture.md",
+      "rationale": "Verifier licensing requires legal applicability review."
+    },
+    {
+      "id": "RANK-1",
+      "source": "rankings/RANKING.md",
+      "locator": "Ranking methodology",
+      "disposition": "adapt",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Incumbent exposure is not user value, dependencies or feasibility; annual financial exposure unknown."
+    },
+    {
+      "id": "RANK-2",
+      "source": "rankings/RANKING.md",
+      "locator": "S1–S14 dossiers",
+      "disposition": "adapt",
+      "artifact": "source-reconciliation.md",
+      "rationale": "All map to requirements; S4 umbrella/not additive, S8 unofficial, S13 v2 only; signing legal statement overbroad."
+    },
+    {
+      "id": "RANK-3",
+      "source": "rankings/RANKING.md",
+      "locator": "Parked/excluded ledger",
+      "disposition": "adapt",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Safety/conformance/release work stays mandatory even without a priced competitor surface."
+    },
+    {
+      "id": "RANK-4",
+      "source": "rankings/RANKING.md",
+      "locator": "E1–E9 and G1–G7",
+      "disposition": "adapt",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Wallet ideas have future gates; OSINT/proxy/browser work stays in original projects."
+    },
+    {
+      "id": "RANK-5",
+      "source": "rankings/RANKING.md",
+      "locator": "Implementation distance; queue",
+      "disposition": "adapt",
+      "artifact": "source-reconciliation.md",
+      "rationale": "No app implementation observed; other repos tests and overlapping synthetic queue are not progress."
+    },
+    {
+      "id": "GLAZER-recommendation",
+      "source": "glazer.ee/deliverable/recommendation.md",
+      "locator": "Executive recommendation; plan; guardrails",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Evidence capture/RFC3161/WARC/proxy/OSINT/MCP/browser work belongs to fingerprintproxy/ManyFaces."
+    },
+    {
+      "id": "GLAZER-plan-30d",
+      "source": "glazer.ee/deliverable/plan-30d.md",
+      "locator": "Executive recommendation; plan; guardrails",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Evidence capture/RFC3161/WARC/proxy/OSINT/MCP/browser work belongs to fingerprintproxy/ManyFaces."
+    },
+    {
+      "id": "GLAZER-compliance",
+      "source": "glazer.ee/deliverable/compliance.md",
+      "locator": "Executive recommendation; plan; guardrails",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Evidence capture/RFC3161/WARC/proxy/OSINT/MCP/browser work belongs to fingerprintproxy/ManyFaces."
+    },
+    {
+      "id": "EXCLUDE-glazer-01",
+      "source": "_issues/glazer/01-fix-chunked-response-hang.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-02",
+      "source": "_issues/glazer/02-rfc3161-stamp.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-03",
+      "source": "_issues/glazer/03-verify-command.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-04",
+      "source": "_issues/glazer/04-verification-docs-demo-case.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-05",
+      "source": "_issues/glazer/05-refusal-records.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-06",
+      "source": "_issues/glazer/06-case-json-metadata.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-07",
+      "source": "_issues/glazer/07-redact-flag.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-08",
+      "source": "_issues/glazer/08-capture-retention.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-09",
+      "source": "_issues/glazer/09-capture-start-warning.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-10",
+      "source": "_issues/glazer/10-operator-obligations-docs.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-11",
+      "source": "_issues/glazer/11-mcp-server.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-12",
+      "source": "_issues/glazer/12-mcp-safety-policy.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-13",
+      "source": "_issues/glazer/13-mcp-agpl-source-offer.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-14",
+      "source": "_issues/glazer/14-fingerprint-coverage-metrics.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-15",
+      "source": "_issues/glazer/15-homebrew-release-verification.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-16",
+      "source": "_issues/glazer/16-capture-encryption-at-rest.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-17",
+      "source": "_issues/glazer/17-per-case-mitm-ca.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-18",
+      "source": "_issues/glazer/18-record-upstream-cert-chain.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-19",
+      "source": "_issues/glazer/19-warc-export.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-glazer-20",
+      "source": "_issues/glazer/20-enrichment-broker.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-manyfaces-21",
+      "source": "_issues/manyfaces/21-case-scoped-profiles.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-manyfaces-22",
+      "source": "_issues/manyfaces/22-case-screenshots.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "EXCLUDE-manyfaces-23",
+      "source": "_issues/manyfaces/23-remote-browser-isolation.md",
+      "locator": "Summary; Proposed solution",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Different product/data model; keep in original project, no eidbridge requirement."
+    },
+    {
+      "id": "PLAN-SPEC-PINS",
+      "source": "skidsolutions.eu/plan_30d.md",
+      "locator": "Docs harvest; Do NOT build 8",
+      "disposition": "adapt",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Link/version/hash metadata only; no vendored unlicensed doc text or LGPL demo code."
+    },
+    {
+      "id": "PLAN-NODE",
+      "source": "skidsolutions.eu/distribution.md",
+      "locator": "Exact hooks",
+      "disposition": "exclude",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Link Node client, do not create competing SDK."
+    },
+    {
+      "id": "PLAN-COMMUNITY",
+      "source": "skidsolutions.eu/distribution.md",
+      "locator": "Launch mechanics",
+      "disposition": "plan-only",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Plan useful launch material; no HN/Reddit/tracker/Slack posts or catalogue PRs executed."
+    },
+    {
+      "id": "PLAN-METRICS",
+      "source": "skidsolutions.eu/distribution.md",
+      "locator": "90-day measurement",
+      "disposition": "adapt",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Retain original metrics/failure-rule conflict with N-A handling, no product analytics."
+    },
+    {
+      "id": "PLAN-FALLBACK",
+      "source": "skidsolutions.eu/plan_30d.md",
+      "locator": "Week 1 fallback ladder",
+      "disposition": "adapt",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Notification same-product fallback; MID/Web eID requires explicit capacity/security decision, not automatic expansion."
+    },
+    {
+      "id": "PLAN-DATES",
+      "source": "skidsolutions.eu/proposal.md",
+      "locator": "Executive recommendation; Evaluation protocol",
+      "disposition": "retain-dated-hypothesis",
+      "artifact": "source-reconciliation.md",
+      "rationale": "2026-12-21/2027-01-11 source targets, 2027-02-14 fixed forecast resolution; launch D+90 starts at actual launch."
+    },
+    {
+      "id": "PLAN-REMEMBER",
+      "source": "_issues/skid/20-method-chooser.md",
+      "locator": "Proposed solution",
+      "disposition": "defer",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Method preference cookie opt-in after privacy/data-flow update, absent in single-method mode."
+    },
+    {
+      "id": "PLAN-PULL-METRICS",
+      "source": "_issues/skid/26-doctor-health-check.md",
+      "locator": "Proposed solution",
+      "disposition": "defer",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Counts/expiry metrics opt-in/pull-only/no personal data; no hosted monitoring."
+    },
+    {
+      "id": "PLAN-README-ET",
+      "source": "_issues/skid/16-login-page-i18n.md",
+      "locator": "Notes",
+      "disposition": "defer",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Estonian README optional, English authoritative; distinct from five required login catalogs."
+    },
+    {
+      "id": "PLAN-FRAMEWORKS",
+      "source": "_issues/skid/18-framework-oidc-examples.md",
+      "locator": "Out of scope",
+      "disposition": "defer",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Rails/Laravel/Spring additions only on demand."
+    },
+    {
+      "id": "PLAN-DEPLOYMENT",
+      "source": "_issues/skid/14-compose-quickstart.md",
+      "locator": "Out of scope",
+      "disposition": "defer",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Helm/systemd packaging only on demand; secure production guide still required."
+    },
+    {
+      "id": "PLAN-CSS",
+      "source": "_issues/skid/07-binary-login-page-config.md",
+      "locator": "Out of scope",
+      "disposition": "adapt",
+      "artifact": "source-reconciliation.md",
+      "rationale": "Bounded CSS override only, no theming platform."
+    },
+    {
+      "id": "PLAN-SHARED-STORE",
+      "source": "_issues/skid/10-no-telemetry-zero-retention.md",
+      "locator": "Out of scope",
+      "disposition": "defer",
+      "artifact": "source-reconciliation.md",
+      "rationale": "HA/shared store only on demand; document restart/single-replica now."
+    }
+  ],
+  "signals": [
+    {
+      "id": "S-A-01",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-02",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-03",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-04",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-05",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-06",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-07",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-08",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-09",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-10",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-11",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-12",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-13",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-14",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-15",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-16",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-A-17",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-01",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-02",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-03",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-04",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-05",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-06",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-07",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-08",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-09",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-10",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-11",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-12",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-13",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-14",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-15",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-16",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-17",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-18",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-19",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-20",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-21",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-B-22",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-01",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-02",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-03",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-04",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-05",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-06",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-07",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-08",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-09",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-10",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-11",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-12",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-13",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-14",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    },
+    {
+      "id": "S-C-15",
+      "disposition": "retain-dated-evidence",
+      "artifact": "research/competitive-signals.csv"
+    }
+  ],
+  "forecasts": [
+    {
+      "id": "F01",
+      "disposition": "retain-unresolved-watch",
+      "artifact": "research/competitive-watch.csv"
+    },
+    {
+      "id": "F02",
+      "disposition": "retain-unresolved-watch",
+      "artifact": "research/competitive-watch.csv"
+    },
+    {
+      "id": "F03",
+      "disposition": "retain-unresolved-watch",
+      "artifact": "research/competitive-watch.csv"
+    },
+    {
+      "id": "F04",
+      "disposition": "retain-unresolved-watch",
+      "artifact": "research/competitive-watch.csv"
+    },
+    {
+      "id": "F05",
+      "disposition": "retain-unresolved-watch",
+      "artifact": "research/competitive-watch.csv"
+    },
+    {
+      "id": "F06",
+      "disposition": "retain-unresolved-watch",
+      "artifact": "research/competitive-watch.csv"
+    },
+    {
+      "id": "F07",
+      "disposition": "retain-unresolved-watch",
+      "artifact": "research/competitive-watch.csv"
+    },
+    {
+      "id": "F08",
+      "disposition": "retain-unresolved-watch",
+      "artifact": "research/competitive-watch.csv"
+    },
+    {
+      "id": "F09",
+      "disposition": "retain-unresolved-watch",
+      "artifact": "research/competitive-watch.csv"
+    },
+    {
+      "id": "F10",
+      "disposition": "retain-unresolved-watch",
+      "artifact": "research/competitive-watch.csv"
+    }
+  ],
+  "dependency_semantics": "depends_on orders prerequisite implementation packets only, not full source-parent closure. Original AC may require later integration surfaces; see epics execution packets and parent closure obligations. No parent is complete before all original AC."
+}

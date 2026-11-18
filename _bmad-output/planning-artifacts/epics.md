@@ -14,7 +14,7 @@ inputDocuments:
 
 Thirty source-aligned stories preserve all 111 original issue acceptance criteria. No acceptance checkbox is checked. Source GitHub state is open for all issues; 19–30 are deferred. This is a backlog draft: high-risk or multi-week source issues retain their parent story and require the specified smaller work packets before sprint readiness. Do not mistake source estimates, a completed document or a passing coverage proxy for implemented functionality. The user requested batch integration; interactive workflow menus were bypassed and logged, not treated as approval.
 
-Inputs: [PRD](prd.md), [architecture](architecture.md), [UX contract](ux-design-specification.md), [original proposals](addendum.md), [source reconciliation](source-reconciliation.md) and immutable issue snapshot (`research/github-issues-2026-11-18.json`, local only).
+Inputs: [PRD](prd.md), [architecture](architecture.md), [UX contract](ux-design-specification.md), [original proposals](addendum.md), [source reconciliation](source-reconciliation.md) and immutable [issue snapshot](research/github-issues-2026-11-18.json).
 
 ## Execution packets and parent-story closure
 

@@ -1,0 +1,27 @@
+{
+  "scope": "Planning remediation only; no product implementation test or fresh readiness judgment",
+  "rv_items_addressed": 32,
+  "nfr_copies_identical": true,
+  "stale_replay_contracts_absent": true,
+  "source_preservation": {
+    "result": "PASS",
+    "failures": 0,
+    "original_issue_criteria": 111,
+    "stories": 30
+  },
+  "architecture_trace": {
+    "result": "PASS",
+    "original_findings": 82,
+    "open": 0,
+    "errors": 0,
+    "mermaid": "1 diagram rendered"
+  },
+  "document_sha256": {
+    "architecture.md": "d1c5860020d5a212035c7c1dee3cc5c36f2981da69a32e643e1b8ea4be75336a",
+    "epics.md": "0041b6f92231c8ac13591b45668b04be1d94c5e460d8ec78cfe86b1b7a97f69a",
+    "prd.md": "38068366f7498e084bb082d86132421ac24af844d80dd66c8278f36863431f99",
+    "ux-design-specification.md": "ebb4ce9461d937d94113b3d0fe29e9e48c6e2b39375849222b7664a2ea4fd827",
+    "roadmap.md": "14335c68acfb1b2651e35670dbde8e251cae4c50823e6b15a198163eb7e2eac0",
+    "addendum.md": "c4f7b86627f68d398af170b127f9dd7cf176442d0df36db87f06f5232f87edca"
+  }
+}

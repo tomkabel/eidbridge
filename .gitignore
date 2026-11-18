@@ -41,5 +41,5 @@ _bmad/config.user.toml
 .DS_Store
 Thumbs.db
 
-# Competitive research snapshots: kept local, not published
-_bmad-output/planning-artifacts/research/
+# Competitive research data: kept local, not published
+_bmad-output/planning-artifacts/research/competitive-*.csv

@@ -1,0 +1,616 @@
+[
+ {
+  "id": "A01",
+  "lens": "adversarial",
+  "location": "ADR-002 ¶1",
+  "trigger_condition": "'encrypted-in-transit claim set' describes in-memory data; transit encryption does not apply",
+  "guard_snippet": "Say plaintext in process memory keyed by code hash, or specify the in-memory encryption key and its home",
+  "potential_consequence": "False assurance carried into DPIA/RoPA aids"
+ },
+ {
+  "id": "A02",
+  "lens": "adversarial",
+  "location": "ADR-002 ¶2 + Public surface (userinfo)",
+  "trigger_condition": "Claims deleted at code exchange and personal_code barred from bearer tokens, so userinfo has no claim source",
+  "guard_snippet": "Choose: claims embedded in signed access token, drop userinfo in v1, or a bounded per-token claim cache in the lifecycle table",
+  "potential_consequence": "userinfo breaks or reintroduces server-side retention"
+ },
+ {
+  "id": "A03",
+  "lens": "adversarial",
+  "location": "Public surface (subject) vs addendum §claims",
+  "trigger_condition": "Addendum derives public sub from country+ID code; raw/reversible sub leaks the personal code to every client",
+  "guard_snippet": "Both public and pairwise sub = HMAC(server secret, scope‖country‖code)",
+  "potential_consequence": "National ID leaks via a mandatory claim; opt-in allow-list bypassed"
+ },
+ {
+  "id": "A04",
+  "lens": "adversarial",
+  "location": "Public surface (pairwise rotation)",
+  "trigger_condition": "Rotating the pairwise secret changes every sub but is framed as routine",
+  "guard_snippet": "Versioned pairwise key id; rotation is a migration event; back up with signing-key custody",
+  "potential_consequence": "Every client's account links silently orphaned"
+ },
+ {
+  "id": "A05",
+  "lens": "adversarial",
+  "location": "Public surface (JWKS retention) + ADR-005 incident matrix",
+  "trigger_condition": "Retention rule has no override for key compromise",
+  "guard_snippet": "Compromised keys removed from JWKS immediately; drill covers emergency revocation",
+  "potential_consequence": "Forged tokens verify during an incident"
+ },
+ {
+  "id": "A06",
+  "lens": "adversarial",
+  "location": "Public surface (client auth)",
+  "trigger_condition": "private_key_jwt key source unspecified; jwks_uri fetch adds egress/SSRF",
+  "guard_snippet": "Inline static client JWKS only; no jwks_uri in v1",
+  "potential_consequence": "Breaks egress isolation (NFR-004), new SSRF vector"
+ },
+ {
+  "id": "A07",
+  "lens": "adversarial",
+  "location": "Public surface / Assurance",
+  "trigger_condition": "acr_values, prompt, max_age, claims request params unspecified",
+  "guard_snippet": "Unprovable acr_values → unmet_authentication_requirements; never silently downgrade",
+  "potential_consequence": "Clients get lower assurance than requested"
+ },
+ {
+  "id": "A08",
+  "lens": "adversarial",
+  "location": "ADR-002 capacity + threat table",
+  "trigger_condition": "Unauthenticated authorize creates flows; no overflow behavior, no code-store bound, no per-IP/client sub-quota",
+  "guard_snippet": "503 on overflow, separate code-store cap, per-IP/client quotas, lazy upstream session creation",
+  "potential_consequence": "One bot denies login to all or burns RP upstream quota"
+ },
+ {
+  "id": "A09",
+  "lens": "adversarial",
+  "location": "Public surface (polling)",
+  "trigger_condition": "Polling model and global upstream concurrency undefined",
+  "guard_snippet": "Server-side poller with global rate cap; cancel upstream on abandon",
+  "potential_consequence": "Upstream rate limit/ban; all logins fail"
+ },
+ {
+  "id": "A10",
+  "lens": "adversarial",
+  "location": "ADR-002 cookies + threat table",
+  "trigger_condition": "Web2App return lands in a different browser/webview; cookie attributes unspecified",
+  "guard_snippet": "Define cross-browser return binding; __Host-, Secure, HttpOnly, SameSite=Lax",
+  "potential_consequence": "Mobile Web2App failures or weakened binding enabling takeover"
+ },
+ {
+  "id": "A11",
+  "lens": "adversarial",
+  "location": "Threat and validation model",
+  "trigger_condition": "Missing real-time QR relay phishing and XSS/clickjacking rows",
+  "guard_snippet": "Add QR-relay row (freshness, verification code, origin display, relay test) and UI row (CSP, frame-ancestors 'none', autoescape)",
+  "potential_consequence": "Most practical eID takeover routes untested"
+ },
+ {
+  "id": "A12",
+  "lens": "adversarial",
+  "location": "ADR-003 demo tokens",
+  "trigger_condition": "Demo/prod separation relies only on clients checking claims",
+  "guard_snippet": "Distinct demo issuer and demo-labelled key; production rejects demo key fingerprints",
+  "potential_consequence": "Lax client accepts demo identities"
+ },
+ {
+  "id": "A13",
+  "lens": "adversarial",
+  "location": "Public surface (readiness) + single replica",
+  "trigger_condition": "Readiness fails on full capacity",
+  "guard_snippet": "Readiness = config/key load only; saturation → per-request 503",
+  "potential_consequence": "Load spike becomes total outage"
+ },
+ {
+  "id": "A14",
+  "lens": "adversarial",
+  "location": "ADR-002 ¶3",
+  "trigger_condition": "No graceful shutdown; deploys kill flows and unexchanged codes",
+  "guard_snippet": "SIGTERM: stop new authorize, drain ≤ code TTL/grace, exit",
+  "potential_consequence": "Every deploy causes login and token-exchange failures"
+ },
+ {
+  "id": "A15",
+  "lens": "adversarial",
+  "location": "Context diagram",
+  "trigger_condition": "Omits browser→eidbridge front channel and eID app→Smart-ID leg; no trust boundaries",
+  "guard_snippet": "Add U→O, app→scheme edges and trust-boundary groupings",
+  "potential_consequence": "Threat model and proxy/egress config miss the public surface"
+ },
+ {
+  "id": "A16",
+  "lens": "adversarial",
+  "location": "All ADRs",
+  "trigger_condition": "Mostly 'proposed' with no owner, trigger or date",
+  "guard_snippet": "Decision table: ADR → status → Q-xx → owner → blocking FR → evidence",
+  "potential_consequence": "Stories built on undecided architecture or blocked with no owner"
+ },
+ {
+  "id": "A17",
+  "lens": "adversarial",
+  "location": "ADR-006",
+  "trigger_condition": "'Build chooser after FR-005' contradicts 'no dead chooser UI'",
+  "guard_snippet": "Only the registry contract test with a fake method until a demand trigger activates chooser+FR-019 together",
+  "potential_consequence": "Premature UI/cookie scope, or gate ignored"
+ },
+ {
+  "id": "E01",
+  "lens": "edge-case",
+  "location": "Method states",
+  "trigger_condition": "Init fails or user abandons before pending",
+  "guard_snippet": "created→{pending|failed|cancelled}; pending→{…|cancelled}",
+  "potential_consequence": "Non-terminal entries hold capacity"
+ },
+ {
+  "id": "E02",
+  "lens": "edge-case",
+  "location": "Method states",
+  "trigger_condition": "COMPLETE with non-OK endResult",
+  "guard_snippet": "Exhaustive endResult→state table; unknown → failed",
+  "potential_consequence": "Unmapped code treated as success/undefined"
+ },
+ {
+  "id": "E03",
+  "lens": "edge-case",
+  "location": "Polling retries",
+  "trigger_condition": "Retries exhausted while phone session still open",
+  "guard_snippet": "Mark failed, never accept later result, tell user to cancel on device",
+  "potential_consequence": "Phone shows success, browser login failed"
+ },
+ {
+  "id": "E04",
+  "lens": "edge-case",
+  "location": "ADR-002 capacity",
+  "trigger_condition": "Store full while authorize requests arrive",
+  "guard_snippet": "Reject with 503+Retry-After; never evict pending/verified",
+  "potential_consequence": "Eviction flushing or unbounded memory"
+ },
+ {
+  "id": "E05",
+  "lens": "edge-case",
+  "location": "ADR-002 flow vs code store",
+  "trigger_condition": "Flow verifies while store is full",
+  "guard_snippet": "Reserve code slot at flow creation or separate code cap",
+  "potential_consequence": "Authenticated user gets no code"
+ },
+ {
+  "id": "E06",
+  "lens": "edge-case",
+  "location": "ADR-002 timeout+30s",
+  "trigger_condition": "In-flight poll returns verified after entry expired",
+  "guard_snippet": "Missing/terminal entry → discard result, destroy secrets",
+  "potential_consequence": "Flow resurrection or orphaned cert material"
+ },
+ {
+  "id": "E07",
+  "lens": "edge-case",
+  "location": "ADR-002 one-time code",
+  "trigger_condition": "Concurrent token requests with same code",
+  "guard_snippet": "Atomic LoadAndDelete",
+  "potential_consequence": "Two token sets per code"
+ },
+ {
+  "id": "E08",
+  "lens": "edge-case",
+  "location": "ADR-002 code exchange",
+  "trigger_condition": "Valid code with failed PKCE/client auth/redirect check",
+  "guard_snippet": "Consume code on any failed exchange or cap attempts",
+  "potential_consequence": "Verifier brute force or code burning"
+ },
+ {
+  "id": "E09",
+  "lens": "edge-case",
+  "location": "ADR-002 stateless JWT",
+  "trigger_condition": "Code replayed after token issuance",
+  "guard_snippet": "Per-code jti deny-list for userinfo, or documented deviation",
+  "potential_consequence": "OIDC replay-revocation rule unmet"
+ },
+ {
+  "id": "E10",
+  "lens": "edge-case",
+  "location": "ADR-002 cookies",
+  "trigger_condition": "Refused/expired/failed or unexchanged code",
+  "guard_snippet": "Clear cookies on every terminal state",
+  "potential_consequence": "Stale cookie confuses next flow"
+ },
+ {
+  "id": "E11",
+  "lens": "edge-case",
+  "location": "Threat model cookie binding",
+  "trigger_condition": "Two concurrent tabs",
+  "guard_snippet": "Per-flow-handle cookie",
+  "potential_consequence": "Second flow breaks the first"
+ },
+ {
+  "id": "E12",
+  "lens": "edge-case",
+  "location": "JWKS retention",
+  "trigger_condition": "Compromised key retained until token expiry",
+  "guard_snippet": "Compromised → drop immediately",
+  "potential_consequence": "Forged tokens validate"
+ },
+ {
+  "id": "E13",
+  "lens": "edge-case",
+  "location": "Key persistence",
+  "trigger_condition": "Restart after rotation",
+  "guard_snippet": "Persist retired public keys with not-after",
+  "potential_consequence": "Pre-restart tokens fail verification"
+ },
+ {
+  "id": "E14",
+  "lens": "edge-case",
+  "location": "Pairwise subject",
+  "trigger_condition": "Secret rotated or client switches sub mode",
+  "guard_snippet": "Versioned secret, no in-place rotation; mode change needs migration",
+  "potential_consequence": "All accounts unlinked"
+ },
+ {
+  "id": "E15",
+  "lens": "edge-case",
+  "location": "Notification identity match",
+  "trigger_condition": "Account identity ≠ requested identity",
+  "guard_snippet": "→ failed(identity_mismatch), no code",
+  "potential_consequence": "Undefined state on substitution attempt"
+ },
+ {
+  "id": "E16",
+  "lens": "edge-case",
+  "location": "ADR-003 mode",
+  "trigger_condition": "Mode unset, or demo mode with production endpoints/credentials",
+  "guard_snippet": "No default mode; demo rejects production host/pins/CA/UUID",
+  "potential_consequence": "Real identities under acr=demo or unsafe default"
+ },
+ {
+  "id": "E17",
+  "lens": "edge-case",
+  "location": "ADR-003 TLS_PINS=disabled",
+  "trigger_condition": "Set in production",
+  "guard_snippet": "Require second acknowledgement flag or fail startup",
+  "potential_consequence": "Unpinned production with only a log warning"
+ },
+ {
+  "id": "E18",
+  "lens": "edge-case",
+  "location": "ADR-003 proxy + rate limits",
+  "trigger_condition": "Proxy not configured as trusted hop",
+  "guard_snippet": "Startup warning when all peers are private/LB addresses",
+  "potential_consequence": "Per-IP limit throttles everyone"
+ },
+ {
+  "id": "E19",
+  "lens": "edge-case",
+  "location": "Readiness",
+  "trigger_condition": "Store full on single replica",
+  "guard_snippet": "Readiness ignores transient capacity",
+  "potential_consequence": "LB drops only replica"
+ },
+ {
+  "id": "E20",
+  "lens": "edge-case",
+  "location": "ADR-002 restart",
+  "trigger_condition": "Browser returns with lost flow handle",
+  "guard_snippet": "Stable error page / error=access_denied to client redirect",
+  "potential_consequence": "User stranded, client waits"
+ },
+ {
+  "id": "E21",
+  "lens": "edge-case",
+  "location": "ADR-002 TTLs",
+  "trigger_condition": "Wall-clock jump",
+  "guard_snippet": "Monotonic clock for TTLs",
+  "potential_consequence": "Codes expire early or outlive 60s"
+ },
+ {
+  "id": "E22",
+  "lens": "edge-case",
+  "location": "RS256/ES256",
+  "trigger_condition": "Both keys active, client alg unspecified",
+  "guard_snippet": "Per-client id_token_signed_response_alg, default RS256",
+  "potential_consequence": "Client cannot verify tokens"
+ },
+ {
+  "id": "E23",
+  "lens": "edge-case",
+  "location": "ADR-006 remember-method cookie",
+  "trigger_condition": "Remembered method removed",
+  "guard_snippet": "Ignore cookie if method not in registry",
+  "potential_consequence": "Flow errors on missing method"
+ },
+ {
+  "id": "S01",
+  "lens": "structure",
+  "original": "§Deferred adjacent wallet requirements and handoffs, whole section (427 words, 18% of the document)",
+  "revised": "MOVE the ADJ table and the ADJ-17 paragraph to `source-reconciliation.md`, which already owns the ADJ IDs. Keep a two-sentence pointer: \"Deferred adjacent wallet candidates (ADJ-01…ADJ-18) and out-of-product items are tracked in [source reconciliation](source-reconciliation.md). None are initial-release promises.\"",
+  "rationale": "Scope violation. The section's own lead says these are \"not new initial release promises\", yet it is the largest section and sits ahead of the in-scope threat model. Saves about 395 words. Humans lose nothing because the table survives in its home document."
+ },
+ {
+  "id": "S02",
+  "lens": "structure",
+  "original": "§Threat and validation model (179 words), placed last after deferred material",
+  "revised": "MOVE to directly after §Public surface and identity contract, before ADR-001. If the deferred section is moved out, it can follow ADR-006 instead.",
+  "rationale": "Buried critical information. The threat-to-control-to-evidence table is the most scannable statement of what the ADRs protect against, and it now sits behind 427 words of out-of-scope candidates. Readers get the \"why\" before the ADR \"how\". 0 words."
+ },
+ {
+  "id": "S03",
+  "lens": "structure",
+  "original": "Document opening: §Status and authority (68 words) leads with caveats, and no section lists the decisions",
+  "revised": "QUESTION: add a decision index under the H1, a six-row table with ADR, one-line decision and status (proposed gate / retained default / retained guardrail / proposed choice / accepted criterion / deferred), plus a line for open gates Q-01–Q-05.",
+  "rationale": "The pyramid model wants the conclusion first. Statuses now appear only inside each ADR body, so readers must read all six to learn what is decided. Adds about 60 words."
+ },
+ {
+  "id": "S04",
+  "lens": "structure",
+  "original": "§Status and authority: \"Go single binary, standard-library-first dependencies and dual MIT/Apache-2.0 licensing are source constraints; choose exact runtime/library versions…\"",
+  "revised": "MOVE the constraints to the top of §Context and boundaries as a short \"Constraints\" list (Go single binary; stdlib-first; MIT/Apache-2.0; versions chosen at implementation). Keep only document status and authority in §Status.",
+  "rationale": "Hard constraints sit inside a paragraph about the document's provenance. Separating them makes them scannable. About 0 words."
+ },
+ {
+  "id": "S05",
+  "lens": "structure",
+  "original": "§Public surface and identity contract (274 words): RS256/JWKS rotation, pairwise subject, and the assurance/acr rule (paragraphs at lines 38–42)",
+  "revised": "QUESTION: either number this section as an ADR (for example \"ADR-000: OIDC public contract\") with a Status line, or split the assurance paragraph into its own ADR.",
+  "rationale": "The section holds decisions as consequential as the numbered ADRs, including signing algorithm, subject privacy and assurance claims, but it has no status. The document marks the pairwise default as \"proposed… to confirm\" only inline. That is inconsistent scaffolding for a decision record. 0 words (+5 for the Status line)."
+ },
+ {
+  "id": "S06",
+  "lens": "structure",
+  "original": "ADR-001 to ADR-006: free prose with a \"Status:\" lead only",
+  "revised": "CONDENSE into a consistent schema, using bold lead-ins rather than new headings: **Status**, **Decision**, **Source reconciliation**, **Open gates/evidence**.",
+  "rationale": "Each ADR mixes decision, source history and gating in different orders. ADR-001, for example, opens with the decision, and its second paragraph is source history. A consistent schema supports the random access readers use when they come back to one ADR. About +20 words."
+ },
+ {
+  "id": "S07",
+  "lens": "structure",
+  "original": "ADR-005, paragraphs 3–4: \"Operator docs require field/purpose/…\" and \"Production checklist: own RP agreement/…\" (about 145 words)",
+  "revised": "MOVE to the PRD's operations/documentation requirements or a future operator runbook. In ADR-005, leave one sentence: \"Operator documentation and the production checklist are release-gating evidence; see [PRD §…].\"",
+  "rationale": "Scope violation. These are deliverable content requirements, not architecture decisions, and they make ADR-005 the most overloaded ADR (five concerns: artifacts, conformance table, operator docs, checklist/incidents, nightly workflow/support). Saves about 125 words. If they stay, convert the checklist to a bulleted list (see the pacing row)."
+ },
+ {
+  "id": "S08",
+  "lens": "structure",
+  "original": "ADR-006 \"Wallet FR-022/023\" paragraph: \"SD-JWT/KB-JWT and mdoc require issuer/holder/audience/nonce/transcript binding…\"",
+  "revised": "MERGE with the ADJ-14 row, which says the same thing (issuer, holder, status, audience, nonce, transcript). Keep the prerequisites sentence and the conformance-harness sentence in ADR-006.",
+  "rationale": "True redundancy: the same binding list is stated twice, three paragraphs apart. Saves about 40 words."
+ },
+ {
+  "id": "S09",
+  "lens": "structure",
+  "original": "ADR-001: \"MID/Web eID are not automatic low-cost substitutes; Web eID alone is estimated 80–100 hours and needs hardware/security review.\"",
+  "revised": "CONDENSE to \"MID/Web eID are not automatic low-cost substitutes (see ADR-006).\"",
+  "rationale": "Duplicates ADR-006's \"80–100h… no 'cheap fallback' assumption\". One source of truth for the estimate. Saves about 15 words."
+ },
+ {
+  "id": "S10",
+  "lens": "structure",
+  "original": "ADR-001: \"No fictional successful spike ADR is written by this planning task.\" · ADR-005: \"This task records its acceptance requirement; it does not enable a cron, send messages or deploy an autonomous monitor.\"",
+  "revised": "CUT both, or CONDENSE the second to \"Acceptance requirement only; implementation needs separate authorization.\"",
+  "rationale": "Process notes about the planning session, not the architecture. They will read as noise once the document outlives the task. Saves about 30 words."
+ },
+ {
+  "id": "S11",
+  "lens": "structure",
+  "original": "Closing paragraph: \"Apply actual implementation-specific security review before a production release. Planning/source coverage is not cryptographic review…\" (27 words)",
+  "revised": "MERGE into §Status and authority, next to \"not an implementation survey\".",
+  "rationale": "Repeats the opening disclaimer. A single caveat at the top is enough, and the threat table then ends cleanly. Saves about 15 words net."
+ },
+ {
+  "id": "S12",
+  "lens": "structure",
+  "original": "ADR-002 (303 words, five concerns: flow/code lifecycle, token lifecycle, persistence/HA, access logs, telemetry/egress)",
+  "revised": "CONDENSE the lifecycle rules (lines 52–54) into a table with Data item / Created / Destroyed at / Notes (flow entry, challenge/cert secrets, claim set, auth code, access token, cookies). Add bold lead-ins \"Persistence\", \"Logging\" and \"Egress\" for the rest.",
+  "rationale": "The lifecycle is sequential data that is hard to track in prose. A table is a visual aid that lets readers check each item's end of life, and it also makes the #10/#13 reconciliation visible. Saves about 40 words."
+ },
+ {
+  "id": "S13",
+  "lens": "structure",
+  "original": "§Proposed layout (line 32): \"cmd/eidbridge; internal/smartid; internal/authn and authntest; …\"",
+  "revised": "CONDENSE into a code-block tree or a bulleted list with a few words of responsibility per package.",
+  "rationale": "Thirteen paths in a semicolon run-on cannot be scanned. A list improves pacing at about +15 words."
+ },
+ {
+  "id": "S14",
+  "lens": "structure",
+  "original": "Pacing across the ADRs: dense paragraphs of 60–90 words built from slash-joined lists; ADR-005's \"Maintain per-release table: requirement/profile version; implemented/deviation/not-run; …\"",
+  "revised": "QUESTION: render the per-release table as an empty table template, and put the production checklist and incident steps in bullet lists.",
+  "rationale": "For human readers, the document has one diagram and two tables across about 2,300 words, with no whitespace inside sections. A table described in prose should be shown as a table. About 0 words."
+ },
+ {
+  "id": "S15",
+  "lens": "structure",
+  "original": "Missing scaffolding: undefined terms (RP, MID, LoA, acr/amr, SPKI, LOTL/TL, HAIP, ARF, QTSP, QSCD, CSC, DPIA, RoPA, OIDF) and unlinked references (FR-xxx, Q-01–Q-05, issues #6/#8/#10/#13)",
+  "revised": "QUESTION: link FR and Q IDs to the PRD and issue numbers to the tracker. Add a short glossary or link the PRD glossary.",
+  "rationale": "The Microsoft Writing Style Guide asks you to spell out an acronym on first use unless your audience knows it. Readers new to eID cannot follow ADR-003 or ADR-006 without these definitions. About +80 to +100 words for a glossary, or about +10 for links only."
+ },
+ {
+  "id": "S16",
+  "lens": "structure",
+  "original": "§Context and boundaries Mermaid diagram",
+  "revised": "PRESERVE, and add a one-line lead-in such as \"Request flow and trust inputs:\".",
+  "rationale": "This is the document's only visual aid and it anchors the mental model. Keep it. A lead-in helps screen-reader users and scanning, per Microsoft style. About +5 words."
+ },
+ {
+  "id": "S17",
+  "lens": "structure",
+  "original": "Repeated status-check/Q-02 caveat (Public surface \"Assurance\", ADR-003 paragraph 3, threat table \"explicit status policy\")",
+  "revised": "PRESERVE",
+  "rationale": "Each mention applies the rule to a different surface (claims, certificate verification, trust drift). This is reinforcement, not redundancy."
+ },
+ {
+  "id": "P01",
+  "lens": "prose",
+  "original": "\"source\" used alone as a noun throughout: \"source constraints\", \"Source requests client_secret_basic…\", \"source default 10,000\", \"RS256 is source baseline\", \"source sketch LoA='high'\", \"the source prose loop\", \"per source\", \"Support source policy\"",
+  "revised": "Consider defining the term once in Status: \"In this document, *source* means the GitHub issues and research inputs listed in the frontmatter.\"",
+  "rationale": "Readers can take \"source\" to mean source code, which changes the meaning of \"Source requests…\" and \"source default\". One definition fixes every occurrence."
+ },
+ {
+  "id": "P02",
+  "lens": "prose",
+  "original": "\"Code/config receive production RP credentials from the operator.\"",
+  "revised": "\"The operator supplies production RP credentials through configuration; the code does not include them.\"",
+  "rationale": "Says plainly who supplies the credentials and where they live. \"Code/config receive\" has no clear meaning."
+ },
+ {
+  "id": "P03",
+  "lens": "prose",
+  "original": "\"Operator keys persist across restart, old public keys remain in JWKS through issued token expiry and clock-skew allowance.\"",
+  "revised": "\"Operator keys persist across restarts. Old public keys remain in the JWKS until every issued token has expired, plus the clock-skew allowance.\"",
+  "rationale": "Fixes the comma splice and makes the retention window readable."
+ },
+ {
+  "id": "P04",
+  "lens": "prose",
+  "original": "\"Upstream readiness diagnostics are opt-in/deferred under FR-026 and cannot make every health probe perform a network request.\"",
+  "revised": "\"Upstream readiness diagnostics are opt-in and deferred under FR-026, and they must not cause every health probe to make a network request.\"",
+  "rationale": "\"cannot\" reads as a description of capability. \"must not\" states the requirement, which matches the modal verbs used elsewhere in the document."
+ },
+ {
+  "id": "P05",
+  "lens": "prose",
+  "original": "\"Assurance: never equate a method name, QUALIFIED certificate-level string or source sketch LoA='high' to legally established assurance automatically. Keep acr=demo in demo, publish evidence-backed production mapping and the selected policy/profile with status-check responsibilities (Q-02). Conflicting/unverified policy means do not assert the higher level.\"",
+  "revised": "\"Assurance: never automatically treat a method name, a `QUALIFIED` certificate level, or the source sketch's `LoA='high'` as legally established assurance. Keep `acr=demo` in demo mode. Publish an evidence-backed production mapping and the selected policy or profile, including who performs certificate status checks (Q-02). If the policy is conflicting or unverified, do not assert the higher level.\"",
+  "rationale": "Moves \"automatically\" next to its verb, fixes the comma splice, and turns \"means do not\" into a clear condition."
+ },
+ {
+  "id": "P06",
+  "lens": "prose",
+  "original": "\"This removes the source prose loop 'chooser waits for second method' while MID depends on chooser.\"",
+  "revised": "\"This breaks the circular dependency in the source, where the chooser waits for a second method while Mobile-ID waits for the chooser.\"",
+  "rationale": "\"prose loop\" is unclear. The revision names the cycle directly."
+ },
+ {
+  "id": "P07",
+  "lens": "prose",
+  "original": "\"Original spike says print subject fields and offers Mobile-ID then Web eID fallbacks.\" / \"A blocked public demo or contract/payment requirement is a stop/replan finding.\"",
+  "revised": "\"The original spike prints subject fields and offers Mobile-ID, then Web eID, as fallbacks.\" / \"If the public demo is blocked, or access requires a contract or payment, stop and replan.\"",
+  "rationale": "Fixes the verb mismatch (\"says print\") and rewrites the noun stack as a condition and an action."
+ },
+ {
+  "id": "P08",
+  "lens": "prose",
+  "original": "\"Notification may be measured as fallback without changing the product wedge.\"",
+  "revised": "Consider: \"Notification mode may be measured as a fallback without changing the product's primary method (device link)?\"",
+  "rationale": "\"wedge\" is jargon with no definition. Check that \"device link\" is what the author means."
+ },
+ {
+  "id": "P09",
+  "lens": "prose",
+  "original": "\"Public subject exposes linkability\" … \"Pairwise default is a proposed privacy choice to confirm, not an approved source default.\"",
+  "revised": "\"A public `sub` value lets clients link one user across services.\" … \"Making pairwise the default is a proposed privacy choice that still needs confirmation; the source does not approve it as the default.\"",
+  "rationale": "Says who can link users and how. Replaces the noun stack \"Pairwise default\"."
+ },
+ {
+  "id": "P10",
+  "lens": "prose",
+  "original": "\"A source logger warning that DEBUG may contain PII does not permit raw identifiers; typed no-PII logging first, sink masking as backstop at all levels.\"",
+  "revised": "\"A source logger warning that DEBUG may contain PII does not permit logging raw identifiers. Use typed no-PII logging as the primary control and sink masking as a backstop at every log level.\"",
+  "rationale": "Completes the verb (\"permit logging\"). Turns the fragment into an instruction."
+ },
+ {
+  "id": "P11",
+  "lens": "prose",
+  "original": "\"Single-replica/process restart loses pending flows; retry fresh and document this instead of claiming HA.\"",
+  "revised": "\"Restarting the single replica or process loses pending flows, and users must start a new flow. Document this instead of claiming high availability.\"",
+  "rationale": "\"retry fresh\" has no subject. Expands HA in place because it appears only once."
+ },
+ {
+  "id": "P12",
+  "lens": "prose",
+  "original": "\"Signing keys/trust files/config and synthetic fixtures are not retention of user flow history.\" / \"demo named volume stores only that key\"",
+  "revised": "\"Storing signing keys, trust files, configuration, and synthetic fixtures does not count as retaining user flow history.\" / \"the demo's named volume stores only that key\"",
+  "rationale": "Replaces the slash chain and fixes the category error (keys \"are not retention\"). Adds the missing possessive."
+ },
+ {
+  "id": "P13",
+  "lens": "prose",
+  "original": "\"It does not make a passing hardened deployment claim.\" / \"Default demo warning/banner repeats per source, without personal data.\"",
+  "revised": "\"A deployment that uses it cannot claim to be hardened.\" / Consider: \"The demo warning banner is shown by default, as the source specifies, and contains no personal data?\"",
+  "rationale": "The first sentence misparses as written. In the second, \"repeats\" could mean \"on every page\" or \"as the source says\", so the author should check the intended meaning."
+ },
+ {
+  "id": "P14",
+  "lens": "prose",
+  "original": "\"Official permissive code can be reused with notice; no LGPL demo or unlicensed documentation copying.\"",
+  "revised": "\"Official permissively licensed code can be reused with attribution. Do not copy the LGPL demo or unlicensed documentation.\"",
+  "rationale": "\"no LGPL demo\" can be read as \"do not ship a demo\". The intended rule is about copying."
+ },
+ {
+  "id": "P15",
+  "lens": "prose",
+  "original": "\"Prefer an appropriate maintained provider library over handwritten JWT/protocol mechanics, but do not invent a selection.\"",
+  "revised": "\"Prefer a maintained provider library over handwritten JWT and protocol code, but do not name one until the evaluation below is done.\"",
+  "rationale": "\"invent a selection\" is unclear. \"appropriate\" adds nothing."
+ },
+ {
+  "id": "P16",
+  "lens": "prose",
+  "original": "\"Failure cannot be hidden by labelling omitted source AC done.\"",
+  "revised": "\"Do not hide a failure by marking omitted source acceptance criteria as done.\"",
+  "rationale": "Turns the passive into a direct rule and expands AC."
+ },
+ {
+  "id": "P17",
+  "lens": "prose",
+  "original": "\"Access tokens for userinfo need an explicit bounded lifecycle: proposal is short-lived signed JWTs … unless explicitly necessary/allow-listed.\"",
+  "revised": "\"…: the proposal is short-lived signed JWTs … unless it is necessary and explicitly allow-listed.\"",
+  "rationale": "Adds the missing article. \"necessary/allow-listed\" leaves open whether one condition or both is required. Check that \"and\" is right."
+ },
+ {
+  "id": "P18",
+  "lens": "prose",
+  "original": "\"Conformance harness after verified wallet method, core positive plus at least ten negative cases, pinned spec references and JUnit, no certification claim.\"",
+  "revised": "\"Build the conformance harness after the wallet method is verified. It covers the core positive case and at least ten negative cases, uses pinned spec references, and emits JUnit results. It makes no certification claim.\"",
+  "rationale": "The fragment does not parse. The revision adds the verb and the relationships."
+ },
+ {
+  "id": "P19",
+  "lens": "prose",
+  "original": "\"Support source policy: latest minor fixes; pin/CA fixes backported one minor if maintained.\"",
+  "revised": "Consider: \"Support policy (from source): fixes ship in the latest minor release; pin and CA fixes are backported to the previous minor release while it is maintained?\"",
+  "rationale": "\"latest minor fixes\" and \"one minor\" are too compressed to read. Check the meaning."
+ },
+ {
+  "id": "P20",
+  "lens": "prose",
+  "original": "\"Private-key rotation/compromise recovery must be exercised.\" / \"HTTP/request sizes\"",
+  "revised": "\"Private-key rotation and compromise recovery must both be exercised.\" / Consider: \"HTTP header and request body sizes?\"",
+  "rationale": "These slashes are ambiguous: \"rotation/compromise\" could mean \"rotation or recovery\". The guide says not to use a slash for \"and/or\". Other slash pairs in the document (\"provisioning/linking\", \"templates/loggers/metrics\", \"built/tested\", \"short-lived/non-identifying\") should become \"and\" or \"or\" in the same way."
+ },
+ {
+  "id": "P21",
+  "lens": "prose",
+  "original": "\"licence\" (ADR-004, ADR-006), \"license\" (ADR-004 \"hash/license metadata\"), \"labelling\" (ADR-005); \"80–100 hours\" vs \"80–100h\"",
+  "revised": "\"license\", \"labeling\"; \"80–100 hours\" everywhere",
+  "rationale": "The document mixes British and US spelling inside one ADR. The Microsoft style guide uses US spelling and says to spell out units in prose."
+ },
+ {
+  "id": "P22",
+  "lens": "prose",
+  "original": "Serial comma left out throughout, for example \"client_secret_basic, client_secret_post and private_key_jwt\", \"hosted deployment or project-author data collection\", \"signature, root chain, validity, usage, certificate level and identity match\"",
+  "revised": "Add the serial comma: \"…, client_secret_post, and private_key_jwt\"",
+  "rationale": "The Microsoft style guide requires the serial comma. It also removes ambiguity in long technical lists."
+ },
+ {
+  "id": "P23",
+  "lens": "prose",
+  "original": "Code identifiers in plain text: acr=demo, eid_env=demo, TLS_PINS=disabled, personal_code, client_secret_basic, private_key_jwt, testdata, oss_inventory, COMPLETE, \"Verify coverage\" (threat table)",
+  "revised": "Format them as code: `acr=demo`, `TLS_PINS=disabled`, `personal_code`, `testdata`, `Verify`, and so on",
+  "rationale": "The Microsoft style guide puts code elements in code style. This separates literal values from prose. Consider whether \"Verify\" in the threat table is a function name."
+ },
+ {
+  "id": "P24",
+  "lens": "prose",
+  "original": "Closing caveat (merged into Status): \"Apply actual implementation-specific security review before a production release. Planning/source coverage is not cryptographic review or evidence that any product test passes.\"",
+  "revised": "\"Complete a security review of the actual implementation before any production release. This planning document is neither a cryptographic review nor evidence that any product test passes.\"",
+  "rationale": "\"Apply … review\" is the wrong verb. \"Planning/source coverage\" is unclear."
+ },
+ {
+  "id": "P25",
+  "lens": "prose",
+  "original": "\"Registry of methods is internal until multiple implementations justify stabilizing it. OIDC and web receive a registry/contract, not a direct import of each backend.\"",
+  "revised": "\"The method registry stays internal until several implementations justify stabilizing it. The OIDC and web packages receive the registry interface, not direct imports of each backend.\"",
+  "rationale": "Adds missing articles and says that \"OIDC and web\" are packages. \"registry/contract\" is resolved as a single interface. Check that reading."
+ }
+]
