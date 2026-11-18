@@ -7,3 +7,7 @@ Self-hosted Go bridge from the Smart-ID RP API v3 to OIDC. Unofficial and operat
 Names such as Smart-ID are used only to describe compatibility. They imply no endorsement, certification, assurance level or qualified trust-service status.
 
 Security issues: see [SECURITY.md](SECURITY.md).
+
+## License
+
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. See [NOTICE](NOTICE).
