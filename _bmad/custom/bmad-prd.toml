@@ -1,0 +1,8 @@
+# Project-owned BMAD context, 2026-11-18. Framework and installed skills remain unchanged.
+[workflow]
+persistent_facts = [
+  "file:{project-root}/_bmad-output/planning-artifacts/README.md",
+  "file:{project-root}/_bmad-output/planning-artifacts/prd.md",
+  "file:{project-root}/_bmad-output/planning-artifacts/source-reconciliation.md",
+  "The canonical PRD is _bmad-output/planning-artifacts/prd.md; its directory is doc_workspace for updates. Preserve source-aligned IDs and issue gates. Do not create a parallel PRD from the same inputs.",
+]

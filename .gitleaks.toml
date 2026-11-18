@@ -1,0 +1,12 @@
+[extend]
+useDefault = true
+
+# SHA-256 file hashes next to filenames containing "key" trip generic-api-key.
+# Scoped to these two files and this one rule; every other rule still applies.
+[[allowlists]]
+description = "SHA-256 manifests (false positives)"
+targetRules = ["generic-api-key"]
+paths = [
+  '''^tools/verify_bmad_artifacts\.py$''',
+  '''^_bmad/_config/files-manifest\.csv$''',
+]

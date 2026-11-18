@@ -1,0 +1,8 @@
+# Project-owned BMAD context, 2026-11-18. Framework and installed skills remain unchanged.
+[workflow]
+persistent_facts = [
+  "file:{project-root}/_bmad-output/planning-artifacts/README.md",
+  "file:{project-root}/_bmad-output/planning-artifacts/architecture.md",
+  "file:{project-root}/_bmad-output/planning-artifacts/source-reconciliation.md",
+  "The canonical architecture baseline is _bmad-output/planning-artifacts/architecture.md. It is a proposal derived from sources, not proof of implementation. Preserve privacy, trust/environment separation, source conflicts and open implementation decisions.",
+]

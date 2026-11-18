@@ -1,0 +1,328 @@
+#!/usr/bin/env python3
+"""Trace every architecture review finding to an architecture anchor plus a verifying AC or gate.
+
+Exit 0 only when all findings resolve and every editorial gate passes.
+Usage: tools/check-arch-trace [--json] [--skip-mermaid]
+"""
+import json, re, shutil, subprocess, sys, tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+PLAN = ROOT / "_bmad-output/planning-artifacts"
+ARCH, EPICS = PLAN / "architecture.md", PLAN / "epics.md"
+FINDINGS = PLAN / "research/architecture-review-2026-11-18.json"
+WORD_BUDGET = 1900  # words outside tables, fences and frontmatter (remediation plan, hard target)
+BEHAVIORAL = ("A", "E")
+
+
+def slug(h):
+    s = re.sub(r"[^\w\- ]", "", h.strip().lower().replace("`", ""))
+    return s.replace(" ", "-")
+
+
+def strip_fences(t):
+    return re.sub(r"^(```|~~~).*?^\1", "", t, flags=re.M | re.S)
+
+
+def prose_lines(text):
+    """Lines that count as prose: not frontmatter, fences, tables, headings."""
+    text = re.sub(r"\A---.*?^---\n", "", text, flags=re.S | re.M)
+    for l in strip_fences(text).splitlines():
+        if l.lstrip().startswith("|") or l.startswith("#"):
+            continue
+        yield l
+
+
+def outside_code(l):
+    """Visible prose: no code spans, no link destinations."""
+    return re.sub(r"\]\([^)]*\)", "]", re.sub(r"`[^`]*`", "", l))
+
+
+def section(text, name):
+    m = re.search(rf"^## {re.escape(name)}\n(.*?)(?=^## |\Z)", text, flags=re.S | re.M)
+    return m.group(1) if m else ""
+
+
+# ---- gates: each returns (ok, detail) -------------------------------------------------
+def g_word_budget(a, _):
+    n = sum(len(l.split()) for l in prose_lines(a) if not l.startswith("<!--"))
+    return n <= WORD_BUDGET, f"{n} prose words outside tables (budget {WORD_BUDGET})"
+
+
+def g_decision_index(a, _):
+    s = section(a, "Decision index")
+    ok = bool(re.search(r"\|\s*ADR\s*\|.*Decision.*Status.*Q-xx.*Owner.*Blocks.*Evidence", s))
+    rows = len(re.findall(r"^\| \[?ADR-\d+", s, flags=re.M))
+    return ok and rows >= 10, f"header ok={ok}, ADR rows={rows} (need >=10)"
+
+
+def g_adr_schema(a, _):
+    bad = []
+    for m in re.finditer(r"^## (ADR-\d+[^\n]*)\n(.*?)(?=^## |\Z)", a, flags=re.S | re.M):
+        for lead in ("Status", "Decision", "Source reconciliation", "Open gates and evidence"):
+            if f"**{lead}.**" not in m.group(2):
+                bad.append(f"{m.group(1).split(':')[0]} lacks {lead}")
+    return not bad, "; ".join(bad) or "all ADRs use the four lead-ins"
+
+
+def g_threat_first(a, _):
+    t, f = a.find("\n## Threat and validation model"), a.find("\n## ADR-001")
+    return 0 < t < f, f"threat model at {t}, ADR-001 at {f}"
+
+
+def g_adj_moved(a, _):
+    sr = (PLAN / "source-reconciliation.md").read_text()
+    here = bool(re.search(r"^\| ADJ-\d+ \|", a, flags=re.M)) or "ADJ-17 WooCommerce" in a
+    there = "| ADJ-01 signed verifier requests" in sr and "ADJ-17 WooCommerce" in sr
+    return (not here) and there, f"ADJ in architecture={here}, ADJ table in source-reconciliation={there}"
+
+
+def g_ops_moved(a, _):
+    prd = (PLAN / "prd.md").read_text()
+    gone = "Operator docs require" not in a and "Production checklist:" not in a
+    there = "Operator documentation requirements" in prd and "Production checklist" in prd
+    return gone and there, f"removed from architecture={gone}, present in PRD={there}"
+
+
+def g_glossary(a, _):
+    s = section(a, "Glossary")
+    need = ["RP", "MID", "LoA", "acr", "SPKI", "LOTL", "HAIP", "ARF", "QTSP", "QSCD", "CSC", "DPIA", "RoPA", "OIDF", "AEAD", "HMAC"]
+    miss = [n for n in need if not re.search(rf"\b{n}\b", s)]
+    return not miss, f"missing glossary terms: {miss}" if miss else "glossary covers required terms"
+
+
+def g_links(a, _):
+    bad = []
+    for l in prose_lines(a):
+        l = outside_code(re.sub(r"\[[^\]]*\]\([^)]*\)", "", l))
+        bad += re.findall(r"\b(?:FR-\d+|Q-0\d)\b", l)
+    return not bad, f"unlinked FR/Q references: {sorted(set(bad))[:8]}" if bad else "FR/Q references linked"
+
+
+def g_no_process_notes(a, _):
+    hit = [p for p in ("No fictional successful spike", "This task records", "planning task", "not an implementation survey; ") if p in a]
+    return not hit, f"process notes present: {hit}" if hit else "no planning-task notes"
+
+
+def g_layout_list(a, _):
+    m = re.search(r"Proposed layout[^\n]*\n((?:\s*[-*] [^\n]*\n|\n)+)", a)
+    n = len(re.findall(r"^\s*[-*] ", m.group(1), flags=re.M)) if m else 0
+    return n >= 8, f"layout list items={n}"
+
+
+def g_diagram_leadin(a, _):
+    m = re.search(r"\n([^\n]+)\n\n~~~mermaid", a)
+    return bool(m and m.group(1).strip().endswith(":")), "lead-in before mermaid " + ("ok" if m else "missing")
+
+
+def g_release_template(a, _):
+    return bool(re.search(r"^\| Requirement or profile version \|", a, flags=re.M)), "per-release table template present"
+
+
+def g_spelling(a, _):
+    t = outside_code("\n".join(prose_lines(a)))
+    hits = re.findall(r"licen[c]e\w*|labell\w*|80–100h|\band/or\b", t, flags=re.I)
+    return not hits, f"forbidden spellings: {sorted(set(hits))}" if hits else "US spelling, no and/or"
+
+
+def g_code_literals(a, _):
+    bad = []
+    for l in prose_lines(a):
+        bad += re.findall(r"acr=demo|eid_env=demo|TLS_PINS\S*", outside_code(l))
+    return not bad, f"literals outside backticks: {sorted(set(bad))}" if bad else "literals in code format"
+
+
+def g_source_defined(a, _):
+    s = section(a, "Status and authority")
+    return bool(re.search(r"\*?source\*? means", s, flags=re.I)), "source defined in Status"
+
+
+def g_ambiguous(a, _):
+    pats = ["product wedge", "repeats per source", "necessary/allow-listed", "Latest minor fixes", "latest minor fixes"]
+    hit = [p for p in pats if p in a]
+    return not hit, f"ambiguous phrases remain: {hit}" if hit else "four ambiguous items resolved"
+
+
+def g_serial_comma(a, _):
+    bad = []
+    for l in prose_lines(a):
+        l = outside_code(re.sub(r"\[[^\]]*\]\([^)]*\)", "", l))
+        bad += re.findall(r"\b\w+, \w+ (?:and|or) \w+", l)
+    return not bad, f"missing serial comma near: {bad[:4]}" if bad else "serial commas present"
+
+
+def g_mermaid(a, _):
+    if "--skip-mermaid" in sys.argv:
+        return True, "SKIPPED (--skip-mermaid)"
+    blocks = re.findall(r"^~~~mermaid\n(.*?)^~~~", a, flags=re.S | re.M)
+    if not blocks:
+        return False, "no mermaid block"
+    mmdc = shutil.which("mmdc")
+    cmd = [mmdc] if mmdc else (["npx", "--yes", "@mermaid-js/mermaid-cli"] if shutil.which("npx") else None)
+    if not cmd:
+        return False, "mmdc/npx unavailable: NOT RUN"
+    with tempfile.TemporaryDirectory() as d:
+        for i, b in enumerate(blocks):
+            src, out = Path(d, f"{i}.mmd"), Path(d, f"{i}.svg")
+            src.write_text(b)
+            pj = Path(d, "p.json")
+            chrome = next((c for c in ("chromium", "google-chrome-stable", "google-chrome") if shutil.which(c)), None)
+            pj.write_text(json.dumps({"args": ["--no-sandbox"], **({"executablePath": shutil.which(chrome)} if chrome else {})}))
+            r = subprocess.run(cmd + ["-p", str(pj), "-i", str(src), "-o", str(out)], capture_output=True, text=True, timeout=240)
+            if r.returncode or not out.exists():
+                return False, "render failed: " + (r.stderr or r.stdout)[-200:]
+    return True, f"{len(blocks)} diagram(s) rendered"
+
+
+def _table(a, header_re):
+    """Return data rows (cell lists) of the first table whose header matches."""
+    lines = a.splitlines()
+    for i, l in enumerate(lines):
+        if l.startswith("|") and re.search(header_re, l):
+            rows = []
+            for r in lines[i + 2:]:
+                if not r.startswith("|"):
+                    break
+                rows.append([c.strip() for c in r.strip().strip("|").split("|")])
+            return rows
+    return None
+
+
+def g_lifecycle_table(a, _):
+    rows = _table(a, r"Item\s*\|\s*Created\s*\|\s*Destroyed at\s*\|\s*Memory owner")
+    need = ["flow entry", "challenge", "claim set", "authorization code", "access token", "deny-list", "cookie"]
+    if rows is None:
+        return False, "lifecycle table missing"
+    names = " ".join(r[0].lower() for r in rows)
+    miss = [n for n in need if n not in names]
+    empty = [r[0] for r in rows if any(not c for c in r)]
+    return not miss and not empty, f"missing rows {miss}, rows with empty cells {empty}"
+
+
+STATES = ["created", "pending", "verified", "refused", "expired", "failed", "cancelled"]
+
+
+def g_state_table(a, _):
+    rows = _table(a, r"Input\s*\|\s*created\s*\|\s*pending")
+    if rows is None:
+        return False, "state-transition table missing"
+    hdr = next(l for l in a.splitlines() if re.search(r"Input\s*\|\s*created", l))
+    cols = [c.strip() for c in hdr.strip().strip("|").split("|")]
+    ok = cols[1:] == STATES
+    empty = [r[0] for r in rows if len(r) != len(cols) or any(not c for c in r)]
+    inputs = " ".join(r[0].lower() for r in rows)
+    need = ["init error", "abandon", "unknown", "late", "identity mismatch", "retry", "timeout", "endresult"]
+    miss = [n for n in need if n not in inputs]
+    return ok and not empty and not miss, f"columns ok={ok}, incomplete rows={empty}, missing inputs={miss}, rows={len(rows)}"
+
+
+def g_capacity_model(a, _):
+    rows = _table(a, r"Quantity\s*\|\s*Formula\s*\|\s*Value")
+    need = ["pending-flow cap", "code store cap", "upstream concurrency", "per-ip", "per-client", "tombstone"]
+    if rows is None:
+        return False, "capacity model table missing"
+    names = " ".join(r[0].lower() for r in rows)
+    miss = [n for n in need if n not in names]
+    return not miss, f"capacity rows missing: {miss}"
+
+
+def g_config_matrix(a, _):
+    rows = _table(a, r"Invariant\s*\|\s*Mode\s*\|\s*Startup result")
+    need = ["mode unset", "outside the published demo allow-list", "any value on the demo allow-list", "demo signing key", "tls_pins=disabled", "trusted_proxies", "unsupported signing algorithm"]
+    if rows is None:
+        return False, "configuration invariant matrix missing"
+    names = " ".join(r[0].lower() for r in rows)
+    miss = [n for n in need if n not in names]
+    return not miss, f"config invariants missing: {miss}"
+
+
+def g_constraints_list(a, _):
+    s = section(a, "Context and boundaries")
+    return bool(re.search(r"Constraints[^\n]*\n(?:\s*[-*] [^\n]+\n){3,}", s)), "Constraints list in Context and boundaries"
+
+
+def g_dedupe(a, _):
+    n1, n2 = len(re.findall(r"issuer, holder, audience", a)), len(re.findall(r"80.100 hours", a))
+    return n1 <= 1 and n2 <= 1, f"wallet binding list x{n1}, 80-100 hours x{n2} (each at most once)"
+
+
+def g_status_caveat(a, _):
+    return "cryptographic review" in section(a, "Status and authority"), "security-review caveat lives in Status"
+
+
+def g_q02_preserved(a, _):
+    n = len(re.findall(r"Q-02", a))
+    return n >= 3, f"Q-02 caveat mentions={n} (keep >=3)"
+
+
+REWRITES = ["Conformance harness after verified wallet", "HTTP/request sizes", "Code/config receive", "retry fresh", "prose loop", "Original spike says", "passing hardened deployment claim", "no LGPL demo", "invent a selection", "Failure cannot be hidden", "rotation/compromise", "trust files/config", "contract/payment requirement", "cannot make every health probe", "means do not assert", "Single-replica/process", "opt-in/deferred", "unless explicitly necessary", "oss_inventory,", "stabilizing it. OIDC and web receive a registry/contract"]
+
+
+def g_prose_rewrites(a, _):
+    hit = [p for p in REWRITES if p in a]
+    return not hit, f"unrevised phrases remain: {hit}" if hit else "flagged phrases rewritten"
+
+
+GATES = {k[2:].replace("_", "-"): v for k, v in globals().items() if k.startswith("g_")}
+
+
+def main():
+    a, e = ARCH.read_text(), EPICS.read_text()
+    findings = json.loads(FINDINGS.read_text())
+    ids = [f["id"] for f in findings]
+    resolution = section(a, "Review resolution")
+    rows, errors = {}, []
+    for l in resolution.splitlines():
+        c = [x.strip() for x in l.strip().strip("|").split("|")]
+        if l.startswith("|") and re.fullmatch(r"[ASEP]\d\d", c[0]):
+            if c[0] in rows:
+                errors.append(f"{c[0]}: duplicate row")
+            rows[c[0]] = c
+    heads = {slug(m.group(1)) for m in re.finditer(r"^#{1,6} (.+)$", a, flags=re.M)}
+    stories = {m.group(1): m.group(2) for m in re.finditer(r"^### Story (\d+\.\d+):.*?\n(.*?)(?=^### |^## |\Z)", e, flags=re.S | re.M)}
+    gate_results = {}
+    open_ids = []
+    for fid in ids:
+        r = rows.get(fid)
+        if not r or len(r) < 4:
+            open_ids.append(fid); errors.append(f"{fid}: no row in Review resolution")
+            continue
+        anchor = re.search(r"\(#([^)]+)\)", r[1])
+        story, test = r[2], r[3].strip("`")
+        if not anchor or anchor.group(1) not in heads:
+            errors.append(f"{fid}: anchor does not resolve ({r[1]})")
+        if story != "—":
+            body = stories.get(story)
+            ok = body is not None and any(f"[{fid}]" in ln and f"`{test}`" in ln for ln in body.splitlines())
+            if not ok:
+                errors.append(f"{fid}: Story {story} lacks an AC line tagged [{fid}] naming `{test}`")
+        elif test.startswith("gate:") and fid[0] not in BEHAVIORAL:
+            for g in test[5:].split("+"):
+                if g not in GATES:
+                    errors.append(f"{fid}: unknown gate {g}")
+        else:
+            errors.append(f"{fid}: behavioral findings need a story AC and test; others need a story or gate")
+    for g, fn in GATES.items():
+        try:
+            gate_results[g] = fn(a, None)
+        except Exception as ex:  # a broken gate must fail, not pass
+            gate_results[g] = (False, f"gate error: {ex}")
+    for g, (ok, d) in gate_results.items():
+        if not ok:
+            errors.append(f"gate {g}: {d}")
+    result = {"findings": len(ids), "rows": len(rows), "open": len(set(open_ids)), "errors": errors, "gates": {g: {"ok": ok, "detail": d} for g, (ok, d) in gate_results.items()}}
+    if "--json" in sys.argv:
+        print(json.dumps(result, indent=1, ensure_ascii=False))
+    else:
+        print(f"findings={len(ids)} rows={len(rows)} open={result['open']} errors={len(errors)}")
+        for g, (ok, d) in gate_results.items():
+            print(f"  [{'PASS' if ok else 'FAIL'}] {g}: {d}")
+        for x in errors[:60]:
+            print("  -", x)
+        if len(errors) > 60:
+            print(f"  ... {len(errors) - 60} more")
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
