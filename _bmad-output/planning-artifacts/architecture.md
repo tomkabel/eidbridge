@@ -121,7 +121,7 @@ The method registry stays internal until several implementations justify stabili
 
 **Source reconciliation.** If the public demo is blocked or access needs a contract or payment: stop and replan. Mobile-ID and Web eID are not automatic cheap substitutes (ADR-006).
 
-**Open gates and evidence.** [Q-01](prd.md#constraints-assumptions-and-open-decisions); redacted spike notes. The pinned source is Smart-ID RP API 3.2.8 (its OpenAPI file reads 3.1); see the [facts note](research/smart-id-v3-facts-2026-11-18.md) and `docs/spec-pins/spec-pins.json`.
+**Open gates and evidence.** [Q-01](prd.md#constraints-assumptions-and-open-decisions); redacted spike notes. The pinned source is Smart-ID RP API 3.2.8 (its OpenAPI file reads 3.1); see the facts note (`research/smart-id-v3-facts-2026-11-18.md`, local only) and `docs/spec-pins/spec-pins.json`.
 
 ## ADR-002: privacy and transient state lifecycle
 
@@ -433,7 +433,7 @@ The pinned session status has `state` `RUNNING` (poll again) or `COMPLETE`; only
 
 ## Review resolution
 
-Each finding in [the review JSON](research/architecture-review-2026-11-18.json) has one row. `tools/check-arch-trace` fails when a row, anchor, story AC line or gate is missing. A and E findings need a story AC and a named test; S and P findings need a story or a gate.
+Each finding in the review JSON (`research/architecture-review-2026-11-18.json`, local only) has one row. `tools/check-arch-trace` fails when a row, anchor, story AC line or gate is missing. A and E findings need a story AC and a named test; S and P findings need a story or a gate.
 
 | ID | Section | Story | Test or gate |
 |---|---|---|---|
