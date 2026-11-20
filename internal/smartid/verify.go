@@ -282,3 +282,8 @@ func interactionOffered(interactionsB64, used string) bool {
 	}
 	return used != "" && strings.Contains(string(b), `"type":"`+used+`"`)
 }
+
+// DemoPolicyOIDs is the policy observed on demo authentication certificates
+// (ADR 0001). It is not SK's designated list; production operators configure
+// their own (Q-02).
+var DemoPolicyOIDs = []asn1.ObjectIdentifier{{1, 3, 6, 1, 4, 1, 10015, 17, 2}}
