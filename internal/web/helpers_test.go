@@ -293,3 +293,20 @@ func (e *wenv) exchange(code string) (int, string) {
 	}
 	return resp.StatusCode, readAll(resp)
 }
+
+func (e *wenv) stateOf(id string) string {
+	f := e.flow(id)
+	if f == nil {
+		return "gone"
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.state
+}
+
+func (e *wenv) reasonOf(id string) string {
+	f := e.flow(id)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.reason
+}

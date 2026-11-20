@@ -183,7 +183,7 @@ func TestReloadRendersStoredStateAndCancelNeedsBindingToken(t *testing.T) {
 	// Cancel by GET is not a route; POST without form token restarts.
 	r, _ := b.nr.PostForm(e.issuer+"/flow/"+id+"/cancel", url.Values{})
 	r.Body.Close()
-	if e.flow(id).state != StatePending {
+	if e.stateOf(id) != StatePending {
 		t.Fatal("cancel without binding token changed state")
 	}
 	r, _ = b.nr.PostForm(e.issuer+"/flow/"+id+"/cancel", url.Values{"ft": {formToken(t, page)}})
@@ -212,7 +212,7 @@ func TestEveryFlowScopedEndpointRequiresCookie(t *testing.T) {
 			t.Errorf("%s %s without cookie: %d", ep.m, ep.p, resp.StatusCode)
 		}
 	}
-	if e.flow(id).state != StatePending || e.up.Creates.Load() != before {
+	if e.stateOf(id) != StatePending || e.up.Creates.Load() != before {
 		t.Fatal("cookieless request changed state or created upstream work")
 	}
 }
@@ -250,7 +250,7 @@ func TestStoreFullNeverEvicts(t *testing.T) {
 	if _, _, r := e.browser().begin(nil); r.StatusCode != 503 {
 		t.Fatal("full store admitted a flow")
 	}
-	if e.flow(id) == nil || e.flow(id).state != StatePending {
+	if e.flow(id) == nil || e.stateOf(id) != StatePending {
 		t.Fatal("pending flow evicted")
 	}
 }
@@ -287,7 +287,7 @@ func TestNoPollSlotReturns503AndFlowStaysCreated(t *testing.T) {
 	if r.StatusCode != 503 || r.Header.Get("Retry-After") == "" {
 		t.Fatalf("no poll slot: %d", r.StatusCode)
 	}
-	if e.flow(id3).state != StateCreated {
+	if e.stateOf(id3) != StateCreated {
 		t.Fatal("flow left created without a poll slot")
 	}
 }
@@ -343,7 +343,7 @@ func TestCreatedFlowTerminatesOnInitFailOrAbandon(t *testing.T) {
 	f.startBy = 0
 	f.mu.Unlock()
 	e.web.Sweep()
-	if e.flow(id2).state != StateExpired {
+	if e.stateOf(id2) != StateExpired {
 		t.Fatal("abandoned created flow did not expire")
 	}
 }
@@ -356,8 +356,8 @@ func TestPollRetryExhaustionFailsFlow(t *testing.T) {
 	f := e.flow(id)
 	// Break the upstream: every poll now fails with a retryable 5xx.
 	e.upBreak()
-	if e.waitState(id, StateFailed) != StateFailed || e.flow(id).reason != authn.ReasonRetriesExhausted {
-		t.Fatalf("reason %q", e.flow(id).reason)
+	if e.waitState(id, StateFailed) != StateFailed || e.reasonOf(id) != authn.ReasonRetriesExhausted {
+		t.Fatalf("reason %q", e.reasonOf(id))
 	}
 	// A later upstream result is never accepted.
 	e.upFix()
@@ -477,7 +477,7 @@ func TestFlowCookieCapFour(t *testing.T) {
 		}
 	}
 	for _, id := range ids[1:] {
-		if e.flow(id) == nil || e.flow(id).state != StateCreated {
+		if e.flow(id) == nil || e.stateOf(id) != StateCreated {
 			t.Fatal("newer flows disturbed")
 		}
 	}
@@ -522,7 +522,7 @@ func TestWeb2AppCallbackBinding(t *testing.T) {
 	other := e.browser()
 	r, _ := other.nr.Get(cb)
 	r.Body.Close()
-	if e.flow(id).state != StatePending {
+	if e.stateOf(id) != StatePending {
 		t.Fatal("callback without cookie changed state")
 	}
 	// Correct browser: verified, 303 to continue → client.
@@ -564,7 +564,7 @@ func TestWeb2AppTamperedCallbackFails(t *testing.T) {
 	u2.RawQuery = q2.Encode()
 	r2, _ := b2.nr.Get(u2.String())
 	r2.Body.Close()
-	if e2.flow(id2).state != StatePending {
+	if e2.stateOf(id2) != StatePending {
 		t.Fatal("forged callback value changed state")
 	}
 }
@@ -594,7 +594,7 @@ func TestOnlyCallbackResponseRedirects(t *testing.T) {
 	}
 	r2, _ := oldTab.nr.PostForm(e.issuer+"/flow/"+id+"/cancel", url.Values{"ft": {"x"}})
 	r2.Body.Close()
-	if e.flow(id).state != StateVerified {
+	if e.stateOf(id) != StateVerified {
 		t.Fatal("retired binding mutated completion")
 	}
 	resp, _ = b.nr.Get(e.issuer + "/flow/" + id + "/continue")
@@ -655,11 +655,11 @@ func TestPerTargetIdentityBucket(t *testing.T) {
 		id, page, _ := b.begin(nil)
 		r := b.start(id, page, "smartid", authn.FlowNotification, in)
 		body := readAll(r)
-		if i < 2 && e.flow(id).state == StateCreated {
+		if i < 2 && e.stateOf(id) == StateCreated {
 			t.Fatalf("attempt %d not started", i)
 		}
 		if i == 2 {
-			if e.flow(id).state != StateCreated || e.up.Creates.Load() != 2 || !strings.Contains(body, "Too many attempts") {
+			if e.stateOf(id) != StateCreated || e.up.Creates.Load() != 2 || !strings.Contains(body, "Too many attempts") {
 				t.Fatalf("third push to one target was sent (creates %d)", e.up.Creates.Load())
 			}
 		}
