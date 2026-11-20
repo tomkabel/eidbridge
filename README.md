@@ -13,7 +13,7 @@ Self-hosted Go bridge from the Smart-ID RP API v3 to OpenID Connect. Unofficial 
 - [Legal stance and clean-room rules](docs/legal.md) · [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)
 - [Security design and logging](docs/security.md) · [Personal data flow (for DPIAs)](docs/data-flow.md)
 - [Configuration reference](docs/configuration.md) · [Maintenance runbook](docs/api-tracking.md) · [Changelog](CHANGELOG.md)
-- IdP guides: [Keycloak](docs/idp/keycloak.md)
+- IdP guides: [Keycloak](docs/idp/keycloak.md) · [OpenID conformance results](docs/conformance.md)
 - [Implementation architecture](docs/architecture.md) · [Decision records](docs/adr/)
 
 Security issues: see [SECURITY.md](SECURITY.md).
