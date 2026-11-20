@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	doctorpkg "github.com/tomkabel/eidbridge/internal/doctor"
 	"io"
 	"time"
 
@@ -72,8 +74,62 @@ func keysCmd(args []string, getenv config.Getenv, demo bool, root string, stdout
 	return 2
 }
 
-// doctor is extended by Story 7.3.
+// doctor checks the configured upstreams and trust bundles (Story 7.3).
 var doctor = func(args []string, getenv config.Getenv, demo bool, root string, stdout, stderr io.Writer) int {
-	fmt.Fprintln(stderr, "doctor: not available")
-	return 2
+	asJSON := len(args) == 1 && args[0] == "--json"
+	if len(args) > 1 || (len(args) == 1 && !asJSON) {
+		fmt.Fprintln(stderr, "usage: eidbridge doctor [--json]")
+		return 2
+	}
+	cfg, err := config.Load(getenv, demo, root)
+	if err != nil {
+		fmt.Fprintln(stderr, "eidbridge:", err)
+		return 1
+	}
+	var targets []doctorpkg.Target
+	var bundles []doctorpkg.Bundle
+	if contains(cfg.Methods, "smartid") && cfg.SmartID.Env != "mock" {
+		s := cfg.SmartID
+		targets = append(targets, doctorpkg.Target{Component: "smartid", Env: s.Env, BaseURL: s.BaseURL, Pins: s.Pins.Pins, PinsDisabled: s.Pins.Disabled})
+		bundles = append(bundles, doctorpkg.Bundle{Component: "smartid", Certs: s.Trust.Certificates()})
+	}
+	if contains(cfg.Methods, "mobileid") && cfg.MobileID.Env != "mock" {
+		m := cfg.MobileID
+		targets = append(targets, doctorpkg.Target{Component: "mobileid", Env: m.Env, BaseURL: m.BaseURL, Pins: m.Pins.Pins, PinsDisabled: m.Pins.Disabled})
+		bundles = append(bundles, doctorpkg.Bundle{Component: "mobileid", Certs: m.Trust.Certificates()})
+	}
+	if contains(cfg.Methods, "webeid") && cfg.WebEID.Env != "mock" {
+		bundles = append(bundles, doctorpkg.Bundle{Component: "webeid", Certs: cfg.WebEID.Trust.Certificates()})
+	}
+	if contains(cfg.Methods, "eudi") && cfg.EUDI.Env != "mock" {
+		bundles = append(bundles, doctorpkg.Bundle{Component: "eudi", Certs: cfg.EUDI.Trust.Certificates()})
+	}
+	rs := doctorpkg.Run(context.Background(), targets, bundles, time.Now())
+	if asJSON {
+		enc := json.NewEncoder(stdout)
+		enc.SetIndent("", "  ")
+		enc.Encode(map[string]any{"version": 1, "results": rs})
+	} else {
+		for _, r := range rs {
+			if r.Kind == "upstream" {
+				fmt.Fprintf(stdout, "%-9s %-10s %-24s %-8s %-24s pin %-8s cert expires in %dd  rtt %dms  %s %s\n",
+					r.Component, r.Env, r.Host, r.TLSVersion, r.Cipher, r.Pin, r.ExpiresIn, r.RTTMillis, r.Status, r.Detail)
+			} else {
+				fmt.Fprintf(stdout, "%-9s trust      %d certs, %s  %s\n", r.Component, r.Certs, r.Detail, r.Status)
+			}
+		}
+	}
+	if doctorpkg.Failed(rs) {
+		return 1
+	}
+	return 0
+}
+
+func contains(xs []string, x string) bool {
+	for _, y := range xs {
+		if y == x {
+			return true
+		}
+	}
+	return false
 }

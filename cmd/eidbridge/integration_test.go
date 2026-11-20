@@ -489,3 +489,21 @@ func TestEUDIWalletLoginThroughBridge(t *testing.T) {
 		}
 	}
 }
+
+// Story 7.3: doctor --json emits the documented schema; mock upstreams are
+// not contacted.
+func TestDoctorJSON(t *testing.T) {
+	env := map[string]string{"EIDBRIDGE_SMARTID_ENV": "mock", "EIDBRIDGE_KEY_DIR": t.TempDir()}
+	var out, errb strings.Builder
+	code := run([]string{"--demo", "--root", "../..", "doctor", "--json"}, func(k string) string { return env[k] }, &out, &errb)
+	var doc struct {
+		Version int              `json:"version"`
+		Results []map[string]any `json:"results"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out.String()), &doc) != nil || doc.Version != 1 || len(doc.Results) != 0 {
+		t.Fatalf("exit %d: %s %s", code, out.String(), errb.String())
+	}
+	if code := run([]string{"--demo", "doctor", "--bogus"}, func(k string) string { return env[k] }, &out, &errb); code != 2 {
+		t.Fatalf("bad flag exit %d", code)
+	}
+}

@@ -82,6 +82,9 @@ func NewClient(o Options) *http.Client {
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 }
 
+// CheckPins reports whether a verified chain of cs contains a pinned key.
+func CheckPins(cs tls.ConnectionState, pins []Pin) error { return checkPins(cs, pins) }
+
 // checkPins runs after Go's standard chain and hostname verification. It
 // accepts the connection when any certificate of a verified chain matches.
 func checkPins(cs tls.ConnectionState, pins []Pin) error {
