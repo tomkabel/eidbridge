@@ -1,0 +1,47 @@
+{{template "top" .}}
+<h1>{{call .T "choose.heading"}}</h1>
+{{if .Error}}<p class="error" role="alert" id="form-error">{{call .T (printf "error.%s" .Error)}}</p>{{end}}
+{{if .Chooser}}<p>{{call .T "choose.method"}}</p>{{end}}
+{{range .Choices}}{{$m := .}}
+<section class="method" aria-labelledby="m-{{.Name}}">
+{{if $.Chooser}}<h2 id="m-{{.Name}}">{{call $.T .Label}}</h2>{{else}}<h2 id="m-{{.Name}}" class="visually-hidden">{{call $.T .Label}}</h2>{{end}}
+<div class="actions">
+{{range .Flows}}
+<form method="post" action="{{$.Base}}/flow/{{$.FlowID}}/start">
+<input type="hidden" name="ft" value="{{$.FT}}">
+<input type="hidden" name="method" value="{{$m.Name}}">
+<input type="hidden" name="flow" value="{{.}}">
+{{if $.RememberOffer}}<label class="remember"><input type="checkbox" name="remember"> {{call $.T "choose.remember"}}</label>{{end}}
+<button type="submit" class="primary">{{call $.T (printf "flow.%s.%s" $m.Name .)}}</button>
+</form>
+{{end}}
+</div>
+{{if .Notify}}
+<form method="post" action="{{$.Base}}/flow/{{$.FlowID}}/start" class="notify" autocomplete="off" novalidate>
+<input type="hidden" name="ft" value="{{$.FT}}">
+<input type="hidden" name="method" value="{{.Name}}">
+<input type="hidden" name="flow" value="notification">
+<fieldset>
+<legend>{{call $.T (printf "notify.%s.legend" .Name)}}</legend>
+<label for="country-{{.Name}}">{{call $.T "notify.country"}}</label>
+<select id="country-{{.Name}}" name="country">
+<option value="EE">{{call $.T "country.EE"}}</option>
+<option value="LV">{{call $.T "country.LV"}}</option>
+<option value="LT">{{call $.T "country.LT"}}</option>
+</select>
+<label for="code-{{.Name}}">{{call $.T "notify.code"}}</label>
+<input id="code-{{.Name}}" name="personal_code" inputmode="numeric" maxlength="12" spellcheck="false" aria-describedby="code-help-{{.Name}}">
+<p id="code-help-{{.Name}}" class="help">{{call $.T "notify.code.help"}}</p>
+{{if eq .Name "mobileid"}}<label for="phone-{{.Name}}">{{call $.T "notify.phone"}}</label>
+<input id="phone-{{.Name}}" name="phone" inputmode="tel" maxlength="16" spellcheck="false">{{end}}
+<button type="submit">{{call $.T (printf "notify.%s.submit" .Name)}}</button>
+</fieldset>
+</form>
+{{end}}
+</section>
+{{end}}
+<form method="post" action="{{.Base}}/flow/{{.FlowID}}/cancel" class="cancel">
+<input type="hidden" name="ft" value="{{.FT}}">
+<button type="submit" class="secondary">{{call .T "action.cancel"}}</button>
+</form>
+{{template "bottom" .}}

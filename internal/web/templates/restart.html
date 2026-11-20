@@ -1,0 +1,4 @@
+{{template "top" .}}
+<h1>{{call .T "restart.heading"}}</h1>
+<p>{{call .T (printf "restart.%s" .Message)}}</p>
+{{template "bottom" .}}

@@ -10,7 +10,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	demoRSABits = 2048
+	DemoRSABits = 2048
 	os.Exit(m.Run())
 }
 

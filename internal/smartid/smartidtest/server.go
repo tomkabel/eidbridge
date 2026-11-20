@@ -49,6 +49,9 @@ type Server struct {
 	byToken  map[string]*fakeSession
 	leaves   map[string]*Leaf
 
+	// FailPolls makes every session poll answer HTTP 500.
+	FailPolls atomic.Bool
+
 	Polls       atomic.Int64
 	Creates     atomic.Int64
 	inflight    atomic.Int64
@@ -253,6 +256,7 @@ func (s *Server) resolve(fs *fakeSession, doc string) {
 		end = "DOCUMENT_UNUSABLE"
 	}
 	st := map[string]any{"state": "COMPLETE", "result": map[string]any{"endResult": end}}
+	cbu := ""
 	if end == "OK" {
 		serial := docSerial(doc)
 		leaf := s.Leaf(serial)
@@ -280,14 +284,18 @@ func (s *Server) resolve(fs *fakeSession, doc string) {
 		st["interactionTypeUsed"] = "displayTextAndPIN"
 		if fs.flow == "Web2App" {
 			sd := sha256.Sum256(fs.secret)
-			fs.callbackURL = cb + "&sessionSecretDigest=" + base64.RawURLEncoding.EncodeToString(sd[:]) + "&userChallengeVerifier=" + verifier
+			cbu = cb + "&sessionSecretDigest=" + base64.RawURLEncoding.EncodeToString(sd[:]) + "&userChallengeVerifier=" + verifier
 		}
 	}
-	if s.Mutate != nil {
-		s.Mutate(st)
+	s.mu.Lock()
+	mutate := s.Mutate
+	s.mu.Unlock()
+	if mutate != nil {
+		mutate(st)
 	}
 	s.mu.Lock()
 	fs.status = st
+	fs.callbackURL = cbu
 	s.mu.Unlock()
 	close(fs.done)
 }
@@ -304,6 +312,10 @@ func (s *Server) poll(w http.ResponseWriter, r *http.Request, id string) {
 		}
 	}
 	s.Polls.Add(1)
+	if s.FailPolls.Load() {
+		problem(w, 500, "induced failure")
+		return
+	}
 	s.mu.Lock()
 	fs := s.sessions[id]
 	s.mu.Unlock()
@@ -311,7 +323,10 @@ func (s *Server) poll(w http.ResponseWriter, r *http.Request, id string) {
 		problem(w, 404, "session does not exist or has expired")
 		return
 	}
-	if !fs.resolved {
+	s.mu.Lock()
+	resolved := fs.resolved
+	s.mu.Unlock()
+	if !resolved {
 		if fs.flow == "Notification" {
 			doc := fs.target
 			if _, ok := s.Scenarios[doc]; !ok {
@@ -361,7 +376,10 @@ func (s *Server) deviceLink(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	fs := s.byToken[q.Get("sessionToken")]
 	s.mu.Unlock()
-	if fs == nil || fs.resolved {
+	s.mu.Lock()
+	done := fs != nil && fs.resolved
+	s.mu.Unlock()
+	if fs == nil || done {
 		http.Error(w, `{"message":"unknown or finished session"}`, 400)
 		return
 	}
@@ -403,12 +421,15 @@ func (s *Server) callbackURL(w http.ResponseWriter, token string) {
 	case <-fs.done:
 	case <-time.After(2 * time.Second):
 	}
-	if fs.callbackURL == "" {
+	s.mu.Lock()
+	cbu := fs.callbackURL
+	s.mu.Unlock()
+	if cbu == "" {
 		http.Error(w, `{"message":"not found"}`, 404)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"callbackUrl": fs.callbackURL})
+	json.NewEncoder(w).Encode(map[string]string{"callbackUrl": cbu})
 }
 
 // Expire deletes a session so later polls get 404.
@@ -416,4 +437,12 @@ func (s *Server) Expire(id string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sessions, id)
+}
+
+// SetMutate replaces the status mutation hook safely.
+func (s *Server) SetMutate(f func(map[string]any)) {
+	s.init()
+	s.mu.Lock()
+	s.Mutate = f
+	s.mu.Unlock()
 }

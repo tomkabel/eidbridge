@@ -53,16 +53,16 @@ var docFor = map[authntest.Outcome]string{authntest.Success: "PNOEE-40404040009-
 func (h *harness) Drive(t *testing.T, p authn.Pending, r authn.StartRequest, o authntest.Outcome) authn.Result {
 	t.Helper()
 	ctx := context.Background()
-	h.srv.Mutate = nil
+	h.srv.SetMutate(nil)
 	if o == authntest.VerifyFail {
-		h.srv.Mutate = func(st map[string]any) {
+		h.srv.SetMutate(func(st map[string]any) {
 			if s, ok := st["signature"].(map[string]any); ok {
 				v := s["value"].(string)
 				s["value"] = "AAAA" + v[4:]
 			}
-		}
+		})
 	}
-	defer func() { h.srv.Mutate = nil }()
+	defer func() { h.srv.SetMutate(nil) }()
 	pp := p.(*pending)
 	switch r.Flow {
 	case authn.FlowNotification:
@@ -174,11 +174,11 @@ func TestIdentityMismatchFailsWithoutCode(t *testing.T) {
 	h := newHarness(t)
 	// Upstream answers with another person's certificate.
 	other := h.srv.Leaf("PNOEE-39901012239")
-	h.srv.Mutate = func(st map[string]any) {
+	h.srv.SetMutate(func(st map[string]any) {
 		if c, ok := st["cert"].(map[string]any); ok {
 			c["value"] = b64std(other.Cert.Raw)
 		}
-	}
+	})
 	p, err := h.m.Start(context.Background(), authn.StartRequest{Flow: authn.FlowNotification, Input: map[string]string{"country": "EE", "personal_code": "40404040009"}})
 	if err != nil {
 		t.Fatal(err)

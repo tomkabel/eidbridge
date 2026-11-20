@@ -1,0 +1,33 @@
+{{template "top" .}}
+<h1>{{call .T (printf "pending.%s.heading" .Offered)}}</h1>
+<div id="flow" data-status="{{.Base}}/flow/{{.FlowID}}/status" {{if .HasQR}}data-qr="{{.Base}}/flow/{{.FlowID}}/qr.png"{{end}}>
+{{if .HasQR}}
+<p>{{call .T "pending.qr.instructions"}}</p>
+<img id="qr" class="qr" src="{{.Base}}/flow/{{.FlowID}}/qr.png" width="240" height="240" alt="{{call .T "pending.qr.alt"}}">
+{{end}}
+{{if .AppLink}}
+<p>{{call .T "pending.same-device.instructions"}}</p>
+<p><a class="button primary" href="{{.AppLink}}" rel="noreferrer">{{call .T "pending.same-device.open"}}</a></p>
+{{end}}
+{{if .VC}}
+<p>{{call .T "pending.vc.instructions"}}</p>
+<p class="vc" aria-label="{{call .T "pending.vc.label"}}"><span>{{.VC}}</span></p>
+{{end}}
+{{if .Challenge}}
+<p>{{call .T "pending.browser.instructions"}}</p>
+<form method="post" action="{{.Base}}/flow/{{.FlowID}}/browser" id="browser-form" data-challenge="{{.Challenge}}">
+<input type="hidden" name="ft" value="{{.FT}}">
+<input type="hidden" name="token" id="browser-token" value="">
+<button type="button" id="browser-start" class="primary">{{call .T "pending.browser.start"}}</button>
+</form>
+{{end}}
+{{with .UIExtra}}{{with .request_uri}}<p><a class="button" href="{{.}}" rel="noreferrer">{{call $.T "pending.wallet.open"}}</a></p>{{end}}{{end}}
+<p id="status" class="status" role="status" aria-live="polite">{{call .T "status.waiting"}}</p>
+<noscript><p><a href="{{.Base}}/flow/{{.FlowID}}">{{call .T "action.refresh"}}</a></p></noscript>
+</div>
+<form method="post" action="{{.Base}}/flow/{{.FlowID}}/cancel" class="cancel">
+<input type="hidden" name="ft" value="{{.FT}}">
+<button type="submit" class="secondary">{{call .T "action.cancel"}}</button>
+</form>
+<script src="{{.Base}}/static/flow.js" defer></script>
+{{template "bottom" .}}

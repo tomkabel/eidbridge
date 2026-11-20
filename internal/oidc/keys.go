@@ -167,7 +167,7 @@ func (ks *KeySet) add(alg string) (*jose.Key, error) {
 	var err error
 	switch alg {
 	case jose.RS256:
-		s, err = rsa.GenerateKey(rand.Reader, demoRSABits)
+		s, err = rsa.GenerateKey(rand.Reader, DemoRSABits)
 	case jose.ES256:
 		s, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	default:
@@ -310,6 +310,6 @@ func EmergencyRevoke(p *Provider, kid string) error {
 	return p.sealer.Rotate()
 }
 
-// demoRSABits is the size of generated RSA keys (3,072 recommended by
+// DemoRSABits is the size of generated demo RSA keys (3,072 recommended by
 // ADR-007). Tests lower it to keep the suite fast.
-var demoRSABits = 3072
+var DemoRSABits = 3072
