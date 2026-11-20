@@ -24,6 +24,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
+	"runtime/debug"
 	"strconv"
 	"sync"
 	"testing"
@@ -131,6 +133,20 @@ func TestRedTeamHarness(t *testing.T) {
 			o.KBKey, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		}
 		json.NewEncoder(w).Encode(map[string]string{"vp_token": walletsim.VPToken(wallet(in.Wallet).Present(in.Nonce, in.Aud, o))})
+	})
+	// Heap dump for the privacy audit (runtime/debug.WriteHeapDump after GC).
+	dev.HandleFunc("POST /heapdump", func(w http.ResponseWriter, r *http.Request) {
+		runtime.GC()
+		debug.FreeOSMemory()
+		name := filepath.Join(dir, "heap-"+time.Now().UTC().Format("150405")+".dump")
+		f, err := os.Create(name)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		debug.WriteHeapDump(f.Fd())
+		f.Close()
+		w.Write([]byte(name))
 	})
 	dln, err := net.Listen("tcp", "127.0.0.1:"+port(2))
 	if err != nil {
