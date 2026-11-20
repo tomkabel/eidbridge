@@ -67,5 +67,10 @@ Mode has no default. Demo mode uses the demo defaults below; production requires
 | `EIDBRIDGE_MOBILEID_CERT_STATUS` | `ocsp` | yes | ocsp or none (demo only) | Mobile-ID certificate status checking. The demo OCSP marks demo certificates as non-issued; use none in demo. |
 | `EIDBRIDGE_MOBILEID_STATUS_HOSTS` | `aia.demo.sk.ee,c.sk.ee` | yes | host[:port] list | Allow-listed OCSP/CRL hosts for Mobile-ID. |
 | `EIDBRIDGE_MOBILEID_DISPLAY_TEXT` | `Log in` | no | ≤ 40 GSM-7 characters | Text shown on the phone next to the relying-party name. |
+| `EIDBRIDGE_WEBEID_ENV` | `demo` | yes | demo, production, mock | ID-card through Web eID (only read when `webeid` is in EIDBRIDGE_METHODS). Needs an https issuer. mock trusts a synthetic card CA and is demo-only. |
+| `EIDBRIDGE_WEBEID_CA_DIR` | `trust/demo/webeid-ca` | yes |  | Card authentication CA certificates (demo: SK test ID-card CAs). |
+| `EIDBRIDGE_WEBEID_CERT_STATUS` | `ocsp` | yes | ocsp or none (demo only) | Card certificate status checking. |
+| `EIDBRIDGE_WEBEID_STATUS_HOSTS` | `aia.demo.sk.ee,c.sk.ee` | yes | host[:port] list | Allow-listed OCSP/CRL hosts for card certificates. |
+| `EIDBRIDGE_WEBEID_DISALLOWED_POLICIES` | `1.3.6.1.4.1.10015.18.1,1.3.6.1.4.1.10015.17.2` | no | dotted OIDs | Certificate policies a card certificate must not carry (default: Mobile-ID and Smart-ID). |
 
 Method-specific variables for Web eID, the EUDI Wallet and RP API v2 are listed in their guides under [docs/methods](methods/).

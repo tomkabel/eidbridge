@@ -7,6 +7,7 @@ package config
 
 import (
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -102,6 +103,11 @@ var Options = []Option{
 	{"EIDBRIDGE_MOBILEID_CERT_STATUS", "ocsp", true, "ocsp or none (demo only)", "Mobile-ID certificate status checking. The demo OCSP marks demo certificates as non-issued; use none in demo."},
 	{"EIDBRIDGE_MOBILEID_STATUS_HOSTS", "aia.demo.sk.ee,c.sk.ee", true, "host[:port] list", "Allow-listed OCSP/CRL hosts for Mobile-ID."},
 	{"EIDBRIDGE_MOBILEID_DISPLAY_TEXT", "Log in", false, "≤ 40 GSM-7 characters", "Text shown on the phone next to the relying-party name."},
+	{"EIDBRIDGE_WEBEID_ENV", "demo", true, "demo, production, mock", "ID-card through Web eID (only read when `webeid` is in EIDBRIDGE_METHODS). Needs an https issuer. mock trusts a synthetic card CA and is demo-only."},
+	{"EIDBRIDGE_WEBEID_CA_DIR", "trust/demo/webeid-ca", true, "", "Card authentication CA certificates (demo: SK test ID-card CAs)."},
+	{"EIDBRIDGE_WEBEID_CERT_STATUS", "ocsp", true, "ocsp or none (demo only)", "Card certificate status checking."},
+	{"EIDBRIDGE_WEBEID_STATUS_HOSTS", "aia.demo.sk.ee,c.sk.ee", true, "host[:port] list", "Allow-listed OCSP/CRL hosts for card certificates."},
+	{"EIDBRIDGE_WEBEID_DISALLOWED_POLICIES", "1.3.6.1.4.1.10015.18.1,1.3.6.1.4.1.10015.17.2", false, "dotted OIDs", "Certificate policies a card certificate must not carry (default: Mobile-ID and Smart-ID)."},
 }
 
 // Config is the validated configuration.
@@ -133,6 +139,7 @@ type Config struct {
 
 	SmartID  SmartIDConfig
 	MobileID MobileIDConfig
+	WebEID   WebEIDConfig
 	Extra    map[string]string // method-specific variables, parsed by their packages
 }
 
@@ -160,6 +167,13 @@ type MobileIDConfig struct {
 	StatusHosts                  []string
 	DisplayText                  string
 	Trust                        *smartid.TrustStore
+}
+
+// WebEIDConfig is the Web eID (ID-card) method configuration.
+type WebEIDConfig struct {
+	Env, CADir, CertStatus          string
+	StatusHosts, DisallowedPolicies []string
+	Trust                           *smartid.TrustStore
 }
 
 // Getenv abstracts the environment for tests.
@@ -296,6 +310,14 @@ func Load(env Getenv, demoFlag bool, root string) (*Config, error) {
 		}
 		midPins = get("EIDBRIDGE_MOBILEID_TLS_PINS")
 	}
+	if contains(c.Methods, "webeid") {
+		w := &c.WebEID
+		*w = WebEIDConfig{Env: get("EIDBRIDGE_WEBEID_ENV"), CADir: get("EIDBRIDGE_WEBEID_CA_DIR"), CertStatus: get("EIDBRIDGE_WEBEID_CERT_STATUS"),
+			StatusHosts: splitList(get("EIDBRIDGE_WEBEID_STATUS_HOSTS")), DisallowedPolicies: splitList(get("EIDBRIDGE_WEBEID_DISALLOWED_POLICIES"))}
+		if w.CADir != "" && !filepath.IsAbs(w.CADir) && root != "" {
+			w.CADir = filepath.Join(root, w.CADir)
+		}
+	}
 	if len(missing) > 0 {
 		sort.Strings(missing)
 		return nil, fmt.Errorf("config: production requires explicit values (or a value is out of bounds): %s", strings.Join(missing, ", "))
@@ -385,6 +407,68 @@ func (c *Config) invariants(env Getenv, root string) error {
 			return err
 		}
 	}
+	if contains(c.Methods, "webeid") {
+		if err := c.webEIDInvariants(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// webEIDInvariants applies ADR-003 to the ID-card method: https issuer
+// (the token is bound to the origin), environment agrees with mode, demo
+// trust and demo status hosts never in production.
+func (c *Config) webEIDInvariants() error {
+	w := &c.WebEID
+	if !strings.HasPrefix(c.BaseURL, "https://") {
+		return errors.New("config: webeid needs an https EIDBRIDGE_ISSUER (Web eID binds the token to the https origin)")
+	}
+	switch {
+	case c.Demo && w.Env == "production", !c.Demo && w.Env != "production":
+		return fmt.Errorf("config: EIDBRIDGE_WEBEID_ENV=%s disagrees with mode %s", w.Env, c.Mode)
+	case w.Env != "demo" && w.Env != "production" && w.Env != "mock":
+		return errors.New("config: EIDBRIDGE_WEBEID_ENV must be demo, production or mock")
+	}
+	for _, o := range w.DisallowedPolicies {
+		if _, err := x509.ParseOID(o); err != nil {
+			return fmt.Errorf("config: EIDBRIDGE_WEBEID_DISALLOWED_POLICIES: %q is not an OID", o)
+		}
+	}
+	if w.Env == "mock" {
+		c.Warnings = append(c.Warnings, "Web eID trusts a synthetic card CA (mock): synthetic identities only")
+		return nil
+	}
+	if w.CertStatus != "ocsp" && w.CertStatus != "none" {
+		return errors.New("config: EIDBRIDGE_WEBEID_CERT_STATUS must be ocsp or none")
+	}
+	if !c.Demo {
+		if w.CertStatus != "ocsp" {
+			return errors.New("config: production requires EIDBRIDGE_WEBEID_CERT_STATUS=ocsp")
+		}
+		for _, sh := range w.StatusHosts {
+			if IsDemoHost(sh) {
+				return fmt.Errorf("config: production refuses demo host %s in EIDBRIDGE_WEBEID_STATUS_HOSTS", sh)
+			}
+		}
+	}
+	if w.CertStatus == "none" {
+		c.Warnings = append(c.Warnings, "Web eID certificate status checking is off (demo only)")
+	}
+	trust, err := smartid.LoadCADir(w.CADir)
+	if err != nil {
+		return fmt.Errorf("config: Web eID: %w", err)
+	}
+	for _, crt := range trust.Certificates() {
+		sum := sha256.Sum256(crt.Raw)
+		_, isDemo := DemoCAFingerprints[hex.EncodeToString(sum[:])]
+		switch {
+		case !c.Demo && isDemo:
+			return fmt.Errorf("config: production refuses demo CA %q (mixed trust)", crt.Subject.CommonName)
+		case c.Demo && !isDemo:
+			return fmt.Errorf("config: demo mode refuses non-demo CA %q (mixed trust)", crt.Subject.CommonName)
+		}
+	}
+	w.Trust = trust
 	return nil
 }
 

@@ -527,11 +527,12 @@ func (s *Server) start(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, s.base+"/flow/"+f.id, http.StatusSeeOther)
 }
 
-// offeredFlows filters method flows: same-device needs an HTTPS origin.
+// offeredFlows filters method flows: same-device and browser need an
+// HTTPS origin.
 func (s *Server) offeredFlows(m authn.Method) []string {
 	var out []string
 	for _, fl := range m.Flows() {
-		if fl == authn.FlowSameDevice && !strings.HasPrefix(s.cfg.PublicOrigin, "https://") {
+		if (fl == authn.FlowSameDevice || fl == authn.FlowBrowser) && !strings.HasPrefix(s.cfg.PublicOrigin, "https://") {
 			continue
 		}
 		out = append(out, fl)

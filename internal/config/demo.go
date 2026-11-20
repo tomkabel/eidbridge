@@ -20,6 +20,8 @@ var (
 		"84242dd8e1a1878f76ff2b5ca0c8ef22c8a8863cf072e56a9f0dc28add96b143": "TEST of SK ID Solutions ROOT G1E",
 		"063a4e908785a2b45fba27a22d45d9f2bbaa9a382e5b103e1d1036832cee6ac2": "TEST of SK ID Solutions EID-Q 2024E",
 		"994477a5a63d1087bbcfa0d6721c401c8e1a778987503b0e202777b3c3cb1ff6": "TEST of SK ID Solutions EID-Q 2021E",
+		"2291c167b5275152b53f1efa2c1805c9a15ec8def7120e56a3726a2959b31049": "TEST of ESTEID2018",
+		"e4c92e1146e0123cab3c8f69d0831ecac89869b40d6a59d4107f5bbc916f09e2": "TEST of EE-GovCA2018",
 	}
 	// ProductionHosts are the live RP API hosts. Demo refuses them.
 	ProductionHosts = map[string]bool{"rp-api.smart-id.com": true, "mid.sk.ee": true}

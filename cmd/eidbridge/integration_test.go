@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/tomkabel/eidbridge/internal/webeid/webeidtest"
+	"html"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -330,6 +332,70 @@ func TestSmartIDAndMobileIDOnOneLoginPage(t *testing.T) {
 	}
 	logs := s.logs.String()
 	for _, sec := range []string{"51307149560", "37269930366", "MARY", code, idt, cl["sub"].(string)} {
+		if strings.Contains(logs, sec) {
+			t.Fatalf("DEBUG logs contain identity data or a secret (%.12s…)", sec)
+		}
+	}
+}
+
+// Story 5.1: an ID-card login through the bridge with the mock card CA. The
+// test plays the browser extension: it reads the challenge from the page
+// and posts a token signed over the bridge's origin.
+func TestWebEIDLoginThroughBridge(t *testing.T) {
+	s := newStack(t, map[string]string{"EIDBRIDGE_METHODS": "smartid,webeid", "EIDBRIDGE_WEBEID_ENV": "mock"})
+	q := url.Values{"client_id": {"demo-rp"}, "redirect_uri": {"https://rp.example/cb"}, "response_type": {"code"},
+		"scope": {"openid profile"}, "state": {"st123"}, "nonce": {"nonce123"},
+		"code_challenge": {"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"}, "code_challenge_method": {"S256"}}
+	resp, err := s.b.Get(s.issuer + "/authorize?" + q.Encode())
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := body(resp)
+	id := strings.TrimPrefix(resp.Request.URL.Path, strings.TrimPrefix(s.issuer, s.srv.URL)+"/flow/")
+	ft := ftRe.FindStringSubmatch(page)[1]
+	r, _ := s.b.PostForm(s.issuer+"/flow/"+id+"/start", url.Values{"ft": {ft}, "method": {"webeid"}, "flow": {"browser"}})
+	pending := body(r)
+	m := regexp.MustCompile(`data-challenge="([^"]+)"`).FindStringSubmatch(pending)
+	if m == nil || !strings.Contains(pending, "/static/webeid.js") {
+		t.Fatalf("no challenge or script on the page: %.400s", pending)
+	}
+	challenge := html.UnescapeString(m[1])
+	leaf := webeidFixture.NewLeaf(webeidtest.LeafOptions{})
+	// Wrong origin first: refused, and the nonce is spent.
+	bad := leaf.Token("ES384", "https://evil.example", challenge)
+	r, _ = s.nr.PostForm(s.issuer+"/flow/"+id+"/browser", url.Values{"ft": {ft}, "token": {string(bad)}})
+	r.Body.Close()
+	r, _ = s.nr.Get(s.issuer + "/flow/" + id + "/continue")
+	r.Body.Close()
+	if u, _ := url.Parse(r.Header.Get("Location")); u == nil || u.Query().Get("error") == "" {
+		t.Fatalf("wrong-origin token did not end the flow with an error: %v", r.Header.Get("Location"))
+	}
+	// A fresh flow with the right origin logs in.
+	resp, _ = s.b.Get(s.issuer + "/authorize?" + q.Encode())
+	page = body(resp)
+	id = strings.TrimPrefix(resp.Request.URL.Path, strings.TrimPrefix(s.issuer, s.srv.URL)+"/flow/")
+	ft = ftRe.FindStringSubmatch(page)[1]
+	r, _ = s.b.PostForm(s.issuer+"/flow/"+id+"/start", url.Values{"ft": {ft}, "method": {"webeid"}, "flow": {"browser"}})
+	challenge = html.UnescapeString(regexp.MustCompile(`data-challenge="([^"]+)"`).FindStringSubmatch(body(r))[1])
+	r, _ = s.nr.PostForm(s.issuer+"/flow/"+id+"/browser", url.Values{"ft": {ft}, "token": {string(leaf.Token("ES384", s.srv.URL, challenge))}})
+	r.Body.Close()
+	r, _ = s.nr.Get(s.issuer + "/flow/" + id + "/continue")
+	r.Body.Close()
+	u, _ := url.Parse(r.Header.Get("Location"))
+	code := u.Query().Get("code")
+	if code == "" {
+		t.Fatalf("redirect %s", u)
+	}
+	tok := s.token(code)
+	idt, _ := tok["id_token"].(string)
+	cb, _ := base64.RawURLEncoding.DecodeString(strings.Split(idt, ".")[1])
+	var cl map[string]any
+	json.Unmarshal(cb, &cl)
+	if cl["eid_method"] != "webeid" || cl["given_name"] != "JAAK-KRISTJAN" || cl["acr"] != "demo" {
+		t.Fatalf("claims %v", cl)
+	}
+	logs := s.logs.String()
+	for _, sec := range []string{"38001085718", "JAAK", challenge, code, base64.StdEncoding.EncodeToString(leaf.Cert.Raw)[:40]} {
 		if strings.Contains(logs, sec) {
 			t.Fatalf("DEBUG logs contain identity data or a secret (%.12s…)", sec)
 		}

@@ -29,5 +29,6 @@
 <input type="hidden" name="ft" value="{{.FT}}">
 <button type="submit" class="secondary">{{call .T "action.cancel"}}</button>
 </form>
+{{if .Challenge}}<script src="{{.Base}}/static/webeid.js" defer></script>{{end}}
 <script src="{{.Base}}/static/flow.js" defer></script>
 {{template "bottom" .}}

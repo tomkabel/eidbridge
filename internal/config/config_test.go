@@ -136,6 +136,9 @@ func TestProductionRequiresExplicitBoundedValues(t *testing.T) {
 		if strings.Contains(o.Env, "MOBILEID") {
 			m = prodMIDEnv(t)
 		}
+		if strings.Contains(o.Env, "WEBEID") {
+			m = prodWebEIDEnv(t)
+		}
 		delete(m, o.Env)
 		if _, err := Load(envOf(m), false, ""); err == nil {
 			t.Errorf("production started without %s", o.Env)
@@ -303,5 +306,50 @@ func TestMobileIDModeInvariants(t *testing.T) {
 		if _, err := Load(envOf(m), true, root(t)); err == nil {
 			t.Errorf("demo accepted %s", name)
 		}
+	}
+}
+
+func prodWebEIDEnv(t *testing.T) map[string]string {
+	m := prodEnv(t)
+	m["EIDBRIDGE_METHODS"] = "smartid,webeid"
+	for k, v := range map[string]string{"EIDBRIDGE_WEBEID_ENV": "production", "EIDBRIDGE_WEBEID_CA_DIR": m["EIDBRIDGE_SMARTID_AUTH_CA_DIR"],
+		"EIDBRIDGE_WEBEID_CERT_STATUS": "ocsp", "EIDBRIDGE_WEBEID_STATUS_HOSTS": "aia.sk.ee"} {
+		m[k] = v
+	}
+	return m
+}
+
+// Story 5.1 with ADR-003: the ID-card method keeps demo and production
+// apart and needs an https issuer.
+func TestWebEIDModeInvariants(t *testing.T) {
+	if _, err := Load(envOf(prodWebEIDEnv(t)), false, ""); err != nil {
+		t.Fatalf("valid production Web eID refused: %v", err)
+	}
+	for name, mod := range map[string]map[string]string{
+		"demo env":         {"EIDBRIDGE_WEBEID_ENV": "demo"},
+		"mock env":         {"EIDBRIDGE_WEBEID_ENV": "mock"},
+		"status none":      {"EIDBRIDGE_WEBEID_CERT_STATUS": "none"},
+		"demo status host": {"EIDBRIDGE_WEBEID_STATUS_HOSTS": "aia.sk.ee,AIA.DEMO.SK.EE"},
+		"demo CA":          {"EIDBRIDGE_WEBEID_CA_DIR": filepath.Join(root(t), "trust", "demo", "webeid-ca")},
+		"bad policy":       {"EIDBRIDGE_WEBEID_DISALLOWED_POLICIES": "x.y"},
+	} {
+		m := prodWebEIDEnv(t)
+		for k, v := range mod {
+			m[k] = v
+		}
+		if _, err := Load(envOf(m), false, ""); err == nil {
+			t.Errorf("production accepted %s", name)
+		}
+	}
+	if _, err := Load(envOf(map[string]string{"EIDBRIDGE_METHODS": "smartid,webeid"}), true, root(t)); err == nil {
+		t.Error("demo Web eID accepted an http issuer")
+	}
+	c, err := Load(envOf(map[string]string{"EIDBRIDGE_METHODS": "smartid,webeid", "EIDBRIDGE_ISSUER": "https://localhost:8443"}), true, root(t))
+	if err != nil || c.WebEID.Trust == nil {
+		t.Fatalf("demo Web eID: %v", err)
+	}
+	m := map[string]string{"EIDBRIDGE_METHODS": "smartid,webeid", "EIDBRIDGE_ISSUER": "https://localhost:8443", "EIDBRIDGE_WEBEID_CA_DIR": prodEnv(t)["EIDBRIDGE_SMARTID_AUTH_CA_DIR"]}
+	if _, err := Load(envOf(m), true, root(t)); err == nil {
+		t.Error("demo accepted a non-demo card CA")
 	}
 }
