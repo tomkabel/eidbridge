@@ -1,10 +1,16 @@
 # eidbridge
 
-Self-hosted Go bridge from the Smart-ID RP API v3 to OIDC. Unofficial and operator-controlled. No telemetry and no persistent personal authentication state by default.
+[![CI](https://github.com/tomkabel/eidbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/tomkabel/eidbridge/actions/workflows/ci.yml)
 
-**Status: planning.** There is no application code yet and no test pass is claimed. See the [project overview](docs/project-overview.md) and the [planning index](_bmad-output/planning-artifacts/README.md).
+Self-hosted Go bridge from the Smart-ID RP API v3 to OpenID Connect. Unofficial and operator-controlled. No telemetry and no persistent personal authentication state by default.
 
-Names such as Smart-ID are used only to describe compatibility. They imply no endorsement, certification, assurance level or qualified trust-service status.
+> **Unofficial, community-maintained software. Not affiliated with, endorsed by or certified by the operators of Smart-ID, Mobile-ID, the Estonian ID-card or any EUDI Wallet.** Scheme names describe compatibility only and imply no endorsement, certification, assurance level or qualified trust-service status. Production use needs your own relying-party agreement with the scheme operator. See [legal stance](docs/legal.md).
+
+**Status: pre-release.** Code exists on the `feat/full-build` branch; nothing is released or published. No external security review has been done. See the [project overview](docs/project-overview.md) and the [planning index](_bmad-output/planning-artifacts/README.md).
+
+## Documentation
+
+- [Legal stance and clean-room rules](docs/legal.md) · [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)
 
 Security issues: see [SECURITY.md](SECURITY.md).
 
