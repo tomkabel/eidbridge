@@ -2,6 +2,7 @@
   "enabledPlugins": {
     "supermatt@supermatt": true,
     "ponytail@ponytail": true,
-    "claude-memory@anthropic-plugin-directory": true
+    "claude-memory@anthropic-plugin-directory": true,
+    "superpowers@superpowers-marketplace": true
   }
 }
