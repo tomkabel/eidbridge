@@ -21,3 +21,12 @@ targetRules = ["generic-api-key"]
 paths = [
   '''^internal/smartid/testdata/live/''',
 ]
+
+# Synthetic JWT (signature bytes "signature…", demo test code) used to
+# prove the log redactor removes tokens. Scoped to the jwt rule there.
+[[allowlists]]
+description = "Synthetic JWT in the redaction test"
+targetRules = ["jwt"]
+paths = [
+  '''^internal/logx/logx_test\.go$''',
+]
