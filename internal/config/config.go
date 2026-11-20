@@ -74,6 +74,8 @@ var Options = []Option{
 	{"EIDBRIDGE_TRUSTED_PROXIES", "", false, "CIDRs", "Proxy hops whose X-Forwarded-For is trusted. Empty: forwarding headers are ignored."},
 	{"EIDBRIDGE_DEFAULT_LOCALE", "en", false, "en, et, lv, lt, ru", "Fallback locale."},
 	{"EIDBRIDGE_REMEMBER_METHOD", "false", false, "true or false", "Offer an opt-in method preference cookie (chooser only)."},
+	{"EIDBRIDGE_SIGNING_ENABLED", "false", false, "true or false", "Serve the Smart-ID signing digest relay at /api/v1/sign (Story 8.1). Needs `smartid` in EIDBRIDGE_METHODS and clients with `signing_allowed` and client_secret_basic. No legal or qualified-signature claim is made."},
+	{"EIDBRIDGE_SIGNING_CA_DIR", "", false, "directory", "Signing-certificate CAs; empty uses EIDBRIDGE_SMARTID_AUTH_CA_DIR."},
 	{"EIDBRIDGE_LOG_LEVEL", "info", false, "info or debug", "Redaction applies at every level."},
 	{"EIDBRIDGE_TLS_CERT_FILE", "", false, "PEM", "Serve HTTPS directly (otherwise terminate TLS at a proxy)."},
 	{"EIDBRIDGE_TLS_KEY_FILE", "", false, "PEM, mode 0600", "Key for EIDBRIDGE_TLS_CERT_FILE."},
@@ -141,11 +143,14 @@ type Config struct {
 	TrustedProxies                                       []netip.Prefix
 	DefaultLocale                                        string
 	RememberMethod                                       bool
-	LogDebug                                             bool
-	TLSCert, TLSKey                                      string
-	MockDocument, MockListen                             string
-	Warnings                                             []string
-	Deviations                                           []string
+	// Signing enables the digest relay (Story 8.1); SigningCADir may be empty.
+	SigningEnabled           bool
+	SigningCADir             string
+	LogDebug                 bool
+	TLSCert, TLSKey          string
+	MockDocument, MockListen string
+	Warnings                 []string
+	Deviations               []string
 
 	SmartID  SmartIDConfig
 	MobileID MobileIDConfig
@@ -272,6 +277,16 @@ func Load(env Getenv, demoFlag bool, root string) (*Config, error) {
 	c.BucketCap = int(num("EIDBRIDGE_BUCKET_CAP", 10, 1e7))
 	c.DefaultLocale = get("EIDBRIDGE_DEFAULT_LOCALE")
 	c.RememberMethod = get("EIDBRIDGE_REMEMBER_METHOD") == "true"
+	c.SigningEnabled = get("EIDBRIDGE_SIGNING_ENABLED") == "true"
+	if c.SigningEnabled {
+		c.SigningCADir = get("EIDBRIDGE_SIGNING_CA_DIR")
+		if c.SigningCADir != "" && !filepath.IsAbs(c.SigningCADir) && root != "" {
+			c.SigningCADir = filepath.Join(root, c.SigningCADir)
+		}
+		if !contains(c.Methods, "smartid") {
+			return nil, errors.New("config: EIDBRIDGE_SIGNING_ENABLED needs smartid in EIDBRIDGE_METHODS")
+		}
+	}
 	c.LogDebug = get("EIDBRIDGE_LOG_LEVEL") == "debug"
 	c.TLSCert, c.TLSKey = env("EIDBRIDGE_TLS_CERT_FILE"), env("EIDBRIDGE_TLS_KEY_FILE")
 	if (c.TLSCert == "") != (c.TLSKey == "") {

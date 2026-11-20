@@ -38,6 +38,9 @@ type Client struct {
 	PersonalCode bool       `json:"personal_code_allowed,omitempty"`
 	// AllowedMethods restricts methods (empty: all enabled).
 	AllowedMethods []string `json:"allowed_methods,omitempty"`
+	// SigningAllowed lets this client use the signing API (Story 8.1);
+	// requires client_secret_basic.
+	SigningAllowed bool `json:"signing_allowed,omitempty"`
 	// DisplayText overrides the on-device interaction text per language.
 	DisplayText map[string]string `json:"display_text,omitempty"`
 	// DemoLoopback allows the exact static http://localhost:<port>/<path>
@@ -91,6 +94,9 @@ func validateClients(cs []Client, demo bool) error {
 			}
 		default:
 			return fmt.Errorf("oidc: client %s: unsupported token_endpoint_auth_method %q", c.ID, c.AuthMethod)
+		}
+		if c.SigningAllowed && c.AuthMethod != AuthBasic {
+			return fmt.Errorf("oidc: client %s: signing_allowed requires client_secret_basic", c.ID)
 		}
 		if c.IDTokenAlg == "" {
 			c.IDTokenAlg = jose.RS256
@@ -210,6 +216,25 @@ func (p *Provider) authenticateClient(r *http.Request) (*Client, error) {
 		return nil, oauthErr(401, "invalid_client", "unsupported client_assertion_type")
 	}
 	return p.assertionClient(assertion, postID)
+}
+
+// AuthenticateSigningClient authenticates a signing-API request by HTTP
+// Basic against a client registered with signing_allowed.
+func (p *Provider) AuthenticateSigningClient(r *http.Request) (string, bool) {
+	user, pass, ok := r.BasicAuth()
+	if !ok {
+		return "", false
+	}
+	id, err1 := url.QueryUnescape(user)
+	sec, err2 := url.QueryUnescape(pass)
+	if err1 != nil || err2 != nil {
+		return "", false
+	}
+	c, err := p.secretClient(id, sec, AuthBasic)
+	if err != nil || !c.SigningAllowed {
+		return "", false
+	}
+	return c.ID, true
 }
 
 func (p *Provider) secretClient(id, secret, method string) (*Client, error) {

@@ -25,6 +25,7 @@ import (
 	"github.com/tomkabel/eidbridge/internal/logx"
 	"github.com/tomkabel/eidbridge/internal/oidc"
 	"github.com/tomkabel/eidbridge/internal/revocation"
+	"github.com/tomkabel/eidbridge/internal/signapi"
 	"github.com/tomkabel/eidbridge/internal/smartid"
 	"github.com/tomkabel/eidbridge/internal/smartid/smartidtest"
 	"github.com/tomkabel/eidbridge/internal/store"
@@ -43,6 +44,7 @@ type App struct {
 	Codes       *store.Codes
 	Fixture     *smartidtest.Server
 	FixtureAddr string
+	signClient  *smartid.Client
 	closers     []func()
 }
 
@@ -112,6 +114,13 @@ func Build(cfg *config.Config, log *slog.Logger, clk clock.Clock) (*App, error) 
 	mux := http.NewServeMux()
 	prov.Register(mux)
 	ws.Register(mux)
+	if a.signClient != nil {
+		sa := signapi.New(signapi.Config{Upstream: a.signClient, Auth: prov, Log: log})
+		a.closers = append(a.closers, sa.Close)
+		mux.Handle("/api/v1/sign", sa)
+		mux.Handle("/api/v1/sign/", sa)
+		log.Info("signing digest relay enabled at /api/v1/sign")
+	}
 	a.Handler, a.Web, a.Provider = web.AccessLog(log, mux), ws, prov
 	return a, nil
 }
@@ -198,6 +207,18 @@ func buildSmartID(cfg *config.Config, log *slog.Logger, a *App) (authn.Method, f
 		Trust: trust, MinCertLevel: s.CertLevel, PolicyOIDs: oids, Status: status})
 	if err != nil {
 		return nil, closer, err
+	}
+	if cfg.SigningEnabled {
+		st := trust
+		if cfg.SigningCADir != "" {
+			if st, err = smartid.LoadCADir(cfg.SigningCADir); err != nil {
+				return nil, closer, err
+			}
+		}
+		if a.signClient, err = smartid.NewClient(smartid.Config{BaseURL: base, RPUUID: s.RPUUID, RPName: s.RPName, SchemeName: scheme,
+			HTTP: httpClient, Trust: st, MinCertLevel: s.CertLevel, PolicyOIDs: oids, Status: status}); err != nil {
+			return nil, closer, err
+		}
 	}
 	texts := map[string]string{"en": s.DisplayText}
 	m, err := smartid.NewMethod(smartid.MethodConfig{Client: c, Flows: s.Flows, DisplayText: texts, IsDemo: cfg.Demo})

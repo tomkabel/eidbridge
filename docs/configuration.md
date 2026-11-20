@@ -38,6 +38,8 @@ Mode has no default. Demo mode uses the demo defaults below; production requires
 | `EIDBRIDGE_TRUSTED_PROXIES` | — | no | CIDRs | Proxy hops whose X-Forwarded-For is trusted. Empty: forwarding headers are ignored. |
 | `EIDBRIDGE_DEFAULT_LOCALE` | `en` | no | en, et, lv, lt, ru | Fallback locale. |
 | `EIDBRIDGE_REMEMBER_METHOD` | `false` | no | true or false | Offer an opt-in method preference cookie (chooser only). |
+| `EIDBRIDGE_SIGNING_ENABLED` | `false` | no | true or false | Serve the Smart-ID signing digest relay at /api/v1/sign (Story 8.1). Needs `smartid` in EIDBRIDGE_METHODS and clients with `signing_allowed` and client_secret_basic. No legal or qualified-signature claim is made. |
+| `EIDBRIDGE_SIGNING_CA_DIR` | — | no | directory | Signing-certificate CAs; empty uses EIDBRIDGE_SMARTID_AUTH_CA_DIR. |
 | `EIDBRIDGE_LOG_LEVEL` | `info` | no | info or debug | Redaction applies at every level. |
 | `EIDBRIDGE_TLS_CERT_FILE` | — | no | PEM | Serve HTTPS directly (otherwise terminate TLS at a proxy). |
 | `EIDBRIDGE_TLS_KEY_FILE` | — | no | PEM, mode 0600 | Key for EIDBRIDGE_TLS_CERT_FILE. |
