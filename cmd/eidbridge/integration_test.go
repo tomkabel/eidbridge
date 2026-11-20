@@ -281,3 +281,16 @@ func TestDiscoveryOverRealWiring(t *testing.T) {
 		}
 	}
 }
+
+// "eidbridge serve --demo" must mean the same as "eidbridge --demo serve";
+// a flag after the subcommand was silently ignored before.
+func TestFlagsAfterSubcommand(t *testing.T) {
+	env := func(string) string { return "" }
+	var out, errb strings.Builder
+	if code := run([]string{"trust", "show", "--demo", "--root", "../.."}, env, &out, &errb); code != 0 {
+		t.Fatalf("trust show --demo: exit %d: %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "TEST") {
+		t.Fatalf("demo trust not shown: %s", out.String())
+	}
+}

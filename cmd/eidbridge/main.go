@@ -37,6 +37,17 @@ func run(args []string, getenv config.Getenv, stdout, stderr io.Writer) int {
 	cmd := "serve"
 	if len(rest) > 0 {
 		cmd, rest = rest[0], rest[1:]
+		// Accept global flags after the subcommand too ("serve --demo").
+		var pos []string
+		for len(rest) > 0 {
+			if err := fs.Parse(rest); err != nil {
+				return 2
+			}
+			if rest = fs.Args(); len(rest) > 0 {
+				pos, rest = append(pos, rest[0]), rest[1:]
+			}
+		}
+		rest = pos
 	}
 	switch cmd {
 	case "serve":

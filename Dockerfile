@@ -1,9 +1,12 @@
+# syntax=docker/dockerfile:1
 FROM golang:1.24-alpine AS builder
 ARG VERSION=dev
 RUN apk add --no-cache ca-certificates
 WORKDIR /src
 COPY go.mod go.sum* ./
-RUN go mod download
+# extra_ca: optional CA bundle for builds behind a TLS-intercepting proxy.
+RUN --mount=type=secret,id=extra_ca,required=false \
+    if [ -s /run/secrets/extra_ca ]; then export SSL_CERT_FILE=/run/secrets/extra_ca; fi; go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X github.com/tomkabel/eidbridge/internal/version.Version=${VERSION}" -o /out/eidbridge ./cmd/eidbridge
 
