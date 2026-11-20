@@ -1,0 +1,30 @@
+{
+  "name": "create-device-link",
+  "method": "POST",
+  "path": "/v3/authentication/device-link/anonymous",
+  "status": 200,
+  "request": {
+    "relyingPartyUUID": "00000000-0000-4000-8000-000000000000",
+    "relyingPartyName": "DEMO",
+    "initialCallbackUrl": "https://localhost/flow/callback?value=QTyCXWBxY9fDQJz_BnrNbA",
+    "certificateLevel": "QUALIFIED",
+    "signatureProtocol": "ACSP_V2",
+    "signatureProtocolParameters": {
+      "rpChallenge": "o3sK077/hvYMMVDMYuuzBIZM1liLVbkXHsHdZgOgnu8=",
+      "signatureAlgorithm": "rsassa-pss",
+      "signatureAlgorithmParameters": {
+        "hashAlgorithm": "SHA-512"
+      }
+    },
+    "interactions": "W3siZGlzcGxheVRleHQ2MCI6ImVpZGJyaWRnZSBsaXZlIHRlc3QiLCJ0eXBlIjoiZGlzcGxheVRleHRBbmRQSU4ifV0=",
+    "requestProperties": {
+      "shareMdClientIpAddress": false
+    }
+  },
+  "response": {
+    "sessionID": "3033f85c-6e69-439c-b7c6-f320ca3ad1e7",
+    "sessionSecret": "5oDTjCS5+69fFFEKEhaJ2HV/",
+    "sessionToken": "TX9oZVPlbMqbXgfgCJIZZg0W",
+    "deviceLinkBase": "https://sid.demo.sk.ee/device-link"
+  }
+}

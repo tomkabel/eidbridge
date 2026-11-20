@@ -1,0 +1,10 @@
+# Demo trust (sid.demo.sk.ee)
+
+Public demo environment only. Production mode refuses every file here.
+
+| File | Subject | Source | sha256 (DER) | Retrieved |
+|---|---|---|---|---|
+| `smartid-auth-ca/TEST_SK_ROOT_G1_2021E.pem` | TEST of SK ID Solutions ROOT G1E | http://c.sk.ee/TEST_SK_ROOT_G1_2021E.der.crt | 84242dd8e1a1878f76ff2b5ca0c8ef22c8a8863cf072e56a9f0dc28add96b143 | 2026-11-20 |
+| `smartid-auth-ca/TEST_EID-Q_2024E.pem` | TEST of SK ID Solutions EID-Q 2024E | http://c.sk.ee/TEST_EID-Q_2024E.der.crt | 063a4e908785a2b45fba27a22d45d9f2bbaa9a382e5b103e1d1036832cee6ac2 | 2026-11-20 |
+
+`smartid-host.txt` names the RP API host. `smartid-tls-pins.txt` is intentionally absent until a pin is observed from a network without TLS interception (see `docs/adr/0001-spike-outcome.md`); demo mode then runs with `EIDBRIDGE_SMARTID_TLS_PINS=disabled` and a warning.

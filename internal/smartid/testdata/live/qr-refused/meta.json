@@ -1,0 +1,12 @@
+{
+  "captured": "2026-11-20T00:32:06Z",
+  "source": "sid.demo.sk.ee public demo RP with SK automated testing interface; published demo test account",
+  "flow": "QR",
+  "rpChallenge": "+S5HNLIHHjgHK0ZIlCVbCVQOSmwk96cFb1qUY97aOqE=",
+  "interactions": "W3siZGlzcGxheVRleHQ2MCI6ImVpZGJyaWRnZSBsaXZlIHRlc3QiLCJ0eXBlIjoiZGlzcGxheVRleHRBbmRQSU4ifV0=",
+  "initialCallbackUrl": "",
+  "sessionSecret": "D2ef25Gi86Ak4dYDiAK2XHPe",
+  "sessionToken": "FHG9NYYmre239ze61LXA9NzH",
+  "deviceLinkBase": "https://sid.demo.sk.ee/device-link",
+  "verifyReason": "refused: smartid: refused: USER_REFUSED"
+}

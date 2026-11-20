@@ -1,0 +1,11 @@
+{
+  "captured": "2026-11-20T00:32:12Z",
+  "source": "sid.demo.sk.ee public demo RP with SK automated testing interface; published demo test account",
+  "flow": "Notification",
+  "rpChallenge": "ypAEMQ2YAd8foIiNxouwfldc57RTXA8i2HURAEeXev0=",
+  "interactions": "W3siZGlzcGxheVRleHQ2MCI6ImVpZGJyaWRnZSBsaXZlIHRlc3QiLCJ0eXBlIjoiZGlzcGxheVRleHRBbmRQSU4ifV0=",
+  "initialCallbackUrl": "",
+  "expectedIdentity": "PNOEE-30403039972",
+  "vc": "0445",
+  "verifyReason": "wrong_code: smartid: wrong_code: WRONG_VC"
+}

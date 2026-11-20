@@ -1,0 +1,13 @@
+{
+  "captured": "2026-11-20T00:32:22Z",
+  "source": "sid.demo.sk.ee public demo RP with SK automated testing interface; published demo test account",
+  "flow": "Web2App",
+  "rpChallenge": "o3sK077/hvYMMVDMYuuzBIZM1liLVbkXHsHdZgOgnu8=",
+  "interactions": "W3siZGlzcGxheVRleHQ2MCI6ImVpZGJyaWRnZSBsaXZlIHRlc3QiLCJ0eXBlIjoiZGlzcGxheVRleHRBbmRQSU4ifV0=",
+  "initialCallbackUrl": "https://localhost/flow/callback?value=QTyCXWBxY9fDQJz_BnrNbA",
+  "sessionSecret": "5oDTjCS5+69fFFEKEhaJ2HV/",
+  "sessionToken": "TX9oZVPlbMqbXgfgCJIZZg0W",
+  "deviceLinkBase": "https://sid.demo.sk.ee/device-link",
+  "callbackUrl": "https://localhost/flow/callback?value=QTyCXWBxY9fDQJz_BnrNbA\u0026sessionSecretDigest=EyET-2oUqeZ0h6MpkHolVz3g9whe6HELIHJrIdNg-sU\u0026userChallengeVerifier=JX1a4c46QXVJMrbBDuDeHqd5p4jiGKD3YgDo4v9k_Os",
+  "verifyReason": "OK"
+}

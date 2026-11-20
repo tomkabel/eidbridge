@@ -1,0 +1,13 @@
+{
+  "name": "session-status",
+  "method": "GET",
+  "path": "/v3/session/52e1454a-ef27-46eb-841d-65922a36f273?timeoutMs=10000",
+  "status": 200,
+  "response": {
+    "state": "COMPLETE",
+    "deviceLinkRegistered": true,
+    "result": {
+      "endResult": "USER_REFUSED"
+    }
+  }
+}

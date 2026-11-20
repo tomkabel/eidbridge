@@ -1,0 +1,27 @@
+{
+  "name": "create-notification",
+  "method": "POST",
+  "path": "/v3/authentication/notification/etsi/PNOEE-30403039917",
+  "status": 200,
+  "request": {
+    "relyingPartyUUID": "00000000-0000-4000-8000-000000000000",
+    "relyingPartyName": "DEMO",
+    "certificateLevel": "QUALIFIED",
+    "signatureProtocol": "ACSP_V2",
+    "signatureProtocolParameters": {
+      "rpChallenge": "kVepA3WoKcuWY48TIg6JakUMjz/uLnmOAHeB7h1fe2c=",
+      "signatureAlgorithm": "rsassa-pss",
+      "signatureAlgorithmParameters": {
+        "hashAlgorithm": "SHA-512"
+      }
+    },
+    "interactions": "W3siZGlzcGxheVRleHQ2MCI6ImVpZGJyaWRnZSBsaXZlIHRlc3QiLCJ0eXBlIjoiZGlzcGxheVRleHRBbmRQSU4ifV0=",
+    "requestProperties": {
+      "shareMdClientIpAddress": false
+    },
+    "vcType": "numeric4"
+  },
+  "response": {
+    "sessionID": "98a63b6f-d586-47c9-a963-7524f9d96783"
+  }
+}
