@@ -210,3 +210,35 @@ func TestConfigurationDocMatchesCode(t *testing.T) {
 		t.Fatal("docs/configuration.md is stale: run go run ./cmd/eidbridge config docs > docs/configuration.md")
 	}
 }
+
+// Red-team finding F1 (2026-11-20): the production demo-host guard compared
+// the raw host, so case changes and a trailing dot passed, and demo OCSP/CRL
+// hosts were accepted as status hosts.
+func TestProductionRefusesDemoHostVariants(t *testing.T) {
+	for _, base := range []string{"https://SID.DEMO.SK.EE/smart-id-rp", "https://Sid.Demo.Sk.Ee/smart-id-rp",
+		"https://sid.demo.sk.ee./smart-id-rp", "https://any.demo.sk.ee/x", "https://demo.sk.ee/x", "https://DEMO.SK.EE./x"} {
+		m := prodEnv(t)
+		m["EIDBRIDGE_SMARTID_BASE_URL"] = base
+		if _, err := Load(envOf(m), false, ""); err == nil || !strings.Contains(err.Error(), "demo host") {
+			t.Errorf("production accepted %s: %v", base, err)
+		}
+	}
+	for _, sh := range []string{"aia.demo.sk.ee", "AIA.DEMO.SK.EE", "aia.demo.sk.ee.", "aia.sk.ee,aia.demo.sk.ee:80"} {
+		m := prodEnv(t)
+		m["EIDBRIDGE_SMARTID_STATUS_HOSTS"] = sh
+		if _, err := Load(envOf(m), false, ""); err == nil || !strings.Contains(err.Error(), "demo host") {
+			t.Errorf("production accepted status host %s: %v", sh, err)
+		}
+	}
+	for _, h := range []string{"notdemo.sk.ee", "demo.sk.ee.example.com"} {
+		if IsDemoHost(h) {
+			t.Errorf("IsDemoHost(%q) = true", h)
+		}
+	}
+}
+
+func TestDemoModeNormalizesHost(t *testing.T) {
+	if _, err := Load(envOf(map[string]string{"EIDBRIDGE_SMARTID_BASE_URL": "https://SID.DEMO.SK.EE/smart-id-rp"}), true, root(t)); err != nil {
+		t.Fatalf("demo refused upper-case demo host: %v", err)
+	}
+}

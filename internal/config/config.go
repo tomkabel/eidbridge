@@ -357,18 +357,23 @@ func (c *Config) smartIDInvariants() error {
 		return nil // trust comes from the in-process fixture PKI
 	}
 	if c.Demo {
-		if s.Env == "demo" && !DemoHosts[host] {
+		if s.Env == "demo" && !IsDemoHost(host) {
 			return fmt.Errorf("config: demo mode refuses Smart-ID host %s outside the demo allow-list", host)
 		}
-		if ProductionHosts[host] {
+		if IsProductionHost(host) {
 			return errors.New("config: demo mode refuses production Smart-ID hosts")
 		}
 		if s.Env == "demo" && (s.RPUUID != DemoRPUUID || s.RPName != DemoRPName) {
 			return errors.New("config: demo mode uses the public demo relying party only")
 		}
 	} else {
-		if DemoHosts[host] {
+		if IsDemoHost(host) {
 			return fmt.Errorf("config: production refuses demo host %s", host)
+		}
+		for _, sh := range s.StatusHosts {
+			if IsDemoHost(sh) {
+				return fmt.Errorf("config: production refuses demo host %s in EIDBRIDGE_SMARTID_STATUS_HOSTS", sh)
+			}
 		}
 		if s.RPUUID == DemoRPUUID || s.RPName == DemoRPName {
 			return errors.New("config: production refuses the public demo relying-party identity")
