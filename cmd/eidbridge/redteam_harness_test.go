@@ -10,6 +10,7 @@ package main
 //
 //	REDTEAM_DIR=/tmp/rt go test -tags redteam -run TestRedTeamHarness -timeout 0 ./cmd/eidbridge
 //
+// Ports: REDTEAM_PORT_BASE (default 18700) +0 bridge, +1 mock, +2 oracle.
 // It writes $REDTEAM_DIR/harness.json and runs until $REDTEAM_DIR/stop exists.
 
 import (
@@ -23,6 +24,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -38,13 +40,18 @@ func TestRedTeamHarness(t *testing.T) {
 	if dir == "" {
 		t.Skip("REDTEAM_DIR not set")
 	}
+	base := 18700
+	if v, err := strconv.Atoi(os.Getenv("REDTEAM_PORT_BASE")); err == nil {
+		base = v
+	}
+	port := func(off int) string { return strconv.Itoa(base + off) }
 	secret := "redteam-secret-redteam-secret-redteam-0001"
 	clients := `[{"client_id":"rp-a","client_secret":"` + secret + `","token_endpoint_auth_method":"client_secret_basic","redirect_uris":["http://localhost:18710/cb"],"sub_mode":"pairwise"},
 {"client_id":"rp-b","client_secret":"` + secret + `","token_endpoint_auth_method":"client_secret_post","redirect_uris":["http://localhost:18711/cb"],"sub_mode":"public"},
 {"client_id":"signer","client_secret":"` + secret + `","token_endpoint_auth_method":"client_secret_basic","redirect_uris":["http://localhost:18712/cb"],"sub_mode":"pairwise","sector_id":"signer.example","signing_allowed":true}]`
 	cf := filepath.Join(dir, "clients.json")
 	os.WriteFile(cf, []byte(clients), 0o600)
-	ln, err := net.Listen("tcp", "127.0.0.1:18700")
+	ln, err := net.Listen("tcp", "127.0.0.1:"+port(0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +62,7 @@ func TestRedTeamHarness(t *testing.T) {
 		"EIDBRIDGE_CLIENTS_FILE": cf, "EIDBRIDGE_METHODS": "smartid,mobileid,webeid,eudi,smartid-v2",
 		"EIDBRIDGE_SMARTID_ENV": "mock", "EIDBRIDGE_MOBILEID_ENV": "mock", "EIDBRIDGE_WEBEID_ENV": "mock", "EIDBRIDGE_EUDI_ENV": "mock",
 		"EIDBRIDGE_SMARTID_FLOWS": "device-link,notification", "EIDBRIDGE_MOCK_DOCUMENT": "manual",
-		"EIDBRIDGE_MOCK_LISTEN": "127.0.0.1:18701", "EIDBRIDGE_SIGNING_ENABLED": "true"}
+		"EIDBRIDGE_MOCK_LISTEN": "127.0.0.1:" + port(1), "EIDBRIDGE_SIGNING_ENABLED": "true"}
 	cfg, err := config.Load(func(k string) string { return env[k] }, true, filepath.Join("..", ".."))
 	if err != nil {
 		t.Fatal(err)
@@ -125,13 +132,13 @@ func TestRedTeamHarness(t *testing.T) {
 		}
 		json.NewEncoder(w).Encode(map[string]string{"vp_token": walletsim.VPToken(wallet(in.Wallet).Present(in.Nonce, in.Aud, o))})
 	})
-	dln, err := net.Listen("tcp", "127.0.0.1:18702")
+	dln, err := net.Listen("tcp", "127.0.0.1:"+port(2))
 	if err != nil {
 		t.Fatal(err)
 	}
 	go http.Serve(dln, dev)
-	meta := map[string]any{"issuer": cfg.Issuer, "bridge": srv.URL, "smartid_mock_control": "http://127.0.0.1:18701",
-		"device_oracle": "http://127.0.0.1:18702", "clients_file": cf, "debug_log": logf.Name()}
+	meta := map[string]any{"issuer": cfg.Issuer, "bridge": srv.URL, "smartid_mock_control": "http://127.0.0.1:" + port(1),
+		"device_oracle": "http://127.0.0.1:" + port(2), "clients_file": cf, "debug_log": logf.Name()}
 	b, _ := json.MarshalIndent(meta, "", "  ")
 	os.WriteFile(filepath.Join(dir, "harness.json"), b, 0o644)
 	t.Logf("harness up: %s", b)
