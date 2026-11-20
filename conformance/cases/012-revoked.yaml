@@ -1,0 +1,6 @@
+id: revoked-status
+title: Credential revoked in its Token Status List
+expect: reject
+mutation: revoked
+spec:
+  - {doc: "Token Status List -21", section: "Status types (INVALID)", url: "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-21"}

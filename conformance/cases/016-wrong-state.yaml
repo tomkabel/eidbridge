@@ -1,0 +1,6 @@
+id: wrong-state
+title: Response carries a state the verifier did not issue
+expect: reject
+mutation: wrong_state
+spec:
+  - {doc: "OpenID4VP 1.0", section: "5.2 Existing Parameters (state)", url: "https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-5.2"}

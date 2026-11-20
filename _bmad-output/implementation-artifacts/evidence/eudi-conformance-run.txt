@@ -1,0 +1,17 @@
+PASS valid-pid                    expect=accept HTTP 200, client got code
+PASS wrong-nonce                  expect=reject HTTP 400, client got error=server_error
+PASS wrong-audience               expect=reject HTTP 400, client got error=server_error
+PASS no-key-binding               expect=reject HTTP 400, client got error=server_error
+PASS kb-other-key                 expect=reject HTTP 400, client got error=server_error
+PASS sd-hash-mismatch             expect=reject HTTP 400, client got error=server_error
+PASS expired-credential           expect=reject HTTP 400, client got error=server_error
+PASS untrusted-issuer             expect=reject HTTP 400, client got error=server_error
+PASS wrong-vct                    expect=reject HTTP 400, client got error=server_error
+PASS injected-disclosure          expect=reject HTTP 400, client got error=server_error
+PASS duplicate-disclosure         expect=reject HTTP 400, client got error=server_error
+PASS revoked-status               expect=reject HTTP 400, client got error=server_error
+PASS stale-key-binding            expect=reject HTTP 400, client got error=server_error
+PASS tampered-issuer-jwt          expect=reject HTTP 400, client got error=server_error
+PASS replay-into-new-request      expect=reject HTTP 400, client got error=server_error
+PASS wrong-state                  expect=reject HTTP 400, flow pending
+PASS issuer-typ                   expect=reject HTTP 400, client got error=server_error

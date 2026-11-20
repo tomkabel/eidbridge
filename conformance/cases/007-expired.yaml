@@ -1,0 +1,6 @@
+id: expired-credential
+title: Credential past its exp
+expect: reject
+mutation: expired
+spec:
+  - {doc: "SD-JWT VC -27", section: "Registered JWT claims (exp)", url: "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-27"}

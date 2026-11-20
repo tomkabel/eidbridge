@@ -1,0 +1,6 @@
+id: kb-other-key
+title: Key-binding JWT signed by a key other than cnf.jwk (holder-binding bypass)
+expect: reject
+mutation: kb_key
+spec:
+  - {doc: "RFC 9901", section: "7.3 Verification by the Verifier", url: "https://www.rfc-editor.org/rfc/rfc9901#section-7.3"}

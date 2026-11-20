@@ -93,9 +93,9 @@ func TestRememberCookieIgnoredWhenMethodRemoved(t *testing.T) {
 func TestAppLinkSchemes(t *testing.T) {
 	for link, want := range map[string]string{
 		"openid4vp://?client_id=x509_hash%3Aabc&request_uri=https%3A%2F%2Fb.example%2Fr": `href="openid4vp://?client_id=x509_hash%3Aabc&amp;request_uri=https%3A%2F%2Fb.example%2Fr"`,
-		"haip://?request_uri=https%3A%2F%2Fb.example%2Fr":                                 `href="haip://?request_uri=https%3A%2F%2Fb.example%2Fr"`,
-		"https://app.example/x":                                                           `href="https://app.example/x"`,
-		"javascript:alert(1)":                                                             ``,
+		"haip://?request_uri=https%3A%2F%2Fb.example%2Fr":                                `href="haip://?request_uri=https%3A%2F%2Fb.example%2Fr"`,
+		"https://app.example/x": `href="https://app.example/x"`,
+		"javascript:alert(1)":   ``,
 	} {
 		e := newWeb(t, wopt{fake: true})
 		e.fake.FlowList = []string{"same-device"}

@@ -1,0 +1,6 @@
+id: sd-hash-mismatch
+title: sd_hash does not cover the presented SD-JWT
+expect: reject
+mutation: kb_sd_hash
+spec:
+  - {doc: "RFC 9901", section: "4.3.1 Binding to an SD-JWT", url: "https://www.rfc-editor.org/rfc/rfc9901#section-4.3.1"}

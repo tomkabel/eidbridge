@@ -1,0 +1,6 @@
+id: stale-key-binding
+title: Key-binding JWT iat older than the verifier's window
+expect: reject
+mutation: kb_stale
+spec:
+  - {doc: "RFC 9901", section: "4.3.1 Binding to an SD-JWT (iat)", url: "https://www.rfc-editor.org/rfc/rfc9901#section-4.3.1"}

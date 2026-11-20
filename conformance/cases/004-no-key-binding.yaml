@@ -1,0 +1,6 @@
+id: no-key-binding
+title: Presentation without a key-binding JWT
+expect: reject
+mutation: no_kb
+spec:
+  - {doc: "RFC 9901", section: "4.3 Key Binding JWT", url: "https://www.rfc-editor.org/rfc/rfc9901#section-4.3"}

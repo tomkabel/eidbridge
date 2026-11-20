@@ -1,0 +1,6 @@
+id: replay-into-new-request
+title: A presentation accepted once is replayed into a new request
+expect: reject
+mutation: replay
+spec:
+  - {doc: "OpenID4VP 1.0", section: "14.1 Preventing Replay of Verifiable Presentations", url: "https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-14.1"}

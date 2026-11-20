@@ -1,0 +1,6 @@
+id: wrong-vct
+title: Credential type other than the requested vct
+expect: reject
+mutation: wrong_vct
+spec:
+  - {doc: "OpenID4VP 1.0", section: "B.3.5 Parameter in the meta parameter (vct_values)", url: "https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#appendix-B.3.5"}
