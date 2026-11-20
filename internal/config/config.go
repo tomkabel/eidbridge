@@ -92,6 +92,8 @@ var Options = []Option{
 	{"EIDBRIDGE_SMARTID_CERT_STATUS", "ocsp", true, "ocsp or none (demo only)", "Certificate status checking."},
 	{"EIDBRIDGE_SMARTID_STATUS_HOSTS", "aia.demo.sk.ee,c.sk.ee", true, "host[:port] list", "Allow-listed OCSP/CRL hosts."},
 	{"EIDBRIDGE_SMARTID_DISPLAY_TEXT", "Log in to the service", false, "≤ 60 characters", "Text shown on the device; per-client overrides in the clients file."},
+	{"EIDBRIDGE_SMARTID_V2_RP_UUID", "00000000-0000-0000-0000-000000000000", true, "UUID", "Legacy RP API v2 relying-party UUID (only read when `smartid-v2` is in EIDBRIDGE_METHODS). Host, pins, CAs and status come from the Smart-ID settings; the v2 base URL is EIDBRIDGE_SMARTID_BASE_URL + /v2."},
+	{"EIDBRIDGE_SMARTID_V2_RP_NAME", "DEMO", true, "≤ 32 bytes", "Legacy RP API v2 relying-party name."},
 	{"EIDBRIDGE_MOBILEID_ENV", "demo", true, "demo, production, mock", "Mobile-ID (only read when `mobileid` is in EIDBRIDGE_METHODS). Must agree with mode; mock is demo-only."},
 	{"EIDBRIDGE_MOBILEID_BASE_URL", "https://tsp.demo.sk.ee/mid-api", true, "", "MID REST API base URL."},
 	{"EIDBRIDGE_MOBILEID_RP_UUID", "00000000-0000-0000-0000-000000000000", true, "lower-case UUID", "Mobile-ID relying-party UUID from your agreement."},
@@ -147,9 +149,11 @@ type Config struct {
 
 	SmartID  SmartIDConfig
 	MobileID MobileIDConfig
-	WebEID   WebEIDConfig
-	EUDI     EUDIConfig
-	Extra    map[string]string // method-specific variables, parsed by their packages
+	// SmartIDV2 holds the legacy v2 relying party (Story 7.5).
+	SmartIDV2 struct{ RPUUID, RPName string }
+	WebEID    WebEIDConfig
+	EUDI      EUDIConfig
+	Extra     map[string]string // method-specific variables, parsed by their packages
 }
 
 // SmartIDConfig is the Smart-ID method configuration.
@@ -327,6 +331,9 @@ func Load(env Getenv, demoFlag bool, root string) (*Config, error) {
 		}
 		midPins = get("EIDBRIDGE_MOBILEID_TLS_PINS")
 	}
+	if contains(c.Methods, "smartid-v2") {
+		c.SmartIDV2.RPUUID, c.SmartIDV2.RPName = get("EIDBRIDGE_SMARTID_V2_RP_UUID"), get("EIDBRIDGE_SMARTID_V2_RP_NAME")
+	}
 	if contains(c.Methods, "webeid") {
 		w := &c.WebEID
 		*w = WebEIDConfig{Env: get("EIDBRIDGE_WEBEID_ENV"), CADir: get("EIDBRIDGE_WEBEID_CA_DIR"), CertStatus: get("EIDBRIDGE_WEBEID_CERT_STATUS"),
@@ -427,6 +434,25 @@ func (c *Config) invariants(env Getenv, root string) error {
 		if err := c.smartIDInvariants(); err != nil {
 			return err
 		}
+	}
+	if contains(c.Methods, "smartid-v2") {
+		v := c.SmartIDV2
+		if len(v.RPName) > 32 || v.RPName == "" {
+			return errors.New("config: EIDBRIDGE_SMARTID_V2_RP_NAME must be 1–32 bytes")
+		}
+		demoRP := v.RPUUID == DemoMIDRPUUID || v.RPName == DemoRPName
+		if !c.Demo && demoRP {
+			return errors.New("config: production refuses the public Smart-ID v2 demo relying-party identity")
+		}
+		if c.Demo && (v.RPUUID != DemoMIDRPUUID || v.RPName != DemoRPName) && c.SmartID.Env != "mock" {
+			return errors.New("config: demo mode uses the public Smart-ID v2 demo relying party only")
+		}
+		if !contains(c.Methods, "smartid") && c.SmartID.Env != "mock" {
+			if err := c.smartIDInvariants(); err != nil {
+				return err
+			}
+		}
+		c.Warnings = append(c.Warnings, "Smart-ID RP API v2 is legacy; move to v3 (docs/smartid-v2-migration.md)")
 	}
 	if contains(c.Methods, "mobileid") {
 		if err := c.mobileIDInvariants(); err != nil {

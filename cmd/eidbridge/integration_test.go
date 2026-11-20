@@ -548,3 +548,20 @@ func TestBridgeAgainstExternalMock(t *testing.T) {
 		t.Fatalf("redirect %s", u)
 	}
 }
+
+// Story 7.5: a login through the bridge with the legacy v2 method.
+func TestSmartIDV2LoginThroughBridge(t *testing.T) {
+	s := newStack(t, map[string]string{"EIDBRIDGE_METHODS": "smartid-v2"})
+	u := s.login("notification", url.Values{"method": {"smartid-v2"}, "country": {"EE"}, "personal_code": {"40404040009"}})
+	code := u.Query().Get("code")
+	if code == "" {
+		t.Fatalf("redirect %s", u)
+	}
+	tok := s.token(code)
+	cb, _ := base64.RawURLEncoding.DecodeString(strings.Split(tok["id_token"].(string), ".")[1])
+	var cl map[string]any
+	json.Unmarshal(cb, &cl)
+	if cl["eid_method"] != "smartid-v2" {
+		t.Fatalf("claims %v", cl)
+	}
+}

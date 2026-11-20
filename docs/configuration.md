@@ -56,6 +56,8 @@ Mode has no default. Demo mode uses the demo defaults below; production requires
 | `EIDBRIDGE_SMARTID_CERT_STATUS` | `ocsp` | yes | ocsp or none (demo only) | Certificate status checking. |
 | `EIDBRIDGE_SMARTID_STATUS_HOSTS` | `aia.demo.sk.ee,c.sk.ee` | yes | host[:port] list | Allow-listed OCSP/CRL hosts. |
 | `EIDBRIDGE_SMARTID_DISPLAY_TEXT` | `Log in to the service` | no | ≤ 60 characters | Text shown on the device; per-client overrides in the clients file. |
+| `EIDBRIDGE_SMARTID_V2_RP_UUID` | `00000000-0000-0000-0000-000000000000` | yes | UUID | Legacy RP API v2 relying-party UUID (only read when `smartid-v2` is in EIDBRIDGE_METHODS). Host, pins, CAs and status come from the Smart-ID settings; the v2 base URL is EIDBRIDGE_SMARTID_BASE_URL + /v2. |
+| `EIDBRIDGE_SMARTID_V2_RP_NAME` | `DEMO` | yes | ≤ 32 bytes | Legacy RP API v2 relying-party name. |
 | `EIDBRIDGE_MOBILEID_ENV` | `demo` | yes | demo, production, mock | Mobile-ID (only read when `mobileid` is in EIDBRIDGE_METHODS). Must agree with mode; mock is demo-only. |
 | `EIDBRIDGE_MOBILEID_BASE_URL` | `https://tsp.demo.sk.ee/mid-api` | yes |  | MID REST API base URL. |
 | `EIDBRIDGE_MOBILEID_RP_UUID` | `00000000-0000-0000-0000-000000000000` | yes | lower-case UUID | Mobile-ID relying-party UUID from your agreement. |

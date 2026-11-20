@@ -147,6 +147,10 @@ func TestProductionRequiresExplicitBoundedValues(t *testing.T) {
 		if strings.Contains(o.Env, "EUDI") {
 			m = prodEUDIEnv(t)
 		}
+		if strings.Contains(o.Env, "SMARTID_V2") {
+			m["EIDBRIDGE_METHODS"] = "smartid,smartid-v2"
+			m["EIDBRIDGE_SMARTID_V2_RP_UUID"], m["EIDBRIDGE_SMARTID_V2_RP_NAME"] = "7c8d2c0e-1111-4222-8333-555555555555", "Example Ltd"
+		}
 		delete(m, o.Env)
 		if _, err := Load(envOf(m), false, ""); err == nil {
 			t.Errorf("production started without %s", o.Env)
@@ -414,5 +418,28 @@ func prodEUDIEnv(t *testing.T) map[string]string {
 func TestEUDIProductionLoads(t *testing.T) {
 	if _, err := Load(envOf(prodEUDIEnv(t)), false, ""); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSmartIDV2Invariants(t *testing.T) {
+	m := prodEnv(t)
+	m["EIDBRIDGE_METHODS"] = "smartid,smartid-v2"
+	m["EIDBRIDGE_SMARTID_V2_RP_UUID"], m["EIDBRIDGE_SMARTID_V2_RP_NAME"] = "7c8d2c0e-1111-4222-8333-555555555555", "Example Ltd"
+	c, err := Load(envOf(m), false, "")
+	if err != nil || !strings.Contains(strings.Join(c.Warnings, " "), "legacy") {
+		t.Fatalf("valid production v2: %v", err)
+	}
+	for k, v := range map[string]string{"EIDBRIDGE_SMARTID_V2_RP_UUID": "00000000-0000-0000-0000-000000000000", "EIDBRIDGE_SMARTID_V2_RP_NAME": "DEMO"} {
+		m2 := map[string]string{}
+		for a, b := range m {
+			m2[a] = b
+		}
+		m2[k] = v
+		if _, err := Load(envOf(m2), false, ""); err == nil {
+			t.Errorf("production accepted demo %s", k)
+		}
+	}
+	if _, err := Load(envOf(map[string]string{"EIDBRIDGE_METHODS": "smartid-v2", "EIDBRIDGE_SMARTID_V2_RP_NAME": "Mine"}), true, root(t)); err == nil {
+		t.Error("demo accepted a non-demo v2 relying party")
 	}
 }
