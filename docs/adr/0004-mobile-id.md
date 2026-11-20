@@ -12,7 +12,7 @@
 
 ## Decisions
 
-- `internal/mobileid` is a second `authn.Method` behind the one issuer and login page. It reuses the Smart-ID package's `TrustStore`, `LoadCADir`, `StatusChecker` and `ParsePersonalCode`/`ValidPersonalCode` helpers, because both are SK PKI. No OIDC code lives there.
+- `internal/mobileid` is a second `authn.Method` behind the one issuer and login page. It reuses the Smart-ID package's `TrustStore`, `LoadCADir`, `StatusChecker` and `ParseSerialNumber` and `ValidPersonalCode` helpers, because both are SK PKI. No OIDC code lives there.
 - Flow: `notification` only. The user types a phone number and personal code; the bridge validates both locally (E.164 `+372` or `+370`, personal-code checksum for the country of the phone prefix) and charges the per-target rate limit before any request.
 - Hash: a fresh random SHA-256 value per session. The page shows the §2.4.1 verification code.
 - Verification order, failing closed: result `OK`; signature and certificate present; algorithm prefix equals the requested hash and suffix matches the key type (EC raw `r||s` or ASN.1, RSA ≥ 2048 bits PKCS #1 v1.5); chain to configured CAs; leaf not a CA; policy `1.3.6.1.4.1.10015.18.1`; `digitalSignature` set and `nonRepudiation` clear; subject `PNO` identity equals the requested country and code; signature over the submitted hash; OCSP/CRL status.

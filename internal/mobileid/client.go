@@ -129,6 +129,10 @@ func ValidateInput(phone, code string) (country string, err error) {
 
 var gsm7Re = regexp.MustCompile(`^[A-Za-z0-9 .,:;!?()'"/+&%-]{0,40}$`)
 
+// ValidDisplayText reports whether t fits the conservative GSM-7 subset
+// and length the bridge sends as displayText.
+func ValidDisplayText(t string) bool { return gsm7Re.MatchString(t) }
+
 // Start initiates an authentication with a fresh random SHA-256 hash.
 func (c *Client) Start(ctx context.Context, r StartRequest) (*Session, error) {
 	country, err := ValidateInput(r.Phone, r.Code)
