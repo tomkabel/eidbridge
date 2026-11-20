@@ -14,6 +14,7 @@ Self-hosted Go bridge from the Smart-ID RP API v3 to OpenID Connect. Unofficial 
 - [Security design and logging](docs/security.md) · [Personal data flow (for DPIAs)](docs/data-flow.md)
 - [Configuration reference](docs/configuration.md) · [Maintenance runbook](docs/api-tracking.md) · [Changelog](CHANGELOG.md)
 - IdP guides: [Keycloak](docs/idp/keycloak.md) · [OpenID conformance results](docs/conformance.md)
+- Relying-party examples: [Django and FastAPI](examples/README.md) · [Go demo RP](examples/demo-rp/main.go)
 - [Implementation architecture](docs/architecture.md) · [Decision records](docs/adr/)
 
 Security issues: see [SECURITY.md](SECURITY.md).
