@@ -1,7 +1,11 @@
 # Used only by goreleaser (release workflow, owner action). Goreleaser places
-# prebuilt binaries at $TARGETPLATFORM/ in the build context. The distroless
-# static base carries CA certificates and runs as nonroot (65532).
-FROM gcr.io/distroless/static-debian12:nonroot
+# prebuilt binaries at $TARGETPLATFORM/ in the build context. Scratch plus
+# the CA bundle keeps the image under the 20 MB target (distroless static
+# measured 20,093,519 bytes on 2026-11-20).
+# alpine ships ca-certificates-bundle in its base image.
+FROM --platform=$BUILDPLATFORM alpine:3.20 AS certs
+
+FROM scratch
 ARG TARGETPLATFORM
 ARG VERSION=dev
 LABEL org.opencontainers.image.title="eidbridge" \
@@ -9,6 +13,7 @@ LABEL org.opencontainers.image.title="eidbridge" \
       org.opencontainers.image.licenses="MIT OR Apache-2.0" \
       org.opencontainers.image.source="https://github.com/tomkabel/eidbridge" \
       org.opencontainers.image.version="${VERSION}"
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY $TARGETPLATFORM/eidbridge /eidbridge
 COPY trust/ /trust/
 USER 65532:65532
