@@ -1,6 +1,9 @@
 package smartid
 
-import "crypto/rand"
+import (
+	"crypto/rand"
+	"encoding/base64"
+)
 
 var randRead = rand.Read
 
@@ -19,3 +22,5 @@ type fixtureMeta struct {
 	VC                 string `json:"vc,omitempty"`
 	VerifyReason       string `json:"verifyReason"`
 }
+
+func b64std(b []byte) string { return base64.StdEncoding.EncodeToString(b) }
