@@ -70,6 +70,9 @@ type fakeSession struct {
 	callbackURL string
 	resolved    bool
 	created     time.Time
+	kind        string // "" authentication, "certchoice" or "sign"
+	digest      []byte
+	signReq     signReq
 }
 
 type authReq struct {
@@ -118,6 +121,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.create(w, r, strings.TrimPrefix(p, "/v3/authentication/notification/etsi/"))
 	case r.Method == http.MethodPost && strings.HasPrefix(p, "/v3/authentication/notification/document/"):
 		s.create(w, r, strings.TrimPrefix(p, "/v3/authentication/notification/document/"))
+	case r.Method == http.MethodPost && strings.HasPrefix(p, "/v3/signature/"):
+		kind, target, ok := signTarget(p)
+		if !ok {
+			problem(w, http.StatusNotFound, "Not Found")
+			return
+		}
+		s.signCreate(w, r, kind, target)
 	case r.Method == http.MethodGet && reSessionID.MatchString(p):
 		s.poll(w, r, reSessionID.FindStringSubmatch(p)[1])
 	case r.Method == http.MethodPost && strings.HasSuffix(p, "/mock/device-link"):
@@ -334,7 +344,13 @@ func (s *Server) poll(w http.ResponseWriter, r *http.Request, id string) {
 	resolved := fs.resolved
 	s.mu.Unlock()
 	if !resolved {
-		if fs.flow == "Notification" {
+		if fs.kind != "" {
+			doc := fs.target
+			if _, ok := s.Scenarios[doc]; !ok && fs.kind == "certchoice" {
+				doc += "-MOCK-Q"
+			}
+			go s.resolveSign(fs, doc)
+		} else if fs.flow == "Notification" {
 			doc := fs.target
 			if _, ok := s.Scenarios[doc]; !ok {
 				doc += "-MOCK-Q"
