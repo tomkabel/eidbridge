@@ -17,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/tomkabel/eidbridge/internal/smartid"
 )
@@ -152,7 +154,7 @@ func (h *Handler) startCertificate(w http.ResponseWriter, r *http.Request, clien
 	}
 	id, j, code := h.admit(client, "certificate")
 	if code != 0 {
-		writeErr(w, code, http.StatusText(code))
+		h.refuse(w, code)
 		return
 	}
 	sessionID, err := h.cfg.Upstream.StartCertificateChoice(r.Context(), in.Signer)
@@ -211,7 +213,7 @@ func (h *Handler) startSignature(w http.ResponseWriter, r *http.Request, client 
 
 	id, j, code := h.admit(client, "signature")
 	if code != 0 {
-		writeErr(w, code, http.StatusText(code))
+		h.refuse(w, code)
 		return
 	}
 	ss, err := h.cfg.Upstream.StartSignature(r.Context(), sc, req)
@@ -239,8 +241,13 @@ var hashSize = map[string]int{"SHA-256": 32, "SHA-384": 48, "SHA-512": 64}
 
 func validSignRequest(r smartid.SignRequest) bool {
 	n, ok := hashSize[r.HashAlgorithm]
-	if !ok || len(r.Digest) != n || r.DisplayText200 == "" || len([]rune(r.DisplayText200)) > 200 {
+	if !ok || len(r.Digest) != n || r.DisplayText200 == "" || len([]rune(r.DisplayText200)) > 200 || !utf8.ValidString(r.DisplayText200) {
 		return false
+	}
+	for _, c := range r.DisplayText200 {
+		if unicode.IsControl(c) || unicode.Is(unicode.Cf, c) { // shown on the phone: no control or bidi/format characters (red-team #2 F7)
+			return false
+		}
 	}
 	switch r.SignatureAlgorithm {
 	case "rsassa-pss":
@@ -311,6 +318,17 @@ func (h *Handler) admit(client, kind string) (string, *job, int) {
 	h.jobs[id] = j
 	h.window[client] = append(recent, now)
 	return id, j, 0
+}
+
+// refuse answers an admission failure; 429 and 503 carry Retry-After.
+func (h *Handler) refuse(w http.ResponseWriter, code int) {
+	switch code {
+	case http.StatusTooManyRequests:
+		w.Header().Set("Retry-After", "60")
+	case http.StatusServiceUnavailable:
+		w.Header().Set("Retry-After", "5")
+	}
+	writeErr(w, code, http.StatusText(code))
 }
 
 func (h *Handler) drop(id string) {

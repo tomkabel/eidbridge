@@ -121,7 +121,7 @@ func Build(cfg *config.Config, log *slog.Logger, clk clock.Clock) (*App, error) 
 		mux.Handle("/api/v1/sign/", sa)
 		log.Info("signing digest relay enabled at /api/v1/sign")
 	}
-	a.Handler, a.Web, a.Provider = web.AccessLog(log, mux), ws, prov
+	a.Handler, a.Web, a.Provider = baseHeaders(web.AccessLog(log, mux), cfg.TLSCert != ""), ws, prov
 	return a, nil
 }
 
@@ -309,4 +309,16 @@ func demoNag(log *slog.Logger, stop chan os.Signal) {
 	for range t.C {
 		log.Warn(msg)
 	}
+}
+
+// baseHeaders sets headers every response carries (red-team #2 F7):
+// nosniff, and HSTS when the bridge terminates TLS itself.
+func baseHeaders(h http.Handler, tls bool) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if tls {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
+		}
+		h.ServeHTTP(w, r)
+	})
 }

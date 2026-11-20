@@ -309,3 +309,29 @@ func TestFailingUpstreamIsNotHammered(t *testing.T) {
 		t.Fatalf("%d polls in one second against a failing upstream", n)
 	}
 }
+
+// Red-team #2 F7: Retry-After on 429/503; no control characters in the
+// text shown on the phone.
+func TestRetryAfterAndControlCharacters(t *testing.T) {
+	h, _ := newAPI(t, func(c *Config) { c.PerClientPerMinute = 1 })
+	body := map[string]string{"signer": "PNOEE-40404040009"}
+	call(h, "POST", "/api/v1/sign/certificate", "a:secret-a", body)
+	req := httptest.NewRequest("POST", "/api/v1/sign/certificate", strings.NewReader(`{"signer":"PNOEE-40404040009"}`))
+	req.SetBasicAuth("a", "secret-a")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != 429 || rec.Header().Get("Retry-After") != "60" {
+		t.Fatalf("429: %d %v", rec.Code, rec.Header())
+	}
+	h2, _ := newAPI(t, nil)
+	cert := certificate(t, h2, "a:secret-a")
+	for _, txt := range []string{"a\u0000b", "line\nbreak", "bidi\u202eoverride"} {
+		b := signBody(cert)
+		var s string
+		json.Unmarshal([]byte(`"`+txt+`"`), &s)
+		b["display_text"] = s
+		if code, _ := call(h2, "POST", "/api/v1/sign", "a:secret-a", b); code != 400 {
+			t.Errorf("%q: %d", txt, code)
+		}
+	}
+}

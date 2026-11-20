@@ -79,5 +79,7 @@
   "restart.callback_other_browser": "Lietotne atgriezās citā pārlūkprogrammā, nevis tajā, kurā Jūs sākāt. Atveriet pakalpojumu savā noklusējuma pārlūkprogrammā un sāciet vēlreiz.",
   "othertab.heading": "Turpiniet otrā cilnē",
   "othertab.text": "Pieteikšanās turpinās cilnē, ko atvēra lietotne. Šo cilni varat aizvērt.",
-  "pending.eudi.qr.instructions": "Atveriet tālrunī maka lietotni un noskenējiet šo kodu."
+  "pending.eudi.qr.instructions": "Atveriet tālrunī maka lietotni un noskenējiet šo kodu.",
+  "pending.eudi.same-device.heading": "Turpiniet maka lietotnē",
+  "pending.eudi.qr.alt": "Maka lietotnes QR kods."
 }

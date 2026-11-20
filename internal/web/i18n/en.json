@@ -79,5 +79,7 @@
   "restart.callback_other_browser": "The app returned to a different browser than the one you started in. Open the service in your default browser and start again.",
   "othertab.heading": "Continue in the other tab",
   "othertab.text": "The login continues in the tab the app opened. You can close this tab.",
-  "pending.eudi.qr.instructions": "Open the wallet app on your phone and scan this code."
+  "pending.eudi.qr.instructions": "Open the wallet app on your phone and scan this code.",
+  "pending.eudi.same-device.heading": "Continue in your wallet app",
+  "pending.eudi.qr.alt": "QR code for your wallet app."
 }

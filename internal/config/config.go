@@ -722,7 +722,7 @@ func (c *Config) smartIDInvariants() error {
 				return fmt.Errorf("config: production refuses demo host %s in EIDBRIDGE_SMARTID_STATUS_HOSTS", sh)
 			}
 		}
-		if s.RPUUID == DemoRPUUID || s.RPName == DemoRPName {
+		if s.RPUUID == DemoRPUUID || s.RPUUID == DemoMIDRPUUID || s.RPName == DemoRPName {
 			return errors.New("config: production refuses the public demo relying-party identity")
 		}
 		if u.Scheme != "https" {

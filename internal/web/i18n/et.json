@@ -79,5 +79,7 @@
   "restart.callback_other_browser": "Rakendus pöördus tagasi teise brauserisse kui see, kus alustasite. Avage teenus oma vaikebrauseris ja alustage uuesti.",
   "othertab.heading": "Jätkake teises vahekaardis",
   "othertab.text": "Sisselogimine jätkub vahekaardil, mille rakendus avas. Selle vahekaardi võite sulgeda.",
-  "pending.eudi.qr.instructions": "Avage telefonis rahakotirakendus ja skannige see kood."
+  "pending.eudi.qr.instructions": "Avage telefonis rahakotirakendus ja skannige see kood.",
+  "pending.eudi.same-device.heading": "Jätkake rahakotirakenduses",
+  "pending.eudi.qr.alt": "Rahakotirakenduse QR-kood."
 }

@@ -112,7 +112,7 @@ func checkPins(cs tls.ConnectionState, pins []Pin) error {
 	for i, p := range pins {
 		want[i] = p.String()
 	}
-	return fmt.Errorf("tlspin: pin mismatch for %s: observed %s; expected one of %s; update EIDBRIDGE_SMARTID_TLS_PINS (see docs/security.md)",
+	return fmt.Errorf("tlspin: pin mismatch for %s: observed %s; expected one of %s; update the TLS pins of this upstream, EIDBRIDGE_SMARTID_TLS_PINS or EIDBRIDGE_MOBILEID_TLS_PINS (see docs/security.md)",
 		cs.ServerName, strings.Join(observed, ","), strings.Join(want, ","))
 }
 

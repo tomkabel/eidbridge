@@ -79,5 +79,7 @@
   "restart.callback_other_browser": "Programėlė grįžo į kitą naršyklę nei ta, kurioje pradėjote. Atidarykite paslaugą savo numatytojoje naršyklėje ir pradėkite iš naujo.",
   "othertab.heading": "Tęskite kitame skirtuke",
   "othertab.text": "Prisijungimas tęsiamas skirtuke, kurį atidarė programėlė. Šį skirtuką galite uždaryti.",
-  "pending.eudi.qr.instructions": "Atidarykite telefone piniginės programėlę ir nuskaitykite šį kodą."
+  "pending.eudi.qr.instructions": "Atidarykite telefone piniginės programėlę ir nuskaitykite šį kodą.",
+  "pending.eudi.same-device.heading": "Tęskite piniginės programėlėje",
+  "pending.eudi.qr.alt": "Piniginės programėlės QR kodas."
 }

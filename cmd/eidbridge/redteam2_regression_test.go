@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -98,5 +99,21 @@ func TestWalletResponseCannotEndOtherFlows(t *testing.T) {
 	}
 	if st := s.flowState(id); !strings.HasPrefix(st, "pending") {
 		t.Fatalf("flow after stray wallet response: %s", st)
+	}
+}
+
+// Red-team #2 F7: JSON responses carry nosniff; HSTS when the bridge
+// terminates TLS.
+func TestBaseHeaders(t *testing.T) {
+	s := newStack(t, nil)
+	r, _ := s.nr.Get(s.issuer + "/.well-known/openid-configuration")
+	r.Body.Close()
+	if r.Header.Get("X-Content-Type-Options") != "nosniff" || r.Header.Get("Strict-Transport-Security") != "" {
+		t.Fatalf("discovery headers %v", r.Header)
+	}
+	rec := httptest.NewRecorder()
+	baseHeaders(http.NotFoundHandler(), true).ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+	if rec.Header().Get("Strict-Transport-Security") != "max-age=31536000" {
+		t.Fatalf("HSTS missing with own TLS: %v", rec.Header())
 	}
 }
