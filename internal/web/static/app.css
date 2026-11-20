@@ -9,7 +9,7 @@ h2 { font-size: 1.15rem; }
 .brand { margin: 0; font-weight: 600; }
 .locales ul { list-style: none; display: flex; gap: 0.75rem; margin: 0; padding: 0; }
 .locales a { color: var(--accent); }
-.demo-banner { background: var(--warn-bg); color: var(--warn-fg); padding: 0.75rem 1rem; border-bottom: 2px solid var(--warn-fg); text-align: center; }
+.demo-banner { flex-basis: calc(100% + 2rem); box-sizing: border-box; margin: 0 -1rem 0.5rem; background: var(--warn-bg); color: var(--warn-fg); padding: 0.75rem 1rem; border-bottom: 2px solid var(--warn-fg); text-align: center; }
 .actions form { margin: 0.5rem 0; }
 button, .button { font: inherit; padding: 0.7rem 1.1rem; border-radius: 0.4rem; border: 2px solid var(--accent); background: var(--bg); color: var(--accent); cursor: pointer; display: inline-block; text-decoration: none; min-height: 2.75rem; }
 .primary { background: var(--accent); color: var(--accent-fg); }

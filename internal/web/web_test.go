@@ -798,3 +798,42 @@ func TestDemoBannerOnLoginPage(t *testing.T) {
 		t.Fatal("demo banner or unofficial footer missing")
 	}
 }
+
+// Browsers apply CSP form-action to every redirect after a form POST. The
+// cancel and browser-result forms end in a 303 to the client's
+// redirect_uri, so form-action must list that origin (and only it) or
+// Chrome blocks the final hop and the client never gets the result.
+// Found by the browser keyboard check (scripts/a11y.py), 2026-11-20.
+func TestLoginPageCSPAllowsOnlyThisClientOriginForForms(t *testing.T) {
+	e := newWeb(t, wopt{})
+	b := e.browser()
+	id, _, _ := b.begin(nil)
+	resp, err := b.c.Get(e.issuer + "/flow/" + id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	csp := resp.Header.Get("Content-Security-Policy")
+	if !strings.Contains(csp, "form-action 'self' https://rp.example;") {
+		t.Fatalf("form-action does not allow the client origin: %s", csp)
+	}
+	if strings.Contains(csp, "rp.example/cb") {
+		t.Fatalf("form-action must carry the origin, not the path: %s", csp)
+	}
+}
+
+func TestFormActionOrigin(t *testing.T) {
+	for in, want := range map[string]string{
+		"https://rp.example/cb":           "https://rp.example",
+		"http://localhost:8081/callback":  "http://localhost:8081",
+		"https://rp.example:8443/a?b=c":   "https://rp.example:8443",
+		"com.example.app:/oauth2redirect": "",
+		"https://x;y.example/cb":          "",
+		"https://x'y.example/cb":          "",
+		"":                                "",
+	} {
+		if got := formActionOrigin(in); got != want {
+			t.Errorf("formActionOrigin(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="{{.Base}}/static/app.css">
 </head>
 <body>
-{{if .Demo}}<div class="demo-banner" role="note" id="demo-banner"><strong>{{call .T "demo.banner.title"}}</strong> {{call .T "demo.banner.text"}}</div>{{end}}
 <header class="top">
+{{if .Demo}}<div class="demo-banner" role="note" id="demo-banner"><strong>{{call .T "demo.banner.title"}}</strong> {{call .T "demo.banner.text"}}</div>{{end}}
 <p class="brand">{{call .T "page.heading"}}</p>
 <nav aria-label="{{call .T "locale.label"}}" class="locales">
 <ul>{{range .Locales}}<li>{{if .Current}}<span aria-current="true" lang="{{.Code}}">{{.Name}}</span>{{else}}<a href="?lang={{.Code}}" lang="{{.Code}}" hreflang="{{.Code}}">{{.Name}}</a>{{end}}</li>{{end}}</ul>

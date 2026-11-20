@@ -114,8 +114,12 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, f *flow, name st
 			d["UIExtra"] = ui.Extra
 		}
 	}
+	origin := ""
+	if f.req != nil {
+		origin = formActionOrigin(f.req.RedirectURI)
+	}
 	f.mu.Unlock()
-	securityHeaders(w)
+	securityHeadersFor(w, origin)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	var buf bytes.Buffer
 	if err := s.tmpl.ExecuteTemplate(&buf, name, d); err != nil {

@@ -9,16 +9,25 @@
   var statusEl = document.getElementById("status");
   var qr = document.getElementById("qr");
   var last = "";
+  // Stop polling once the page is being left (cancel, browser result, the
+  // final redirect): a poll answering "restart" would reload the page and
+  // abort the navigation that carries the result to the client.
+  var leaving = false;
+  function leave() { leaving = true; }
+  document.addEventListener("submit", leave, true);
+  window.addEventListener("pagehide", leave);
   function tick() {
+    if (leaving) { return; }
     if (qr && qrURL) { qr.src = qrURL + "?t=" + Date.now(); }
     var x = new XMLHttpRequest();
     x.open("GET", statusURL);
     x.setRequestHeader("Accept", "application/json");
     x.onload = function () {
       var s;
+      if (leaving) { return; }
       try { s = JSON.parse(x.responseText); } catch (e) { return; }
       if (s.message && s.message !== last) { last = s.message; statusEl.textContent = s.message; }
-      if (s.next) { window.location.assign(s.next); return; }
+      if (s.next) { leaving = true; window.location.assign(s.next); return; }
       if (s.state === "other_tab" || s.state === "restart") { window.location.reload(); return; }
       window.setTimeout(tick, 1000);
     };

@@ -174,9 +174,19 @@ func (s *Server) Draining() bool { return s.draining.Load() }
 // FlowCount returns the number of stored flows.
 func (s *Server) FlowCount() int { return s.flows.Len() }
 
-func securityHeaders(w http.ResponseWriter) {
+func securityHeaders(w http.ResponseWriter) { securityHeadersFor(w, "") }
+
+// securityHeadersFor sets the page headers. formOrigin, when not empty, is
+// added to form-action: browsers check form-action on every redirect after
+// a form POST, and cancel and browser-result submissions end in a 303 to
+// the client's redirect_uri.
+func securityHeadersFor(w http.ResponseWriter, formOrigin string) {
 	h := w.Header()
-	h.Set("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+	fa := "'self'"
+	if formOrigin != "" {
+		fa += " " + formOrigin
+	}
+	h.Set("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action "+fa+"; frame-ancestors 'none'; base-uri 'none'")
 	h.Set("X-Frame-Options", "DENY")
 	h.Set("Referrer-Policy", "no-referrer")
 	h.Set("X-Content-Type-Options", "nosniff")
@@ -956,4 +966,20 @@ func (s *Server) PendingUI(flowID string) (authn.UI, bool) {
 	}
 	ui, err := f.pending.UI(time.Now())
 	return ui, err == nil
+}
+
+// formActionOrigin returns the http(s) origin of a redirect URI for use as
+// a CSP source, or "" when it is not an http(s) URL with a plain host.
+// Custom-scheme (native app) redirect URIs get no form-action entry.
+func formActionOrigin(redirect string) string {
+	u, err := url.Parse(redirect)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.User != nil {
+		return ""
+	}
+	for _, c := range u.Host {
+		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '.' || c == '-' || c == ':' || c == '[' || c == ']') {
+			return ""
+		}
+	}
+	return u.Scheme + "://" + u.Host
 }
