@@ -32,9 +32,11 @@ type fakeFront struct {
 	id  *authn.Identity
 	ttl time.Duration
 	err string
+	last *AuthRequest
 }
 
 func (f *fakeFront) Begin(w http.ResponseWriter, r *http.Request, req *AuthRequest) {
+	f.last = req
 	res, err := f.p.Reserve(time.Minute)
 	if err != nil {
 		w.Header().Set("Retry-After", "5")

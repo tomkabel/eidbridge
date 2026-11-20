@@ -59,6 +59,7 @@ type wopt struct {
 	fake                         bool // register the fake method next to smartid
 	upstreamWait                 time.Duration
 	codeTTL                      time.Duration
+	remember                     bool
 }
 
 func newWeb(t *testing.T, o wopt) *wenv {
@@ -139,7 +140,7 @@ func newWeb(t *testing.T, o wopt) *wenv {
 	ws, err := New(Config{Provider: prov, Registry: reg, Clock: clk, Log: log, PublicOrigin: srv.URL, Demo: true, FlowTTL: o.flowTTL,
 		MaxFlows: o.maxFlows, PollSlots: o.pollSlots, UpstreamRate: Bucket{Burst: 1000, Rate: 1000}, PerIP: o.perIP, PerClient: o.perClient,
 		PerTarget: o.perTarget, BucketCap: 1000, RetryAttempts: o.retry, RetryBase: 10 * time.Millisecond, DefaultLocale: "en",
-		TargetKey: bytes.Repeat([]byte{9}, 32), LongPollGap: 20 * time.Millisecond})
+		TargetKey: bytes.Repeat([]byte{9}, 32), LongPollGap: 20 * time.Millisecond, RememberMethod: o.remember})
 	if err != nil {
 		t.Fatal(err)
 	}
