@@ -68,6 +68,7 @@ type LeafOptions struct {
 	IsCA           bool
 	Expired        bool
 	IssuedBy       *PKI // another (untrusted) PKI
+	ByRoot         bool // issued directly by the root (two-certificate chain)
 	NoIntermediate bool
 }
 
@@ -124,6 +125,9 @@ func (p *PKI) NewLeaf(o LeafOptions) *Leaf {
 	if o.IssuedBy != nil {
 		issuer, ikey = o.IssuedBy.Inter, o.IssuedBy.interKey
 	}
+	if o.ByRoot {
+		issuer, ikey = p.Root, p.rootKey
+	}
 	d, err := x509.CreateCertificate(rand.Reader, t, issuer, key.Public(), ikey)
 	if err != nil {
 		panic(err)
@@ -172,8 +176,9 @@ type Server struct {
 	mu  sync.Mutex
 	sc  map[string]*Scenario // by phone
 	ses map[string]*session
-	// Starts counts authentication requests.
-	Starts int
+	// Starts counts authentication requests; LastStart is the last body.
+	Starts    int
+	LastStart map[string]string
 }
 
 type session struct {
@@ -229,6 +234,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		id := newUUID()
 		s.mu.Lock()
 		s.Starts++
+		s.LastStart = req
 		s.ses[id] = &session{hash: h, phone: req["phoneNumber"]}
 		s.mu.Unlock()
 		json.NewEncoder(w).Encode(map[string]string{"sessionID": id})
