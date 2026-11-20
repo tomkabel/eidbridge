@@ -48,8 +48,9 @@ type flow struct {
 	callback  [32]byte // SHA-256 of the unpredictable callback value
 	cbUsed    bool
 	waiting   string
-	redirect  string // client redirect for the terminal state
-	slot      bool   // holds a poll slot
+	redirect  string        // client redirect for the terminal state
+	codeUntil time.Duration // monotonic code deadline of a verified flow
+	slot      bool          // holds a poll slot
 	clientIP  string
 	createdAt time.Time
 }

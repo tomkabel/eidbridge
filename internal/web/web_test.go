@@ -867,3 +867,24 @@ func TestRedirectResponsesCarrySecurityHeaders(t *testing.T) {
 	}
 	check("callback", r)
 }
+
+// Red-team O3: /continue on a verified flow whose code has expired must
+// send the client access_denied, not a code the token endpoint will refuse.
+func TestContinueAfterCodeExpirySendsAccessDenied(t *testing.T) {
+	e := newWeb(t, wopt{codeTTL: time.Second})
+	b := e.browser()
+	id, page, _ := b.begin(nil)
+	b.start(id, page, "smartid", authn.FlowQR, nil).Body.Close()
+	e.scan(id, "PNOEE-40404040009-MOCK-Q")
+	e.waitState(id, StateVerified)
+	time.Sleep(1200 * time.Millisecond)
+	resp, err := b.nr.Get(e.issuer + "/flow/" + id + "/continue")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	u, _ := url.Parse(resp.Header.Get("Location"))
+	if q := u.Query(); q.Get("error") != "access_denied" || q.Has("code") || q.Get("state") == "" {
+		t.Fatalf("continue after code expiry: %s", u)
+	}
+}

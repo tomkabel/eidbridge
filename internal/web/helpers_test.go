@@ -58,6 +58,7 @@ type wopt struct {
 	retry                        int
 	fake                         bool // register the fake method next to smartid
 	upstreamWait                 time.Duration
+	codeTTL                      time.Duration
 }
 
 func newWeb(t *testing.T, o wopt) *wenv {
@@ -122,9 +123,13 @@ func newWeb(t *testing.T, o wopt) *wenv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.codes = store.NewCodes(store.CodesConfig{Cap: o.codeCap, CodeTTL: 60 * time.Second, TombstoneTTL: 6 * time.Minute, Clock: clk})
+	codeTTL := 60 * time.Second
+	if o.codeTTL > 0 {
+		codeTTL = o.codeTTL
+	}
+	e.codes = store.NewCodes(store.CodesConfig{Cap: o.codeCap, CodeTTL: codeTTL, TombstoneTTL: 6 * time.Minute, Clock: clk})
 	names := reg.Names()
-	prov, err := oidc.New(oidc.Config{Issuer: issuer, Demo: true, Keys: ks, AccessTokenTTL: 5 * time.Minute, CodeTTL: 60 * time.Second,
+	prov, err := oidc.New(oidc.Config{Issuer: issuer, Demo: true, Keys: ks, AccessTokenTTL: 5 * time.Minute, CodeTTL: codeTTL,
 		ClockSkew: 30 * time.Second, Methods: names, Clock: clk, Codes: e.codes,
 		Subjects: &oidc.Subjects{Keys: map[int][]byte{1: bytes.Repeat([]byte{7}, 32)}, Current: 1},
 		Clients:  []oidc.Client{{ID: "rp", Secret: secret, AuthMethod: oidc.AuthBasic, RedirectURIs: []string{"https://rp.example/cb"}, SubMode: "pairwise"}}})

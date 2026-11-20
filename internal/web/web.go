@@ -647,6 +647,7 @@ func (s *Server) applyLocked(f *flow, res authn.Result) {
 			return
 		}
 		f.redirect = u
+		f.codeUntil = s.cfg.Clock.Mono() + s.cfg.Provider.CodeTTL()
 		f.state, f.reason = StateVerified, ""
 		s.releaseLocked(f, false)
 		return
@@ -834,6 +835,10 @@ func (s *Server) continueFlow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u := f.redirect
+	if f.state == StateVerified && s.cfg.Clock.Mono() >= f.codeUntil {
+		// The code is dead; tell the client instead of handing it over.
+		u = s.cfg.Provider.ErrorRedirect(f.req.RedirectURI, f.req.State, "access_denied")
+	}
 	f.mu.Unlock()
 	s.flows.remove(f)
 	clearFlowCookie(w, f.id)
