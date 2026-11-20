@@ -39,7 +39,12 @@ func (f *Fake) Now() time.Time { f.mu.Lock(); defer f.mu.Unlock(); return f.wall
 func (f *Fake) Mono() time.Duration { f.mu.Lock(); defer f.mu.Unlock(); return f.mono }
 
 // Advance moves both clocks forward.
-func (f *Fake) Advance(d time.Duration) { f.mu.Lock(); f.wall = f.wall.Add(d); f.mono += d; f.mu.Unlock() }
+func (f *Fake) Advance(d time.Duration) {
+	f.mu.Lock()
+	f.wall = f.wall.Add(d)
+	f.mono += d
+	f.mu.Unlock()
+}
 
 // StepWall moves only the wall clock (either direction).
 func (f *Fake) StepWall(d time.Duration) { f.mu.Lock(); f.wall = f.wall.Add(d); f.mu.Unlock() }
