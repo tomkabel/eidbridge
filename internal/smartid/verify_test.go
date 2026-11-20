@@ -81,7 +81,7 @@ func (sy *synth) sign() {
 			"userChallenge": userChallenge, "flowType": sy.s.Flow, "signatureAlgorithm": "rsassa-pss",
 			"signatureAlgorithmParameters": map[string]any{"hashAlgorithm": "SHA-512",
 				"maskGenAlgorithm": map[string]any{"algorithm": "id-mgf1", "parameters": map[string]any{"hashAlgorithm": "SHA-512"}},
-				"saltLength": 64, "trailerField": "0xbc"}},
+				"saltLength":       64, "trailerField": "0xbc"}},
 		"cert":                map[string]any{"value": base64.StdEncoding.EncodeToString(sy.leaf.Cert.Raw), "certificateLevel": "QUALIFIED"},
 		"interactionTypeUsed": "displayTextAndPIN"}
 	sd := sha256.Sum256(sy.s.secret)
@@ -101,8 +101,10 @@ func (sy *synth) verify() (*Identity, error) {
 	return sy.c.Verify(sy.s, st, cb)
 }
 
-func (sy *synth) sig() map[string]any    { return sy.st["signature"].(map[string]any) }
-func (sy *synth) params() map[string]any { return sy.sig()["signatureAlgorithmParameters"].(map[string]any) }
+func (sy *synth) sig() map[string]any { return sy.st["signature"].(map[string]any) }
+func (sy *synth) params() map[string]any {
+	return sy.sig()["signatureAlgorithmParameters"].(map[string]any)
+}
 
 func TestSyntheticPositiveAllFlows(t *testing.T) {
 	for _, f := range []string{FlowQR, FlowWeb2App, FlowNotification} {
@@ -134,9 +136,9 @@ func TestVerifyNegativePerStep(t *testing.T) {
 	other := smartidtest.NewPKI("other")
 	cases := map[string]tc{
 		// Step 1
-		"s1 web2app missing callback":  {flow: FlowWeb2App, mutate: func(sy *synth) { sy.cb = nil; sy.s.Flow = FlowWeb2App }},
-		"s1 web2app wrong digest":      {flow: FlowWeb2App, mutate: func(sy *synth) { sy.cb.SessionSecretDigest = strings.Repeat("x", 43) }},
-		"s1 web2app empty digest":      {flow: FlowWeb2App, mutate: func(sy *synth) { sy.cb.SessionSecretDigest = "" }},
+		"s1 web2app missing callback": {flow: FlowWeb2App, mutate: func(sy *synth) { sy.cb = nil; sy.s.Flow = FlowWeb2App }},
+		"s1 web2app wrong digest":     {flow: FlowWeb2App, mutate: func(sy *synth) { sy.cb.SessionSecretDigest = strings.Repeat("x", 43) }},
+		"s1 web2app empty digest":     {flow: FlowWeb2App, mutate: func(sy *synth) { sy.cb.SessionSecretDigest = "" }},
 		// Step 2
 		"s2 state running":           {mutate: func(sy *synth) { sy.st["state"] = "RUNNING" }, reason: ReasonUnknownEndResult},
 		"s2 endResult refused":       {mutate: func(sy *synth) { sy.st["result"].(map[string]any)["endResult"] = "USER_REFUSED" }, reason: ReasonRefused},
@@ -154,27 +156,31 @@ func TestVerifyNegativePerStep(t *testing.T) {
 		"s3 web2app wrong verifier": {flow: FlowWeb2App, mutate: func(sy *synth) { sy.cb.UserChallengeVerifier = "nope" }},
 		"s3 web2app empty verifier": {flow: FlowWeb2App, mutate: func(sy *synth) { sy.cb.UserChallengeVerifier = "" }},
 		// Step 4
-		"s4 cert not base64":     {mutate: func(sy *synth) { sy.st["cert"].(map[string]any)["value"] = "!!!" }},
-		"s4 cert garbage":        {mutate: func(sy *synth) { sy.st["cert"].(map[string]any)["value"] = base64.StdEncoding.EncodeToString([]byte("garbage")) }},
-		"s4 untrusted chain":     {lo: smartidtest.LeafOptions{SelfIssuedBy: other}},
-		"s4 expired cert":        {lo: smartidtest.LeafOptions{NotBefore: time.Now().Add(-48 * time.Hour), NotAfter: time.Now().Add(-24 * time.Hour)}},
-		"s4 not yet valid":       {lo: smartidtest.LeafOptions{NotBefore: time.Now().Add(24 * time.Hour)}},
-		"s4 leaf is CA":          {lo: smartidtest.LeafOptions{IsCA: true}},
-		"s4 root as leaf":        {mutate: func(sy *synth) { sy.st["cert"].(map[string]any)["value"] = base64.StdEncoding.EncodeToString(testPKI.Root.Raw) }},
+		"s4 cert not base64": {mutate: func(sy *synth) { sy.st["cert"].(map[string]any)["value"] = "!!!" }},
+		"s4 cert garbage": {mutate: func(sy *synth) {
+			sy.st["cert"].(map[string]any)["value"] = base64.StdEncoding.EncodeToString([]byte("garbage"))
+		}},
+		"s4 untrusted chain": {lo: smartidtest.LeafOptions{SelfIssuedBy: other}},
+		"s4 expired cert":    {lo: smartidtest.LeafOptions{NotBefore: time.Now().Add(-48 * time.Hour), NotAfter: time.Now().Add(-24 * time.Hour)}},
+		"s4 not yet valid":   {lo: smartidtest.LeafOptions{NotBefore: time.Now().Add(24 * time.Hour)}},
+		"s4 leaf is CA":      {lo: smartidtest.LeafOptions{IsCA: true}},
+		"s4 root as leaf": {mutate: func(sy *synth) {
+			sy.st["cert"].(map[string]any)["value"] = base64.StdEncoding.EncodeToString(testPKI.Root.Raw)
+		}},
 		// Step 5
 		"s5 missing policy": {lo: smartidtest.LeafOptions{NoPolicy: true}},
 		// Step 6
-		"s6 no auth EKU":              {lo: smartidtest.LeafOptions{NoAuthEKU: true}},
-		"s6 no digitalSignature":      {lo: smartidtest.LeafOptions{KeyUsage: x509.KeyUsageKeyEncipherment}},
-		"s6 old profile missing KU":   {lo: smartidtest.LeafOptions{OldProfile: true, KeyUsage: x509.KeyUsageDigitalSignature}},
+		"s6 no auth EKU":            {lo: smartidtest.LeafOptions{NoAuthEKU: true}},
+		"s6 no digitalSignature":    {lo: smartidtest.LeafOptions{KeyUsage: x509.KeyUsageKeyEncipherment}},
+		"s6 old profile missing KU": {lo: smartidtest.LeafOptions{OldProfile: true, KeyUsage: x509.KeyUsageDigitalSignature}},
 		// Step 7
 		"s7 level advanced": {mutate: func(sy *synth) { sy.st["cert"].(map[string]any)["certificateLevel"] = "ADVANCED" }},
 		"s7 level unknown":  {mutate: func(sy *synth) { sy.st["cert"].(map[string]any)["certificateLevel"] = "SUPER" }},
 		"s7 level missing":  {mutate: func(sy *synth) { sy.st["cert"].(map[string]any)["certificateLevel"] = "" }},
 		// Step 8
-		"s8 serialNumber other form":  {lo: smartidtest.LeafOptions{SerialNumber: "XYZEE-40404040009"}},
-		"s8 notification other person": {flow: FlowNotification, lo: smartidtest.LeafOptions{SerialNumber: "PNOEE-39901012239"}, reason: ReasonIdentityMismatch},
-		"s8 document of other subject": {mutate: func(sy *synth) { sy.st["result"].(map[string]any)["documentNumber"] = "PNOEE-39901012239-MOCK-Q" }, reason: ReasonIdentityMismatch},
+		"s8 serialNumber other form":           {lo: smartidtest.LeafOptions{SerialNumber: "XYZEE-40404040009"}},
+		"s8 notification other person":         {flow: FlowNotification, lo: smartidtest.LeafOptions{SerialNumber: "PNOEE-39901012239"}, reason: ReasonIdentityMismatch},
+		"s8 document of other subject":         {mutate: func(sy *synth) { sy.st["result"].(map[string]any)["documentNumber"] = "PNOEE-39901012239-MOCK-Q" }, reason: ReasonIdentityMismatch},
 		"s8 notification by document mismatch": {flow: FlowNotification, mutate: func(sy *synth) { sy.s.ExpectedIdentity = "PNOEE-40404040009-ZZZZ-Q" }, reason: ReasonIdentityMismatch},
 		// Step 9
 		"s9 tampered signature":   {mutate: func(sy *synth) { v := []byte(sy.sig()["value"].(string)); v[10] ^= 1; sy.sig()["value"] = string(v) }},
@@ -188,12 +194,14 @@ func TestVerifyNegativePerStep(t *testing.T) {
 		"s9 missing params":       {mutate: func(sy *synth) { delete(sy.sig(), "signatureAlgorithmParameters") }},
 		"s9 missing mgf":          {mutate: func(sy *synth) { delete(sy.params(), "maskGenAlgorithm") }},
 		"s9 missing salt":         {mutate: func(sy *synth) { delete(sy.params(), "saltLength") }},
-		"s9 mgf hash differs":     {mutate: func(sy *synth) { sy.params()["maskGenAlgorithm"].(map[string]any)["parameters"] = map[string]any{"hashAlgorithm": "SHA-256"} }},
-		"s9 mgf algorithm":        {mutate: func(sy *synth) { sy.params()["maskGenAlgorithm"].(map[string]any)["algorithm"] = "other" }},
-		"s9 salt length":          {mutate: func(sy *synth) { sy.params()["saltLength"] = 32 }},
-		"s9 trailer field":        {mutate: func(sy *synth) { sy.params()["trailerField"] = "0x01" }},
-		"s9 ec key":               {lo: smartidtest.LeafOptions{ECKey: true}},
-		"s9 rsa 1024":             {lo: smartidtest.LeafOptions{RSABits: 1024}},
+		"s9 mgf hash differs": {mutate: func(sy *synth) {
+			sy.params()["maskGenAlgorithm"].(map[string]any)["parameters"] = map[string]any{"hashAlgorithm": "SHA-256"}
+		}},
+		"s9 mgf algorithm": {mutate: func(sy *synth) { sy.params()["maskGenAlgorithm"].(map[string]any)["algorithm"] = "other" }},
+		"s9 salt length":   {mutate: func(sy *synth) { sy.params()["saltLength"] = 32 }},
+		"s9 trailer field": {mutate: func(sy *synth) { sy.params()["trailerField"] = "0x01" }},
+		"s9 ec key":        {lo: smartidtest.LeafOptions{ECKey: true}},
+		"s9 rsa 1024":      {lo: smartidtest.LeafOptions{RSABits: 1024}},
 		// Status and lifecycle
 		"status unavailable": {mutate: func(sy *synth) {
 			sy.c.cfg.Status = statusFn(func(context.Context, *x509.Certificate, *x509.Certificate) error { return errors.New("ocsp down") })

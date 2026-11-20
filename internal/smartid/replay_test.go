@@ -133,16 +133,16 @@ func TestReplayTamperedLiveResponsesFail(t *testing.T) {
 	type mut func(m map[string]any)
 	sig := func(m map[string]any) map[string]any { return m["signature"].(map[string]any) }
 	cases := map[string]mut{
-		"signature value":   func(m map[string]any) { v := sig(m)["value"].(string); sig(m)["value"] = "A" + v[1:] },
-		"serverRandom":      func(m map[string]any) { sig(m)["serverRandom"] = "P3UygfCL/KKtubiGwP0pDzkX" },
-		"userChallenge":     func(m map[string]any) { sig(m)["userChallenge"] = strings.Repeat("A", 43) },
-		"flowType":          func(m map[string]any) { sig(m)["flowType"] = "Web2App" },
-		"interactionType":   func(m map[string]any) { m["interactionTypeUsed"] = "confirmationMessage" },
-		"pkcs1 algorithm":   func(m map[string]any) { sig(m)["signatureAlgorithm"] = "sha512WithRSAEncryption" },
-		"cert level":        func(m map[string]any) { m["cert"].(map[string]any)["certificateLevel"] = "ADVANCED" },
-		"documentNumber":    func(m map[string]any) { m["result"].(map[string]any)["documentNumber"] = "PNOEE-30403039917-MOCK-Q" },
-		"protocol":          func(m map[string]any) { m["signatureProtocol"] = "RAW_DIGEST_SIGNATURE" },
-		"state running":     func(m map[string]any) { m["state"] = "RUNNING" },
+		"signature value": func(m map[string]any) { v := sig(m)["value"].(string); sig(m)["value"] = "A" + v[1:] },
+		"serverRandom":    func(m map[string]any) { sig(m)["serverRandom"] = "P3UygfCL/KKtubiGwP0pDzkX" },
+		"userChallenge":   func(m map[string]any) { sig(m)["userChallenge"] = strings.Repeat("A", 43) },
+		"flowType":        func(m map[string]any) { sig(m)["flowType"] = "Web2App" },
+		"interactionType": func(m map[string]any) { m["interactionTypeUsed"] = "confirmationMessage" },
+		"pkcs1 algorithm": func(m map[string]any) { sig(m)["signatureAlgorithm"] = "sha512WithRSAEncryption" },
+		"cert level":      func(m map[string]any) { m["cert"].(map[string]any)["certificateLevel"] = "ADVANCED" },
+		"documentNumber":  func(m map[string]any) { m["result"].(map[string]any)["documentNumber"] = "PNOEE-30403039917-MOCK-Q" },
+		"protocol":        func(m map[string]any) { m["signatureProtocol"] = "RAW_DIGEST_SIGNATURE" },
+		"state running":   func(m map[string]any) { m["state"] = "RUNNING" },
 	}
 	for name, f := range cases {
 		t.Run(name, func(t *testing.T) {
