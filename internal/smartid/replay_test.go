@@ -210,3 +210,58 @@ func TestReplayTamperedLiveResponsesFail(t *testing.T) {
 		}
 	})
 }
+
+// Shared negative vectors (testdata/vectors/smartid-v3-negatives.json), also
+// run by the Python client's test suite (Story 7.2).
+func TestSharedNegativeVectors(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("..", "..", "testdata", "vectors", "smartid-v3-negatives.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Cases []struct {
+			Name, Fixture, Path, Reason string
+			Set                         any
+			Delete, Flip                bool
+		}
+	}
+	if err := json.Unmarshal(b, &doc); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range doc.Cases {
+		t.Run(c.Name, func(t *testing.T) {
+			r := loadReplay(t, c.Fixture)
+			var m map[string]any
+			json.Unmarshal(r.status, &m)
+			if c.Path != "" {
+				keys := strings.Split(c.Path, ".")
+				obj := m
+				for _, k := range keys[:len(keys)-1] {
+					obj = obj[k].(map[string]any)
+				}
+				last := keys[len(keys)-1]
+				switch {
+				case c.Delete:
+					delete(obj, last)
+				case c.Flip:
+					v := obj[last].(string)
+					f := "A"
+					if v[0] == 'A' {
+						f = "B"
+					}
+					obj[last] = f + v[1:]
+				default:
+					obj[last] = c.Set
+				}
+			}
+			raw, _ := json.Marshal(m)
+			st, err := ParseStatus(raw)
+			if err == nil {
+				_, err = r.client.Verify(r.session(t), st, r.callback())
+			}
+			if err == nil || ReasonOf(err) != c.Reason {
+				t.Fatalf("got %v (reason %q), want %q", err, ReasonOf(err), c.Reason)
+			}
+		})
+	}
+}

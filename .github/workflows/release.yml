@@ -33,3 +33,22 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pypi:
+    # Story 7.2: publish eidbridge-rp with PyPI trusted publishing (OIDC, no
+    # token). Requires the PyPI project and the "pypi" environment to be
+    # configured by the owner; runs only on a release tag.
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m pip install --quiet build && python3 -m build python --outdir dist-python
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist-python
