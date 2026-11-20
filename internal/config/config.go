@@ -399,6 +399,9 @@ func Load(env Getenv, demoFlag bool, root string) (*Config, error) {
 	if err := c.invariants(env, root); err != nil {
 		return nil, err
 	}
+	if err := c.checkSigningCA(); err != nil {
+		return nil, err
+	}
 	return c, nil
 }
 
@@ -906,4 +909,23 @@ func Markdown() string {
 	}
 	b.WriteString("\nMethod-specific variables for Web eID, the EUDI Wallet and RP API v2 are listed in their guides under [docs/methods](methods/).\n")
 	return b.String()
+}
+
+// checkSigningCA keeps demo and production CA sets apart for the signing
+// relay too (red-team #2 F2).
+func (c *Config) checkSigningCA() error {
+	if !c.SigningEnabled || c.SigningCADir == "" {
+		return nil
+	}
+	trust, err := smartid.LoadCADir(c.SigningCADir)
+	if err != nil {
+		return fmt.Errorf("config: signing CAs: %w", err)
+	}
+	for _, crt := range trust.Certificates() {
+		sum := sha256.Sum256(crt.Raw)
+		if _, isDemo := DemoCAFingerprints[hex.EncodeToString(sum[:])]; isDemo && !c.Demo {
+			return fmt.Errorf("config: production refuses demo CA %q (mixed trust)", crt.Subject.CommonName)
+		}
+	}
+	return nil
 }
