@@ -52,6 +52,23 @@ with sync_playwright() as p:
                 print("  KEYBOARD: no focusable primary button with visible focus", seen)
             else:
                 print(f"  keyboard: reached '{btn['text']}' after {len(seen)} Tab(s), focus {btn['outline']}")
+            # Every interactive control on the page is reachable by Tab, in order.
+            want = page.evaluate("""() => [...document.querySelectorAll('main button, main input:not([type=hidden]), main select, main a')]
+                .filter(e => e.offsetParent !== null).map(e => e.outerHTML.slice(0, 60))""")
+            page.focus("body")
+            got = []
+            for _ in range(len(want) + 15):
+                page.keyboard.press("Tab")
+                h = page.evaluate("() => document.activeElement.closest('main') ? document.activeElement.outerHTML.slice(0, 60) : ''")
+                if h and h not in got:
+                    got.append(h)
+            missing = [w for w in want if w not in got]
+            if missing:
+                failed = True
+                print("  KEYBOARD: not reachable by Tab:", missing)
+            else:
+                print(f"  keyboard: all {len(want)} controls in main reachable by Tab")
+            page.focus("button.primary")
             page.keyboard.press("Enter")
             page.wait_for_url("**/flow/**", timeout=5000)
             page.wait_for_selector("img, [data-status]", timeout=5000)
@@ -72,6 +89,20 @@ with sync_playwright() as p:
             other.goto(flow_url)
             audit(other, "restart-no-cookie[en]")
         ctx.close()
+    # Notification form filled by keyboard only; the pending page shows the
+    # verification code (Smart-ID notification stays pending in manual mock).
+    ctx = b.new_context(bypass_csp=True)
+    page = ctx.new_page()
+    page.goto(AUTH)
+    if page.query_selector("#code-smartid"):
+        page.focus("#code-smartid")
+        page.keyboard.type("40404040009")
+        page.keyboard.press("Enter")
+        page.wait_for_selector("[data-status]", timeout=5000)
+        vc = page.evaluate("() => (document.querySelector('.vc, #vc, [data-vc]') || {}).textContent || ''")
+        print("  notification by keyboard -> pending page, verification code shown:", bool(vc.strip()))
+        audit(page, "pending-notification[en]")
+    ctx.close()
     ctx = b.new_context(bypass_csp=True)
     page = ctx.new_page()
     page.goto(ISSUER + "/authorize?client_id=unknown")

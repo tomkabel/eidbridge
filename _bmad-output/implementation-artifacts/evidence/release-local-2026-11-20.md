@@ -54,3 +54,22 @@ error[en]: passes=33 serious/critical=0 other=[]
 ```
 
 The keyboard-only check found a real defect: Chrome applies CSP `form-action` to the redirects after a form POST, so a keyboard (or mouse) Cancel ended on the restart page and the client never received `access_denied`. Fixed by adding the client's redirect origin to `form-action` on flow pages (TestLoginPageCSPAllowsOnlyThisClientOriginForForms) and by stopping status polling once a form is submitted. Not run: screen-reader pass (NVDA/VoiceOver) and a manual 200 % zoom review – human follow-ups.
+
+### Rerun with two methods (Story 4.1 keyboard AC)
+
+Bridge with `EIDBRIDGE_METHODS=smartid,mobileid` (both mock), Smart-ID device-link and notification. Exit 0:
+
+```
+choose[en]: passes=40 serious/critical=0 other=[]
+  keyboard: reached 'Show a QR code to scan with Smart-ID' after 5 Tab(s), focus solid 3px
+  keyboard: all 9 controls in main reachable by Tab
+pending-qr[en]: passes=37 serious/critical=0 other=[]
+  keyboard cancel -> /callback error=access_denied
+outcome-or-restart[en]: passes=33 serious/critical=0 other=[]
+restart-no-cookie[en]: passes=33 serious/critical=0 other=[]
+choose[et]: passes=40 serious/critical=0 other=[]
+choose[ru]: passes=40 serious/critical=0 other=[]
+  notification by keyboard -> pending page, verification code shown: True
+pending-notification[en]: passes=35 serious/critical=0 other=[]
+error[en]: passes=33 serious/critical=0 other=[]
+```
