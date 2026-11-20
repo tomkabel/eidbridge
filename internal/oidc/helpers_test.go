@@ -28,10 +28,10 @@ var testIdentity = authn.Identity{Method: "smartid", AMR: []string{"smartid"}, I
 // fakeFront completes every flow immediately with testIdentity, the way the
 // web layer does after a verified login.
 type fakeFront struct {
-	p   *Provider
-	id  *authn.Identity
-	ttl time.Duration
-	err string
+	p    *Provider
+	id   *authn.Identity
+	ttl  time.Duration
+	err  string
 	last *AuthRequest
 }
 
