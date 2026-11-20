@@ -117,4 +117,3 @@ func TestMethodUIAndIdentityMismatch(t *testing.T) {
 		t.Fatal("callback produced identity")
 	}
 }
-
