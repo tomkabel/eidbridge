@@ -107,6 +107,14 @@ var Options = []Option{
 	{"EIDBRIDGE_WEBEID_CA_DIR", "trust/demo/webeid-ca", true, "", "Card authentication CA certificates (demo: SK test ID-card CAs)."},
 	{"EIDBRIDGE_WEBEID_CERT_STATUS", "ocsp", true, "ocsp or none (demo only)", "Card certificate status checking."},
 	{"EIDBRIDGE_WEBEID_STATUS_HOSTS", "aia.demo.sk.ee,c.sk.ee", true, "host[:port] list", "Allow-listed OCSP/CRL hosts for card certificates."},
+	{"EIDBRIDGE_EUDI_ENV", "demo", true, "demo, production, mock", "EUDI Wallet over OpenID4VP (only read when `eudi` is in EIDBRIDGE_METHODS). Needs an https issuer. mock trusts the built-in simulated PID provider and is demo-only."},
+	{"EIDBRIDGE_EUDI_PID_CA_DIR", "", true, "", "PID provider CA certificates (issuer JWT x5c and status list signers). Required unless mock."},
+	{"EIDBRIDGE_EUDI_VERIFIER_CERT_FILE", "", true, "PEM, leaf first", "Relying-party access certificate chain; client_id is x509_hash of the leaf. Demo without it: a self-signed certificate per start."},
+	{"EIDBRIDGE_EUDI_VERIFIER_KEY_FILE", "", true, "PEM P-256, mode 0600", "Key of the access certificate."},
+	{"EIDBRIDGE_EUDI_VCT", "urn:eudi:pid:1", false, "comma list", "Accepted credential types."},
+	{"EIDBRIDGE_EUDI_STATUS_HOSTS", "", false, "host[:port] list", "Allow-listed Token Status List hosts. A credential with a status reference from another host fails closed."},
+	{"EIDBRIDGE_EUDI_REQUIRE_STATUS", "false", false, "true or false", "Refuse credentials without a status reference."},
+	{"EIDBRIDGE_EUDI_FLOWS", "qr,same-device", false, "qr, same-device", "Wallet flows offered."},
 	{"EIDBRIDGE_WEBEID_DISALLOWED_POLICIES", "1.3.6.1.4.1.10015.18.1,1.3.6.1.4.1.10015.17.2", false, "dotted OIDs", "Certificate policies a card certificate must not carry (default: Mobile-ID and Smart-ID)."},
 }
 
@@ -140,6 +148,7 @@ type Config struct {
 	SmartID  SmartIDConfig
 	MobileID MobileIDConfig
 	WebEID   WebEIDConfig
+	EUDI     EUDIConfig
 	Extra    map[string]string // method-specific variables, parsed by their packages
 }
 
@@ -174,6 +183,14 @@ type WebEIDConfig struct {
 	Env, CADir, CertStatus          string
 	StatusHosts, DisallowedPolicies []string
 	Trust                           *smartid.TrustStore
+}
+
+// EUDIConfig is the EUDI Wallet method configuration.
+type EUDIConfig struct {
+	Env, PIDCADir, CertFile, KeyFile string
+	VCTs, StatusHosts, Flows         []string
+	RequireStatus                    bool
+	Trust                            *smartid.TrustStore
 }
 
 // Getenv abstracts the environment for tests.
@@ -318,6 +335,15 @@ func Load(env Getenv, demoFlag bool, root string) (*Config, error) {
 			w.CADir = filepath.Join(root, w.CADir)
 		}
 	}
+	if contains(c.Methods, "eudi") {
+		e := &c.EUDI
+		*e = EUDIConfig{Env: get("EIDBRIDGE_EUDI_ENV"), PIDCADir: get("EIDBRIDGE_EUDI_PID_CA_DIR"), CertFile: get("EIDBRIDGE_EUDI_VERIFIER_CERT_FILE"),
+			KeyFile: get("EIDBRIDGE_EUDI_VERIFIER_KEY_FILE"), VCTs: splitList(get("EIDBRIDGE_EUDI_VCT")), StatusHosts: splitList(get("EIDBRIDGE_EUDI_STATUS_HOSTS")),
+			RequireStatus: get("EIDBRIDGE_EUDI_REQUIRE_STATUS") == "true", Flows: splitList(get("EIDBRIDGE_EUDI_FLOWS"))}
+		if e.PIDCADir != "" && !filepath.IsAbs(e.PIDCADir) && root != "" {
+			e.PIDCADir = filepath.Join(root, e.PIDCADir)
+		}
+	}
 	if len(missing) > 0 {
 		sort.Strings(missing)
 		return nil, fmt.Errorf("config: production requires explicit values (or a value is out of bounds): %s", strings.Join(missing, ", "))
@@ -412,6 +438,65 @@ func (c *Config) invariants(env Getenv, root string) error {
 			return err
 		}
 	}
+	if contains(c.Methods, "eudi") {
+		if err := c.eudiInvariants(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// eudiInvariants applies ADR-003 to the wallet method.
+func (c *Config) eudiInvariants() error {
+	e := &c.EUDI
+	if !strings.HasPrefix(c.BaseURL, "https://") {
+		return errors.New("config: eudi needs an https EIDBRIDGE_ISSUER (the wallet posts to an https response URI)")
+	}
+	switch {
+	case c.Demo && e.Env == "production", !c.Demo && e.Env != "production":
+		return fmt.Errorf("config: EIDBRIDGE_EUDI_ENV=%s disagrees with mode %s", e.Env, c.Mode)
+	case e.Env != "demo" && e.Env != "production" && e.Env != "mock":
+		return errors.New("config: EIDBRIDGE_EUDI_ENV must be demo, production or mock")
+	}
+	if len(e.VCTs) == 0 {
+		return errors.New("config: EIDBRIDGE_EUDI_VCT is empty")
+	}
+	for _, f := range e.Flows {
+		if f != "qr" && f != "same-device" {
+			return fmt.Errorf("config: EIDBRIDGE_EUDI_FLOWS: unknown flow %q", f)
+		}
+	}
+	if len(e.Flows) == 0 {
+		return errors.New("config: EIDBRIDGE_EUDI_FLOWS is empty")
+	}
+	if (e.CertFile == "") != (e.KeyFile == "") {
+		return errors.New("config: set both EIDBRIDGE_EUDI_VERIFIER_CERT_FILE and EIDBRIDGE_EUDI_VERIFIER_KEY_FILE")
+	}
+	if !c.Demo && e.CertFile == "" {
+		return errors.New("config: production requires a verifier access certificate")
+	}
+	if e.Env == "mock" {
+		c.Warnings = append(c.Warnings, "EUDI Wallet trusts the built-in simulated PID provider (mock): synthetic identities only")
+		return nil
+	}
+	if !c.Demo {
+		for _, h := range e.StatusHosts {
+			if IsDemoHost(h) {
+				return fmt.Errorf("config: production refuses demo host %s in EIDBRIDGE_EUDI_STATUS_HOSTS", h)
+			}
+		}
+	}
+	trust, err := smartid.LoadCADir(e.PIDCADir)
+	if err != nil {
+		return fmt.Errorf("config: EUDI PID provider trust: %w", err)
+	}
+	for _, crt := range trust.Certificates() {
+		sum := sha256.Sum256(crt.Raw)
+		if _, isDemo := DemoCAFingerprints[hex.EncodeToString(sum[:])]; isDemo && !c.Demo {
+			return fmt.Errorf("config: production refuses demo CA %q (mixed trust)", crt.Subject.CommonName)
+		}
+	}
+	e.Trust = trust
 	return nil
 }
 

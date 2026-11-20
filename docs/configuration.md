@@ -71,6 +71,14 @@ Mode has no default. Demo mode uses the demo defaults below; production requires
 | `EIDBRIDGE_WEBEID_CA_DIR` | `trust/demo/webeid-ca` | yes |  | Card authentication CA certificates (demo: SK test ID-card CAs). |
 | `EIDBRIDGE_WEBEID_CERT_STATUS` | `ocsp` | yes | ocsp or none (demo only) | Card certificate status checking. |
 | `EIDBRIDGE_WEBEID_STATUS_HOSTS` | `aia.demo.sk.ee,c.sk.ee` | yes | host[:port] list | Allow-listed OCSP/CRL hosts for card certificates. |
+| `EIDBRIDGE_EUDI_ENV` | `demo` | yes | demo, production, mock | EUDI Wallet over OpenID4VP (only read when `eudi` is in EIDBRIDGE_METHODS). Needs an https issuer. mock trusts the built-in simulated PID provider and is demo-only. |
+| `EIDBRIDGE_EUDI_PID_CA_DIR` | — | yes |  | PID provider CA certificates (issuer JWT x5c and status list signers). Required unless mock. |
+| `EIDBRIDGE_EUDI_VERIFIER_CERT_FILE` | — | yes | PEM, leaf first | Relying-party access certificate chain; client_id is x509_hash of the leaf. Demo without it: a self-signed certificate per start. |
+| `EIDBRIDGE_EUDI_VERIFIER_KEY_FILE` | — | yes | PEM P-256, mode 0600 | Key of the access certificate. |
+| `EIDBRIDGE_EUDI_VCT` | `urn:eudi:pid:1` | no | comma list | Accepted credential types. |
+| `EIDBRIDGE_EUDI_STATUS_HOSTS` | — | no | host[:port] list | Allow-listed Token Status List hosts. A credential with a status reference from another host fails closed. |
+| `EIDBRIDGE_EUDI_REQUIRE_STATUS` | `false` | no | true or false | Refuse credentials without a status reference. |
+| `EIDBRIDGE_EUDI_FLOWS` | `qr,same-device` | no | qr, same-device | Wallet flows offered. |
 | `EIDBRIDGE_WEBEID_DISALLOWED_POLICIES` | `1.3.6.1.4.1.10015.18.1,1.3.6.1.4.1.10015.17.2` | no | dotted OIDs | Certificate policies a card certificate must not carry (default: Mobile-ID and Smart-ID). |
 
 Method-specific variables for Web eID, the EUDI Wallet and RP API v2 are listed in their guides under [docs/methods](methods/).

@@ -149,6 +149,7 @@ func (s *Server) Register(mux *http.ServeMux) {
 	h("POST "+b+"/flow/{id}/browser", s.browserResult)
 	h("GET "+b+"/flow/callback", s.callback)
 	h("POST "+b+"/wallet/response/{id}", s.walletResponse)
+	h("GET "+b+"/wallet/request/{id}", s.walletRequest)
 	static, _ := fs.Sub(assets, "static")
 	mux.Handle("GET "+b+"/static/", http.StripPrefix(b+"/static/", s.staticHandler(http.FileServer(http.FS(static)))))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok\n")) })
@@ -484,12 +485,13 @@ func (s *Server) start(w http.ResponseWriter, r *http.Request) {
 	f.slot = true
 	sr := authn.StartRequest{Flow: flowName, Lang: f.lang, Origin: s.cfg.PublicOrigin, Input: input, ClientID: f.req.ClientID}
 	var cbValue string
-	if flowName == authn.FlowSameDevice {
+	if flowName == authn.FlowSameDevice && m.Name() == "smartid" {
 		cbValue = randToken(16)
 		sr.CallbackURL = s.cfg.PublicOrigin + s.base + "/flow/callback?value=" + cbValue
-		if m.Name() != "smartid" {
-			sr.CallbackURL = s.cfg.PublicOrigin + s.base + "/wallet/response/" + f.id
-		}
+	} else if m.Name() == "eudi" {
+		// The wallet posts its response here and fetches the request object
+		// from the sibling /wallet/request/{id}; it has no flow cookie.
+		sr.CallbackURL = s.cfg.PublicOrigin + s.base + "/wallet/response/" + f.id
 	}
 	remaining := f.deadline - s.cfg.Clock.Mono()
 	ctx, cancel := context.WithTimeout(context.Background(), min(remaining, 20*time.Second))
@@ -949,12 +951,42 @@ func (s *Server) walletResponse(w http.ResponseWriter, r *http.Request) {
 	f.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	if res.Done && res.Err != nil {
+	if res.Err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(`{"error":"invalid_request"}`))
 		return
 	}
 	w.Write([]byte(`{}`))
+}
+
+// requestObjecter is implemented by wallet methods that serve a signed
+// authorization request by reference (OpenID4VP request_uri).
+type requestObjecter interface{ RequestObject() (string, error) }
+
+// walletRequest serves the request object for a pending wallet flow. The
+// wallet has no flow cookie; the unguessable flow id in the request URI is
+// the reference.
+func (s *Server) walletRequest(w http.ResponseWriter, r *http.Request) {
+	f := s.flows.get(r.PathValue("id"))
+	if f == nil {
+		http.NotFound(w, r)
+		return
+	}
+	f.mu.Lock()
+	ro, ok := f.pending.(requestObjecter)
+	pending := f.state == StatePending
+	f.mu.Unlock()
+	if !ok || !pending {
+		http.NotFound(w, r)
+		return
+	}
+	jwt, err := ro.RequestObject()
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "application/oauth-authz-req+jwt")
+	w.Write([]byte(jwt))
 }
 
 func contains(xs []string, x string) bool {

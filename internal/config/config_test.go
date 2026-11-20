@@ -1,13 +1,18 @@
 package config
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tomkabel/eidbridge/internal/smartid/smartidtest"
 )
@@ -138,6 +143,9 @@ func TestProductionRequiresExplicitBoundedValues(t *testing.T) {
 		}
 		if strings.Contains(o.Env, "WEBEID") {
 			m = prodWebEIDEnv(t)
+		}
+		if strings.Contains(o.Env, "EUDI") {
+			m = prodEUDIEnv(t)
 		}
 		delete(m, o.Env)
 		if _, err := Load(envOf(m), false, ""); err == nil {
@@ -351,5 +359,60 @@ func TestWebEIDModeInvariants(t *testing.T) {
 	m := map[string]string{"EIDBRIDGE_METHODS": "smartid,webeid", "EIDBRIDGE_ISSUER": "https://localhost:8443", "EIDBRIDGE_WEBEID_CA_DIR": prodEnv(t)["EIDBRIDGE_SMARTID_AUTH_CA_DIR"]}
 	if _, err := Load(envOf(m), true, root(t)); err == nil {
 		t.Error("demo accepted a non-demo card CA")
+	}
+}
+
+// Story 6.1 with ADR-003: wallet configuration invariants.
+func TestEUDIModeInvariants(t *testing.T) {
+	https := map[string]string{"EIDBRIDGE_METHODS": "smartid,eudi", "EIDBRIDGE_ISSUER": "https://localhost:8443", "EIDBRIDGE_EUDI_ENV": "mock"}
+	if c, err := Load(envOf(https), true, root(t)); err != nil || c.EUDI.Env != "mock" || len(c.EUDI.Flows) != 2 {
+		t.Fatalf("demo mock: %v", err)
+	}
+	for name, mod := range map[string]map[string]string{
+		"http issuer":      {"EIDBRIDGE_ISSUER": "http://localhost:8080"},
+		"production env":   {"EIDBRIDGE_EUDI_ENV": "production"},
+		"bad flow":         {"EIDBRIDGE_EUDI_FLOWS": "notification"},
+		"cert without key": {"EIDBRIDGE_EUDI_VERIFIER_CERT_FILE": "/x.pem"},
+		"demo without CA":  {"EIDBRIDGE_EUDI_ENV": "demo"},
+	} {
+		m := map[string]string{}
+		for k, v := range https {
+			m[k] = v
+		}
+		for k, v := range mod {
+			m[k] = v
+		}
+		if _, err := Load(envOf(m), true, root(t)); err == nil {
+			t.Errorf("demo accepted %s", name)
+		}
+	}
+	m := prodEnv(t)
+	for k, v := range map[string]string{"EIDBRIDGE_METHODS": "smartid,eudi", "EIDBRIDGE_EUDI_ENV": "mock", "EIDBRIDGE_EUDI_PID_CA_DIR": m["EIDBRIDGE_SMARTID_AUTH_CA_DIR"]} {
+		m[k] = v
+	}
+	if _, err := Load(envOf(m), false, ""); err == nil {
+		t.Error("production accepted EUDI mock or a missing verifier certificate")
+	}
+}
+
+func prodEUDIEnv(t *testing.T) map[string]string {
+	m := prodEnv(t)
+	dir := t.TempDir()
+	k, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	tmpl := &x509.Certificate{SerialNumber: big.NewInt(1), DNSNames: []string{"eid.example.com"}, NotBefore: time.Now(), NotAfter: time.Now().Add(time.Hour)}
+	der, _ := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &k.PublicKey, k)
+	kd, _ := x509.MarshalECPrivateKey(k)
+	os.WriteFile(filepath.Join(dir, "v.pem"), pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0o644)
+	os.WriteFile(filepath.Join(dir, "v.key"), pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: kd}), 0o600)
+	for k, v := range map[string]string{"EIDBRIDGE_METHODS": "smartid,eudi", "EIDBRIDGE_EUDI_ENV": "production", "EIDBRIDGE_EUDI_PID_CA_DIR": m["EIDBRIDGE_SMARTID_AUTH_CA_DIR"],
+		"EIDBRIDGE_EUDI_VERIFIER_CERT_FILE": filepath.Join(dir, "v.pem"), "EIDBRIDGE_EUDI_VERIFIER_KEY_FILE": filepath.Join(dir, "v.key")} {
+		m[k] = v
+	}
+	return m
+}
+
+func TestEUDIProductionLoads(t *testing.T) {
+	if _, err := Load(envOf(prodEUDIEnv(t)), false, ""); err != nil {
+		t.Fatal(err)
 	}
 }

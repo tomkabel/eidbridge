@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/tomkabel/eidbridge/internal/eudi/walletsim"
 	"github.com/tomkabel/eidbridge/internal/webeid/webeidtest"
 	"html"
 	"io"
@@ -396,6 +397,93 @@ func TestWebEIDLoginThroughBridge(t *testing.T) {
 	}
 	logs := s.logs.String()
 	for _, sec := range []string{"38001085718", "JAAK", challenge, code, base64.StdEncoding.EncodeToString(leaf.Cert.Raw)[:40]} {
+		if strings.Contains(logs, sec) {
+			t.Fatalf("DEBUG logs contain identity data or a secret (%.12s…)", sec)
+		}
+	}
+}
+
+// Story 6.1: an EUDI Wallet login through the bridge (mock PID provider).
+// The test plays the wallet: it scans the QR (PendingUI), fetches the
+// signed request object over HTTPS, and posts a presentation to the
+// response URI. A replayed presentation into a second flow is refused.
+func TestEUDIWalletLoginThroughBridge(t *testing.T) {
+	s := newStack(t, map[string]string{"EIDBRIDGE_METHODS": "smartid,eudi", "EIDBRIDGE_EUDI_ENV": "mock"})
+	q := url.Values{"client_id": {"demo-rp"}, "redirect_uri": {"https://rp.example/cb"}, "response_type": {"code"},
+		"scope": {"openid profile"}, "state": {"st123"}, "nonce": {"nonce123"},
+		"code_challenge": {"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"}, "code_challenge_method": {"S256"}}
+	startFlow := func() (string, *walletsim.Request) {
+		resp, err := s.b.Get(s.issuer + "/authorize?" + q.Encode())
+		if err != nil {
+			t.Fatal(err)
+		}
+		page := body(resp)
+		id := strings.TrimPrefix(resp.Request.URL.Path, strings.TrimPrefix(s.issuer, s.srv.URL)+"/flow/")
+		ft := ftRe.FindStringSubmatch(page)[1]
+		r, _ := s.b.PostForm(s.issuer+"/flow/"+id+"/start", url.Values{"ft": {ft}, "method": {"eudi"}, "flow": {"qr"}})
+		body(r)
+		ui, ok := s.app.Web.PendingUI(id)
+		if !ok || !strings.HasPrefix(ui.QRPayload, "openid4vp://") {
+			t.Fatalf("no wallet QR: %+v", ui)
+		}
+		wallet := &http.Client{Transport: s.nr.Transport} // no cookies: the wallet is another device
+		req, err := walletsim.FetchRequest(wallet, ui.QRPayload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return id, req
+	}
+	id, req := startFlow()
+	w := eudiFixture.Issue(walletsim.IssueOptions{})
+	vp := walletsim.VPToken(w.Present(req.Nonce, req.ClientID, walletsim.PresentOptions{}))
+	wallet := &http.Client{Transport: s.nr.Transport}
+	resp, err := walletsim.Respond(wallet, req, vp, nil)
+	if err != nil || resp.StatusCode != 200 {
+		t.Fatalf("wallet response: %v %v", err, resp.StatusCode)
+	}
+	resp.Body.Close()
+	var next string
+	for i := 0; i < 50 && next == ""; i++ {
+		r, _ := s.b.Get(s.issuer + "/flow/" + id + "/status")
+		var st struct{ Next string }
+		json.NewDecoder(r.Body).Decode(&st)
+		r.Body.Close()
+		next = st.Next
+		time.Sleep(50 * time.Millisecond)
+	}
+	r, _ := s.nr.Get(s.srv.URL + next)
+	r.Body.Close()
+	u, _ := url.Parse(r.Header.Get("Location"))
+	code := u.Query().Get("code")
+	if code == "" {
+		t.Fatalf("redirect %s", u)
+	}
+	tok := s.token(code)
+	idt, _ := tok["id_token"].(string)
+	cb, _ := base64.RawURLEncoding.DecodeString(strings.Split(idt, ".")[1])
+	var cl map[string]any
+	json.Unmarshal(cb, &cl)
+	if cl["eid_method"] != "eudi" || cl["given_name"] != "MARI" || cl["birthdate"] != "1990-05-17" || cl["acr"] != "demo" {
+		t.Fatalf("claims %v", cl)
+	}
+	if amr, _ := cl["amr"].([]any); len(amr) != 1 || amr[0] != "eudi_pid" {
+		t.Fatalf("amr %v", cl["amr"])
+	}
+	// Replay the same presentation into a new flow: refused with 400.
+	_, req2 := startFlow()
+	resp, _ = walletsim.Respond(wallet, req2, vp, nil)
+	if resp.StatusCode != 400 {
+		t.Fatalf("replayed presentation answered %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+	// A response with a forged state is refused and does not end the flow.
+	resp, _ = walletsim.Respond(wallet, &walletsim.Request{ResponseURI: req2.ResponseURI, State: "forged"}, vp, nil)
+	if resp.StatusCode != 400 {
+		t.Fatalf("forged state answered %d", resp.StatusCode)
+	}
+	resp.Body.Close()
+	logs := s.logs.String()
+	for _, sec := range []string{"49005170005", "MARI", "1990-05-17", req.Nonce, code} {
 		if strings.Contains(logs, sec) {
 			t.Fatalf("DEBUG logs contain identity data or a secret (%.12s…)", sec)
 		}
