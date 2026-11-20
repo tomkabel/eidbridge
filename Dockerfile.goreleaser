@@ -1,0 +1,16 @@
+# Used only by goreleaser (release workflow, owner action). Goreleaser places
+# prebuilt binaries at $TARGETPLATFORM/ in the build context. The distroless
+# static base carries CA certificates and runs as nonroot (65532).
+FROM gcr.io/distroless/static-debian12:nonroot
+ARG TARGETPLATFORM
+ARG VERSION=dev
+LABEL org.opencontainers.image.title="eidbridge" \
+      org.opencontainers.image.description="Unofficial, community-maintained Smart-ID RP API v3 to OpenID Connect bridge. Not affiliated with, endorsed by or certified by the operators of Smart-ID, Mobile-ID, the Estonian ID-card or any EUDI Wallet." \
+      org.opencontainers.image.licenses="MIT OR Apache-2.0" \
+      org.opencontainers.image.source="https://github.com/tomkabel/eidbridge" \
+      org.opencontainers.image.version="${VERSION}"
+COPY $TARGETPLATFORM/eidbridge /eidbridge
+COPY trust/ /trust/
+USER 65532:65532
+EXPOSE 8080
+ENTRYPOINT ["/eidbridge"]

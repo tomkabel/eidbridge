@@ -1,0 +1,55 @@
+version: 2
+project_name: eidbridge
+
+builds:
+  - id: eidbridge
+    main: ./cmd/eidbridge
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/tomkabel/eidbridge/internal/version.Version={{.Version}}
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: default
+    ids: [eidbridge]
+    formats: [tar.gz]
+    files:
+      - LICENSE-MIT
+      - LICENSE-APACHE
+      - NOTICE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+sboms:
+  - artifacts: archive
+
+# Publication happens only from the release workflow on v* tag push,
+# which is an owner action. Do not run `goreleaser release` locally.
+dockers_v2:
+  - id: eidbridge
+    ids: [eidbridge]
+    dockerfile: Dockerfile.goreleaser
+    extra_files: [trust]
+    build_args:
+      VERSION: "{{ .Version }}"
+    images:
+      - ghcr.io/tomkabel/eidbridge
+    tags:
+      - "{{ .Version }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+
+release:
+  github:
+    owner: tomkabel
+    name: eidbridge
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"

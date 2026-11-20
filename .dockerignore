@@ -1,0 +1,8 @@
+.git
+bin
+dist
+_bmad
+_bmad-output
+examples/**/node_modules
+**/.venv
+**/__pycache__
