@@ -167,6 +167,7 @@ type tokenResp struct {
 	AccessToken string `json:"access_token"`
 	IDToken     string `json:"id_token"`
 	Error       string `json:"error"`
+	Desc        string `json:"error_description"`
 	ExpiresIn   int    `json:"expires_in"`
 	header      http.Header
 }

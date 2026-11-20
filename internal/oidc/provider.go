@@ -293,6 +293,9 @@ func params(r *http.Request) (url.Values, string, error) {
 	return v, "", nil
 }
 
+// CodeTTL is the authorization-code lifetime.
+func (p *Provider) CodeTTL() time.Duration { return p.cfg.CodeTTL }
+
 // ErrorRedirect builds an error response to a validated redirect URI with
 // state and iss (RFC 9207).
 func (p *Provider) ErrorRedirect(redirectURI, state, code string) string {
@@ -579,7 +582,8 @@ func (p *Provider) token(w http.ResponseWriter, r *http.Request) {
 			return authErr
 		}
 		if subtle.ConstantTimeCompare([]byte(cb.ClientID), []byte(c.ID)) != 1 {
-			bindErr = oauthErr(400, "invalid_grant", "code was issued to another client")
+			// Same answer as an unknown code: do not confirm the code exists.
+			bindErr = oauthErr(400, "invalid_grant", "invalid, expired or used code")
 			return bindErr
 		}
 		if v.Get("redirect_uri") != cb.RedirectURI {
@@ -659,7 +663,11 @@ func (p *Provider) userinfo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	h := r.Header.Get("Authorization")
-	tok, ok := strings.CutPrefix(h, "Bearer ")
+	// The scheme name is case-insensitive (RFC 9110 §11.1).
+	tok, ok := "", len(h) > 7 && strings.EqualFold(h[:7], "Bearer ")
+	if ok {
+		tok = h[7:]
+	}
 	if !ok || tok == "" {
 		bad()
 		return

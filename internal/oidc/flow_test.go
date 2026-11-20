@@ -173,3 +173,32 @@ func TestConcurrentCodeExchangeSingleWinner(t *testing.T) {
 		t.Fatal("loser did not revoke winner's family")
 	}
 }
+
+// Red-team O4: a cross-client redeem must not reveal that the code exists
+// or which client it belongs to; it gets the same answer as an unknown code.
+func TestCrossClientRedeemErrorIsGeneric(t *testing.T) {
+	e := newEnv(t)
+	cross := e.exchange("post", e.code("basic"), nil)
+	unknown := e.exchange("post", "no-such-code-"+randID(), nil)
+	if cross.Error != "invalid_grant" || cross.Error != unknown.Error || cross.Desc != unknown.Desc {
+		t.Fatalf("cross-client %q/%q differs from unknown %q/%q", cross.Error, cross.Desc, unknown.Error, unknown.Desc)
+	}
+}
+
+// Red-team O6: the auth scheme is case-insensitive (RFC 9110 §11.1).
+func TestUserinfoBearerSchemeCaseInsensitive(t *testing.T) {
+	e := newEnv(t)
+	tr := e.exchange("basic", e.code("basic"), nil)
+	for _, scheme := range []string{"bearer ", "BEARER ", "Bearer "} {
+		req, _ := http.NewRequest(http.MethodGet, e.srv.URL+"/demo/userinfo", nil)
+		req.Header.Set("Authorization", scheme+tr.AccessToken)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != 200 {
+			t.Errorf("scheme %q: %d", scheme, resp.StatusCode)
+		}
+	}
+}
