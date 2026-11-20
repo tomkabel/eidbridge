@@ -777,3 +777,24 @@ func TestProxyTrustWarningWhenAllPeersPrivate(t *testing.T) {
 		t.Fatal("forwarded header trusted without configuration")
 	}
 }
+
+// Story 3.3 AC 2: ui_locales=et renders Estonian; unknown falls back.
+func TestUILocalesSelectsCatalog(t *testing.T) {
+	e := newWeb(t, wopt{})
+	_, page, _ := e.browser().begin(url.Values{"ui_locales": {"et"}})
+	if !strings.Contains(page, `<html lang="et">`) || !strings.Contains(page, catalogs["et"]["choose.heading"]) {
+		t.Fatal("ui_locales=et did not render Estonian")
+	}
+	_, page, _ = e.browser().begin(url.Values{"ui_locales": {"xx-YY"}})
+	if !strings.Contains(page, `<html lang="en">`) {
+		t.Fatal("unknown locale did not fall back to the default")
+	}
+}
+
+func TestDemoBannerOnLoginPage(t *testing.T) {
+	e := newWeb(t, wopt{})
+	_, page, _ := e.browser().begin(nil)
+	if !strings.Contains(page, `id="demo-banner"`) || !strings.Contains(page, "Not affiliated with") {
+		t.Fatal("demo banner or unofficial footer missing")
+	}
+}

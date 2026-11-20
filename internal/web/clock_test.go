@@ -41,3 +41,21 @@ func TestMain(m *testing.M) {
 	oidc.DemoRSABits = 2048
 	os.Exit(m.Run())
 }
+
+// Story 3.3 AC 1: every key in en.json exists in all other catalogs and
+// no catalog has keys en.json lacks.
+func TestLocaleCatalogParity(t *testing.T) {
+	en := catalogs["en"]
+	for _, l := range Locales {
+		for k := range en {
+			if _, ok := catalogs[l][k]; !ok {
+				t.Errorf("%s.json lacks %q", l, k)
+			}
+		}
+		for k := range catalogs[l] {
+			if _, ok := en[k]; !ok {
+				t.Errorf("%s.json has extra key %q", l, k)
+			}
+		}
+	}
+}
