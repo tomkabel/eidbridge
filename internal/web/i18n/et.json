@@ -78,5 +78,6 @@
   "restart.restart": "See sisselogimislink ei kehti selles brauseris. Naaske teenuse juurde ja alustage uuesti.",
   "restart.callback_other_browser": "Rakendus pöördus tagasi teise brauserisse kui see, kus alustasite. Avage teenus oma vaikebrauseris ja alustage uuesti.",
   "othertab.heading": "Jätkake teises vahekaardis",
-  "othertab.text": "Sisselogimine jätkub vahekaardil, mille rakendus avas. Selle vahekaardi võite sulgeda."
+  "othertab.text": "Sisselogimine jätkub vahekaardil, mille rakendus avas. Selle vahekaardi võite sulgeda.",
+  "pending.eudi.qr.instructions": "Avage telefonis rahakotirakendus ja skannige see kood."
 }

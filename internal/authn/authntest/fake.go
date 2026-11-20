@@ -22,6 +22,8 @@ type Fake struct {
 	ID authn.Identity
 	// Delay before a poll resolves.
 	Delay time.Duration
+	// AppLink overrides the same-device link the pending UI shows.
+	AppLink string
 
 	mu      sync.Mutex
 	Started int
@@ -61,7 +63,7 @@ func (f *Fake) Start(ctx context.Context, r authn.StartRequest) (authn.Pending, 
 	}
 	id.Method = f.Name()
 	id.AMR = []string{f.Name()}
-	return &fakePending{o: o, id: id, delay: f.Delay, start: time.Now()}, nil
+	return &fakePending{o: o, id: id, delay: f.Delay, start: time.Now(), link: f.AppLink}, nil
 }
 
 type fakePending struct {
@@ -72,10 +74,15 @@ type fakePending struct {
 	start     time.Time
 	destroyed bool
 	done      bool
+	link      string
 }
 
 func (p *fakePending) UI(time.Time) (authn.UI, error) {
-	return authn.UI{QRPayload: "https://fake.invalid/qr", AppLink: "https://fake.invalid/app", Refresh: time.Second}, nil
+	link := "https://fake.invalid/app"
+	if p.link != "" {
+		link = p.link
+	}
+	return authn.UI{QRPayload: "https://fake.invalid/qr", AppLink: link, Refresh: time.Second}, nil
 }
 
 func (p *fakePending) Poll(ctx context.Context) authn.Result {

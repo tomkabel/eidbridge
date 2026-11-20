@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/base64"
 	"encoding/json"
+	"html/template"
 	"image"
 	"image/color"
 	"image/png"
@@ -107,7 +108,9 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, f *flow, name st
 	d := s.pageData(lang, f, extra)
 	if f.state == StatePending && f.pending != nil {
 		if ui, err := f.pending.UI(time.Now()); err == nil {
-			d["AppLink"] = ui.AppLink
+			if appLinkAllowed(ui.AppLink) {
+				d["AppLink"] = template.URL(ui.AppLink)
+			}
 			d["VC"] = ui.VC
 			d["Challenge"] = ui.Challenge
 			d["HasQR"] = ui.QRPayload != ""
@@ -212,4 +215,15 @@ func qrPNG(payload string) ([]byte, error) {
 	var buf bytes.Buffer
 	err = png.Encode(&buf, img)
 	return buf.Bytes(), err
+}
+
+// appLinkAllowed limits same-device links to https and the wallet
+// invocation schemes; anything else (javascript:, data:) is not rendered.
+func appLinkAllowed(l string) bool {
+	for _, p := range []string{"https://", "openid4vp://", "haip://"} {
+		if strings.HasPrefix(l, p) {
+			return true
+		}
+	}
+	return false
 }

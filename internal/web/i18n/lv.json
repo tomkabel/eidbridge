@@ -78,5 +78,6 @@
   "restart.restart": "Šī pieteikšanās saite nav derīga šajā pārlūkprogrammā. Atgriezieties pakalpojumā un sāciet vēlreiz.",
   "restart.callback_other_browser": "Lietotne atgriezās citā pārlūkprogrammā, nevis tajā, kurā Jūs sākāt. Atveriet pakalpojumu savā noklusējuma pārlūkprogrammā un sāciet vēlreiz.",
   "othertab.heading": "Turpiniet otrā cilnē",
-  "othertab.text": "Pieteikšanās turpinās cilnē, ko atvēra lietotne. Šo cilni varat aizvērt."
+  "othertab.text": "Pieteikšanās turpinās cilnē, ko atvēra lietotne. Šo cilni varat aizvērt.",
+  "pending.eudi.qr.instructions": "Atveriet tālrunī maka lietotni un noskenējiet šo kodu."
 }

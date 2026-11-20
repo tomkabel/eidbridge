@@ -2,12 +2,12 @@
 <h1>{{call .T (printf "pending.%s.heading" .Offered)}}</h1>
 <div id="flow" data-status="{{.Base}}/flow/{{.FlowID}}/status" {{if .HasQR}}data-qr="{{.Base}}/flow/{{.FlowID}}/qr.png"{{end}}>
 {{if .HasQR}}
-<p>{{call .T "pending.qr.instructions"}}</p>
+<p>{{if eq .Method "eudi"}}{{call .T "pending.eudi.qr.instructions"}}{{else}}{{call .T "pending.qr.instructions"}}{{end}}</p>
 <img id="qr" class="qr" src="{{.Base}}/flow/{{.FlowID}}/qr.png" width="240" height="240" alt="{{call .T "pending.qr.alt"}}">
 {{end}}
 {{if .AppLink}}
 <p>{{call .T "pending.same-device.instructions"}}</p>
-<p><a class="button primary" href="{{.AppLink}}" rel="noreferrer">{{call .T "pending.same-device.open"}}</a></p>
+<p><a class="button primary" href="{{.AppLink}}" rel="noreferrer">{{if eq .Method "eudi"}}{{call .T "pending.wallet.open"}}{{else}}{{call .T "pending.same-device.open"}}{{end}}</a></p>
 {{end}}
 {{if .VC}}
 <p>{{call .T "pending.vc.instructions"}}</p>

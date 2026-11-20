@@ -78,5 +78,6 @@
   "restart.restart": "Ši prisijungimo nuoroda šioje naršyklėje negalioja. Grįžkite į paslaugą ir pradėkite iš naujo.",
   "restart.callback_other_browser": "Programėlė grįžo į kitą naršyklę nei ta, kurioje pradėjote. Atidarykite paslaugą savo numatytojoje naršyklėje ir pradėkite iš naujo.",
   "othertab.heading": "Tęskite kitame skirtuke",
-  "othertab.text": "Prisijungimas tęsiamas skirtuke, kurį atidarė programėlė. Šį skirtuką galite uždaryti."
+  "othertab.text": "Prisijungimas tęsiamas skirtuke, kurį atidarė programėlė. Šį skirtuką galite uždaryti.",
+  "pending.eudi.qr.instructions": "Atidarykite telefone piniginės programėlę ir nuskaitykite šį kodą."
 }

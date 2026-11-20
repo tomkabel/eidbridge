@@ -86,3 +86,30 @@ func TestRememberCookieIgnoredWhenMethodRemoved(t *testing.T) {
 		}
 	}
 }
+
+// Wallet links use custom schemes (openid4vp://). html/template replaces
+// unknown schemes with #ZgotmplZ, which broke the same-device wallet link;
+// allowed schemes render as is and anything else is dropped.
+func TestAppLinkSchemes(t *testing.T) {
+	for link, want := range map[string]string{
+		"openid4vp://?client_id=x509_hash%3Aabc&request_uri=https%3A%2F%2Fb.example%2Fr": `href="openid4vp://?client_id=x509_hash%3Aabc&amp;request_uri=https%3A%2F%2Fb.example%2Fr"`,
+		"haip://?request_uri=https%3A%2F%2Fb.example%2Fr":                                 `href="haip://?request_uri=https%3A%2F%2Fb.example%2Fr"`,
+		"https://app.example/x":                                                           `href="https://app.example/x"`,
+		"javascript:alert(1)":                                                             ``,
+	} {
+		e := newWeb(t, wopt{fake: true})
+		e.fake.FlowList = []string{"same-device"}
+		e.fake.AppLink = link
+		b := e.browser()
+		id, page, _ := b.begin(nil)
+		b.start(id, page, "fake", "same-device", nil).Body.Close()
+		r, _ := b.c.Get(e.issuer + "/flow/" + id)
+		got := readAll(r)
+		if want != "" && !strings.Contains(got, want) {
+			t.Errorf("%s: link not rendered: %.200s", link, got[strings.Index(got, "<main"):])
+		}
+		if want == "" && (strings.Contains(got, "javascript:") || strings.Contains(got, "ZgotmplZ")) {
+			t.Errorf("%s rendered", link)
+		}
+	}
+}
