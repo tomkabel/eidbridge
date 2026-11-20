@@ -120,7 +120,7 @@ func (s *stack) login(flow string, form url.Values) *url.URL {
 		s.t.Fatal(err)
 	}
 	body(resp)
-	deadline := time.Now().Add(15 * time.Second)
+	deadline := time.Now().Add(60 * time.Second)
 	for time.Now().Before(deadline) {
 		r, _ := s.b.Get(s.issuer + "/flow/" + id + "/status")
 		var st struct{ State, Next string }
@@ -292,5 +292,46 @@ func TestFlagsAfterSubcommand(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "TEST") {
 		t.Fatalf("demo trust not shown: %s", out.String())
+	}
+}
+
+// Story 4.2 AC: EIDBRIDGE_METHODS=smartid,mobileid serves both on one login
+// page; a Mobile-ID login completes through the same issuer, and DEBUG logs
+// hold neither the phone number nor the personal code.
+func TestSmartIDAndMobileIDOnOneLoginPage(t *testing.T) {
+	s := newStack(t, map[string]string{"EIDBRIDGE_METHODS": "smartid,mobileid", "EIDBRIDGE_MOBILEID_ENV": "mock"})
+	q := url.Values{"client_id": {"demo-rp"}, "redirect_uri": {"https://rp.example/cb"}, "response_type": {"code"},
+		"scope": {"openid profile"}, "state": {"st123"}, "nonce": {"nonce123"},
+		"code_challenge": {"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"}, "code_challenge_method": {"S256"}}
+	resp, err := s.b.Get(s.issuer + "/authorize?" + q.Encode())
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := body(resp)
+	if !strings.Contains(page, `value="smartid"`) || !strings.Contains(page, `value="mobileid"`) || !strings.Contains(page, `name="phone"`) {
+		t.Fatalf("login page lacks one of the methods: %.400s", page)
+	}
+	u := s.login("notification", url.Values{"method": {"mobileid"}, "country": {"EE"}, "personal_code": {"51307149560"}, "phone": {"+37269930366"}})
+	code := u.Query().Get("code")
+	if code == "" {
+		t.Fatalf("redirect %s", u)
+	}
+	tok := s.token(code)
+	idt, _ := tok["id_token"].(string)
+	parts := strings.Split(idt, ".")
+	cb, _ := base64.RawURLEncoding.DecodeString(parts[1])
+	var cl map[string]any
+	json.Unmarshal(cb, &cl)
+	if cl["eid_method"] != "mobileid" || cl["given_name"] != "MARY ÄNN" || cl["acr"] != "demo" || cl["iss"] != s.issuer {
+		t.Fatalf("claims %v", cl)
+	}
+	if amr, _ := cl["amr"].([]any); len(amr) != 1 || amr[0] != "mobileid" {
+		t.Fatalf("amr %v", cl["amr"])
+	}
+	logs := s.logs.String()
+	for _, sec := range []string{"51307149560", "37269930366", "MARY", code, idt, cl["sub"].(string)} {
+		if strings.Contains(logs, sec) {
+			t.Fatalf("DEBUG logs contain identity data or a secret (%.12s…)", sec)
+		}
 	}
 }

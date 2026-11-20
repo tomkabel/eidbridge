@@ -81,3 +81,23 @@ func TestLiveDemoBridgeLogin(t *testing.T) {
 	}
 	t.Fatal("live login did not finish")
 }
+
+// TestLiveDemoBridgeMobileID runs a full bridge login with Mobile-ID
+// against tsp.demo.sk.ee (EIDBRIDGE_LIVE=1), through the login page's
+// notification form. Status checking is off for the same demo OCSP reason.
+func TestLiveDemoBridgeMobileID(t *testing.T) {
+	if os.Getenv("EIDBRIDGE_LIVE") != "1" {
+		t.Skip("set EIDBRIDGE_LIVE=1")
+	}
+	s := newStack(t, map[string]string{"EIDBRIDGE_METHODS": "smartid,mobileid", "EIDBRIDGE_MOBILEID_ENV": "demo", "EIDBRIDGE_MOBILEID_CERT_STATUS": "none"})
+	u := s.login("notification", url.Values{"method": {"mobileid"}, "country": {"EE"}, "personal_code": {"51307149560"}, "phone": {"+37269930366"}})
+	code := u.Query().Get("code")
+	if code == "" {
+		t.Fatalf("live Mobile-ID redirect %s", u)
+	}
+	tok := s.token(code)
+	if tok["id_token"] == nil {
+		t.Fatalf("token %v", tok)
+	}
+	t.Logf("live Mobile-ID login through the bridge: code exchanged, ID token issued")
+}

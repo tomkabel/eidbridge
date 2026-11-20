@@ -11,6 +11,8 @@ import (
 var (
 	DemoRPUUID = "00000000-0000-4000-8000-000000000000"
 	DemoRPName = "DEMO"
+	// DemoMIDRPUUID is the public Mobile-ID demo relying party (MID REST API).
+	DemoMIDRPUUID = "00000000-0000-0000-0000-000000000000"
 	// DemoHosts are eID demo API hosts. Production refuses all of them.
 	DemoHosts = map[string]bool{"sid.demo.sk.ee": true, "tsp.demo.sk.ee": true, "demo.sk.ee": true, "aia.demo.sk.ee": true}
 	// DemoCAFingerprints are SHA-256 (DER, hex) of demo authentication CAs.

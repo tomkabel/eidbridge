@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tomkabel/eidbridge/internal/mobileid"
 	"github.com/tomkabel/eidbridge/internal/oidc"
 	"github.com/tomkabel/eidbridge/internal/smartid"
 	"github.com/tomkabel/eidbridge/internal/tlspin"
@@ -90,6 +91,17 @@ var Options = []Option{
 	{"EIDBRIDGE_SMARTID_CERT_STATUS", "ocsp", true, "ocsp or none (demo only)", "Certificate status checking."},
 	{"EIDBRIDGE_SMARTID_STATUS_HOSTS", "aia.demo.sk.ee,c.sk.ee", true, "host[:port] list", "Allow-listed OCSP/CRL hosts."},
 	{"EIDBRIDGE_SMARTID_DISPLAY_TEXT", "Log in to the service", false, "≤ 60 characters", "Text shown on the device; per-client overrides in the clients file."},
+	{"EIDBRIDGE_MOBILEID_ENV", "demo", true, "demo, production, mock", "Mobile-ID (only read when `mobileid` is in EIDBRIDGE_METHODS). Must agree with mode; mock is demo-only."},
+	{"EIDBRIDGE_MOBILEID_BASE_URL", "https://tsp.demo.sk.ee/mid-api", true, "", "MID REST API base URL."},
+	{"EIDBRIDGE_MOBILEID_RP_UUID", "00000000-0000-0000-0000-000000000000", true, "lower-case UUID", "Mobile-ID relying-party UUID from your agreement."},
+	{"EIDBRIDGE_MOBILEID_RP_NAME", "DEMO", true, "", "Mobile-ID relying-party name."},
+	{"EIDBRIDGE_MOBILEID_TLS_PINS", "disabled", true, "sha256/<b64>[,…] or disabled", "SPKI pins of the MID API host (current and next)."},
+	{"EIDBRIDGE_MOBILEID_TLS_PINS_DISABLED_ACK", "", false, "I_UNDERSTAND", "Production acknowledgement for disabled Mobile-ID pins."},
+	{"EIDBRIDGE_MOBILEID_AUTH_CA_DIR", "trust/demo/mobileid-auth-ca", true, "", "Mobile-ID authentication CA certificates."},
+	{"EIDBRIDGE_MOBILEID_POLICY_OIDS", "1.3.6.1.4.1.10015.18.1", true, "dotted OIDs", "Certificate policies the Mobile-ID certificate must carry."},
+	{"EIDBRIDGE_MOBILEID_CERT_STATUS", "ocsp", true, "ocsp or none (demo only)", "Mobile-ID certificate status checking. The demo OCSP marks demo certificates as non-issued; use none in demo."},
+	{"EIDBRIDGE_MOBILEID_STATUS_HOSTS", "aia.demo.sk.ee,c.sk.ee", true, "host[:port] list", "Allow-listed OCSP/CRL hosts for Mobile-ID."},
+	{"EIDBRIDGE_MOBILEID_DISPLAY_TEXT", "Log in", false, "≤ 40 GSM-7 characters", "Text shown on the phone next to the relying-party name."},
 }
 
 // Config is the validated configuration.
@@ -119,8 +131,9 @@ type Config struct {
 	Warnings                                             []string
 	Deviations                                           []string
 
-	SmartID SmartIDConfig
-	Extra   map[string]string // method-specific variables, parsed by their packages
+	SmartID  SmartIDConfig
+	MobileID MobileIDConfig
+	Extra    map[string]string // method-specific variables, parsed by their packages
 }
 
 // SmartIDConfig is the Smart-ID method configuration.
@@ -131,6 +144,18 @@ type SmartIDConfig struct {
 	PolicyOIDs                   []string
 	CertLevel                    string
 	Flows                        []string
+	CertStatus                   string
+	StatusHosts                  []string
+	DisplayText                  string
+	Trust                        *smartid.TrustStore
+}
+
+// MobileIDConfig is the Mobile-ID method configuration.
+type MobileIDConfig struct {
+	Env, BaseURL, RPUUID, RPName string
+	Pins                         tlspin.Resolved
+	CADir                        string
+	PolicyOIDs                   []string
 	CertStatus                   string
 	StatusHosts                  []string
 	DisplayText                  string
@@ -259,6 +284,18 @@ func Load(env Getenv, demoFlag bool, root string) (*Config, error) {
 		}
 	}
 	pinVal := get("EIDBRIDGE_SMARTID_TLS_PINS")
+	var midPins string
+	if contains(c.Methods, "mobileid") {
+		m := &c.MobileID
+		*m = MobileIDConfig{Env: get("EIDBRIDGE_MOBILEID_ENV"), BaseURL: strings.TrimRight(get("EIDBRIDGE_MOBILEID_BASE_URL"), "/"),
+			RPUUID: get("EIDBRIDGE_MOBILEID_RP_UUID"), RPName: get("EIDBRIDGE_MOBILEID_RP_NAME"), CADir: get("EIDBRIDGE_MOBILEID_AUTH_CA_DIR"),
+			PolicyOIDs: splitList(get("EIDBRIDGE_MOBILEID_POLICY_OIDS")), CertStatus: get("EIDBRIDGE_MOBILEID_CERT_STATUS"),
+			StatusHosts: splitList(get("EIDBRIDGE_MOBILEID_STATUS_HOSTS")), DisplayText: get("EIDBRIDGE_MOBILEID_DISPLAY_TEXT")}
+		if m.CADir != "" && !filepath.IsAbs(m.CADir) && root != "" {
+			m.CADir = filepath.Join(root, m.CADir)
+		}
+		midPins = get("EIDBRIDGE_MOBILEID_TLS_PINS")
+	}
 	if len(missing) > 0 {
 		sort.Strings(missing)
 		return nil, fmt.Errorf("config: production requires explicit values (or a value is out of bounds): %s", strings.Join(missing, ", "))
@@ -274,6 +311,19 @@ func Load(env Getenv, demoFlag bool, root string) (*Config, error) {
 		}
 		if pins.Deviation != "" {
 			c.Deviations = append(c.Deviations, pins.Deviation)
+		}
+	}
+	if contains(c.Methods, "mobileid") && c.MobileID.Env != "mock" {
+		pins, err := tlspin.Policy(mode, midPins, env("EIDBRIDGE_MOBILEID_TLS_PINS_DISABLED_ACK") == "I_UNDERSTAND")
+		if err != nil {
+			return nil, fmt.Errorf("config: EIDBRIDGE_MOBILEID_TLS_PINS: %w", err)
+		}
+		c.MobileID.Pins = pins
+		if pins.Warning != "" {
+			c.Warnings = append(c.Warnings, "Mobile-ID: "+pins.Warning)
+		}
+		if pins.Deviation != "" {
+			c.Deviations = append(c.Deviations, "Mobile-ID: "+pins.Deviation)
 		}
 	}
 	if err := c.invariants(env, root); err != nil {
@@ -330,6 +380,90 @@ func (c *Config) invariants(env Getenv, root string) error {
 			return err
 		}
 	}
+	if contains(c.Methods, "mobileid") {
+		if err := c.mobileIDInvariants(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// mobileIDInvariants applies the demo/production rules of ADR-003 to
+// Mobile-ID: environment agrees with mode, demo hosts, RP identity and CAs
+// never mix with production, production checks status and policies.
+func (c *Config) mobileIDInvariants() error {
+	m := &c.MobileID
+	switch {
+	case c.Demo && m.Env == "production", !c.Demo && m.Env != "production":
+		return fmt.Errorf("config: EIDBRIDGE_MOBILEID_ENV=%s disagrees with mode %s", m.Env, c.Mode)
+	case m.Env != "demo" && m.Env != "production" && m.Env != "mock":
+		return errors.New("config: EIDBRIDGE_MOBILEID_ENV must be demo, production or mock")
+	}
+	if !mobileid.ValidDisplayText(m.DisplayText) {
+		return errors.New("config: EIDBRIDGE_MOBILEID_DISPLAY_TEXT must be ≤ 40 plain GSM-7 characters")
+	}
+	if m.Env == "mock" {
+		if !c.Demo {
+			return errors.New("config: EIDBRIDGE_MOBILEID_ENV=mock is demo-only")
+		}
+		c.Warnings = append(c.Warnings, "Mobile-ID uses the built-in fixture upstream (mock): synthetic identities only")
+		return nil
+	}
+	u, err := url.Parse(m.BaseURL)
+	if err != nil || u.Host == "" {
+		return errors.New("config: EIDBRIDGE_MOBILEID_BASE_URL is invalid")
+	}
+	host := u.Hostname()
+	if c.Demo {
+		if !IsDemoHost(host) {
+			return fmt.Errorf("config: demo mode refuses Mobile-ID host %s outside the demo allow-list", host)
+		}
+		if m.RPUUID != DemoMIDRPUUID || m.RPName != DemoRPName {
+			return errors.New("config: demo mode uses the public Mobile-ID demo relying party only")
+		}
+	} else {
+		if IsDemoHost(host) {
+			return fmt.Errorf("config: production refuses demo host %s", host)
+		}
+		for _, sh := range m.StatusHosts {
+			if IsDemoHost(sh) {
+				return fmt.Errorf("config: production refuses demo host %s in EIDBRIDGE_MOBILEID_STATUS_HOSTS", sh)
+			}
+		}
+		if m.RPUUID == DemoMIDRPUUID || m.RPName == DemoRPName {
+			return errors.New("config: production refuses the public Mobile-ID demo relying-party identity")
+		}
+		if u.Scheme != "https" {
+			return errors.New("config: production Mobile-ID base URL must be https")
+		}
+		if m.CertStatus != "ocsp" {
+			return errors.New("config: production requires EIDBRIDGE_MOBILEID_CERT_STATUS=ocsp")
+		}
+		if len(m.PolicyOIDs) == 0 {
+			return errors.New("config: production requires EIDBRIDGE_MOBILEID_POLICY_OIDS")
+		}
+	}
+	if m.CertStatus != "ocsp" && m.CertStatus != "none" {
+		return errors.New("config: EIDBRIDGE_MOBILEID_CERT_STATUS must be ocsp or none")
+	}
+	if m.CertStatus == "none" {
+		c.Warnings = append(c.Warnings, "Mobile-ID certificate status checking is off (demo only)")
+	}
+	trust, err := smartid.LoadCADir(m.CADir)
+	if err != nil {
+		return fmt.Errorf("config: Mobile-ID: %w", err)
+	}
+	for _, crt := range trust.Certificates() {
+		sum := sha256.Sum256(crt.Raw)
+		_, isDemo := DemoCAFingerprints[hex.EncodeToString(sum[:])]
+		switch {
+		case !c.Demo && isDemo:
+			return fmt.Errorf("config: production refuses demo CA %q (mixed trust)", crt.Subject.CommonName)
+		case c.Demo && !isDemo:
+			return fmt.Errorf("config: demo mode refuses non-demo CA %q (mixed trust)", crt.Subject.CommonName)
+		}
+	}
+	m.Trust = trust
 	return nil
 }
 
@@ -560,6 +694,6 @@ func Markdown() string {
 		}
 		fmt.Fprintf(&b, "| `%s` | %s | %s | %s | %s |\n", o.Env, d, req, o.Bounds, o.Desc)
 	}
-	b.WriteString("\nMethod-specific variables for Mobile-ID, Web eID, the EUDI Wallet and RP API v2 are listed in their guides under [docs/methods](methods/).\n")
+	b.WriteString("\nMethod-specific variables for Web eID, the EUDI Wallet and RP API v2 are listed in their guides under [docs/methods](methods/).\n")
 	return b.String()
 }

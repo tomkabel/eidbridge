@@ -133,6 +133,9 @@ func TestProductionRequiresExplicitBoundedValues(t *testing.T) {
 			continue
 		}
 		m := prodEnv(t)
+		if strings.Contains(o.Env, "MOBILEID") {
+			m = prodMIDEnv(t)
+		}
 		delete(m, o.Env)
 		if _, err := Load(envOf(m), false, ""); err == nil {
 			t.Errorf("production started without %s", o.Env)
@@ -240,5 +243,65 @@ func TestProductionRefusesDemoHostVariants(t *testing.T) {
 func TestDemoModeNormalizesHost(t *testing.T) {
 	if _, err := Load(envOf(map[string]string{"EIDBRIDGE_SMARTID_BASE_URL": "https://SID.DEMO.SK.EE/smart-id-rp"}), true, root(t)); err != nil {
 		t.Fatalf("demo refused upper-case demo host: %v", err)
+	}
+}
+
+// prodMIDEnv is a valid production environment with Mobile-ID enabled.
+func prodMIDEnv(t *testing.T) map[string]string {
+	m := prodEnv(t)
+	m["EIDBRIDGE_METHODS"] = "smartid,mobileid"
+	for k, v := range map[string]string{"EIDBRIDGE_MOBILEID_ENV": "production", "EIDBRIDGE_MOBILEID_BASE_URL": "https://mid.sk.ee/mid-api",
+		"EIDBRIDGE_MOBILEID_RP_UUID": "7c8d2c0e-1111-4222-8333-444444444444", "EIDBRIDGE_MOBILEID_RP_NAME": "Example Ltd",
+		"EIDBRIDGE_MOBILEID_TLS_PINS": m["EIDBRIDGE_SMARTID_TLS_PINS"], "EIDBRIDGE_MOBILEID_AUTH_CA_DIR": m["EIDBRIDGE_SMARTID_AUTH_CA_DIR"],
+		"EIDBRIDGE_MOBILEID_POLICY_OIDS": "1.3.6.1.4.1.10015.18.1", "EIDBRIDGE_MOBILEID_CERT_STATUS": "ocsp", "EIDBRIDGE_MOBILEID_STATUS_HOSTS": "aia.sk.ee"} {
+		m[k] = v
+	}
+	return m
+}
+
+// Story 4.2 with ADR-003: the demo/production invariants hold for Mobile-ID.
+func TestMobileIDModeInvariants(t *testing.T) {
+	if _, err := Load(envOf(prodMIDEnv(t)), false, ""); err != nil {
+		t.Fatalf("valid production Mobile-ID refused: %v", err)
+	}
+	for name, mod := range map[string]map[string]string{
+		"demo env":          {"EIDBRIDGE_MOBILEID_ENV": "demo"},
+		"mock env":          {"EIDBRIDGE_MOBILEID_ENV": "mock"},
+		"demo host":         {"EIDBRIDGE_MOBILEID_BASE_URL": "https://TSP.DEMO.SK.EE./mid-api"},
+		"demo status host":  {"EIDBRIDGE_MOBILEID_STATUS_HOSTS": "aia.demo.sk.ee"},
+		"demo RP UUID":      {"EIDBRIDGE_MOBILEID_RP_UUID": "00000000-0000-0000-0000-000000000000"},
+		"demo RP name":      {"EIDBRIDGE_MOBILEID_RP_NAME": "DEMO"},
+		"http":              {"EIDBRIDGE_MOBILEID_BASE_URL": "http://mid.sk.ee/mid-api"},
+		"status none":       {"EIDBRIDGE_MOBILEID_CERT_STATUS": "none"},
+		"demo CA":           {"EIDBRIDGE_MOBILEID_AUTH_CA_DIR": filepath.Join(root(t), "trust", "demo", "mobileid-auth-ca")},
+		"pins disabled":     {"EIDBRIDGE_MOBILEID_TLS_PINS": "disabled"},
+		"long display text": {"EIDBRIDGE_MOBILEID_DISPLAY_TEXT": strings.Repeat("x", 41)},
+		"non GSM display":   {"EIDBRIDGE_MOBILEID_DISPLAY_TEXT": "Logi sisse – õ"},
+	} {
+		m := prodMIDEnv(t)
+		for k, v := range mod {
+			m[k] = v
+		}
+		if _, err := Load(envOf(m), false, ""); err == nil {
+			t.Errorf("production accepted %s", name)
+		}
+	}
+	c, err := Load(envOf(map[string]string{"EIDBRIDGE_METHODS": "smartid,mobileid"}), true, root(t))
+	if err != nil || c.MobileID.Trust == nil || c.MobileID.BaseURL != "https://tsp.demo.sk.ee/mid-api" {
+		t.Fatalf("demo Mobile-ID defaults: %v", err)
+	}
+	for name, mod := range map[string]map[string]string{
+		"production host": {"EIDBRIDGE_MOBILEID_BASE_URL": "https://mid.sk.ee/mid-api"},
+		"production env":  {"EIDBRIDGE_MOBILEID_ENV": "production"},
+		"own RP in demo":  {"EIDBRIDGE_MOBILEID_RP_UUID": "7c8d2c0e-1111-4222-8333-444444444444"},
+		"non-demo CA":     {"EIDBRIDGE_MOBILEID_AUTH_CA_DIR": prodEnv(t)["EIDBRIDGE_SMARTID_AUTH_CA_DIR"]},
+	} {
+		m := map[string]string{"EIDBRIDGE_METHODS": "smartid,mobileid"}
+		for k, v := range mod {
+			m[k] = v
+		}
+		if _, err := Load(envOf(m), true, root(t)); err == nil {
+			t.Errorf("demo accepted %s", name)
+		}
 	}
 }

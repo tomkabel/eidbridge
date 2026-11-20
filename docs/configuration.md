@@ -56,5 +56,16 @@ Mode has no default. Demo mode uses the demo defaults below; production requires
 | `EIDBRIDGE_SMARTID_CERT_STATUS` | `ocsp` | yes | ocsp or none (demo only) | Certificate status checking. |
 | `EIDBRIDGE_SMARTID_STATUS_HOSTS` | `aia.demo.sk.ee,c.sk.ee` | yes | host[:port] list | Allow-listed OCSP/CRL hosts. |
 | `EIDBRIDGE_SMARTID_DISPLAY_TEXT` | `Log in to the service` | no | ≤ 60 characters | Text shown on the device; per-client overrides in the clients file. |
+| `EIDBRIDGE_MOBILEID_ENV` | `demo` | yes | demo, production, mock | Mobile-ID (only read when `mobileid` is in EIDBRIDGE_METHODS). Must agree with mode; mock is demo-only. |
+| `EIDBRIDGE_MOBILEID_BASE_URL` | `https://tsp.demo.sk.ee/mid-api` | yes |  | MID REST API base URL. |
+| `EIDBRIDGE_MOBILEID_RP_UUID` | `00000000-0000-0000-0000-000000000000` | yes | lower-case UUID | Mobile-ID relying-party UUID from your agreement. |
+| `EIDBRIDGE_MOBILEID_RP_NAME` | `DEMO` | yes |  | Mobile-ID relying-party name. |
+| `EIDBRIDGE_MOBILEID_TLS_PINS` | `disabled` | yes | sha256/<b64>[,…] or disabled | SPKI pins of the MID API host (current and next). |
+| `EIDBRIDGE_MOBILEID_TLS_PINS_DISABLED_ACK` | — | no | I_UNDERSTAND | Production acknowledgement for disabled Mobile-ID pins. |
+| `EIDBRIDGE_MOBILEID_AUTH_CA_DIR` | `trust/demo/mobileid-auth-ca` | yes |  | Mobile-ID authentication CA certificates. |
+| `EIDBRIDGE_MOBILEID_POLICY_OIDS` | `1.3.6.1.4.1.10015.18.1` | yes | dotted OIDs | Certificate policies the Mobile-ID certificate must carry. |
+| `EIDBRIDGE_MOBILEID_CERT_STATUS` | `ocsp` | yes | ocsp or none (demo only) | Mobile-ID certificate status checking. The demo OCSP marks demo certificates as non-issued; use none in demo. |
+| `EIDBRIDGE_MOBILEID_STATUS_HOSTS` | `aia.demo.sk.ee,c.sk.ee` | yes | host[:port] list | Allow-listed OCSP/CRL hosts for Mobile-ID. |
+| `EIDBRIDGE_MOBILEID_DISPLAY_TEXT` | `Log in` | no | ≤ 40 GSM-7 characters | Text shown on the phone next to the relying-party name. |
 
-Method-specific variables for Mobile-ID, Web eID, the EUDI Wallet and RP API v2 are listed in their guides under [docs/methods](methods/).
+Method-specific variables for Web eID, the EUDI Wallet and RP API v2 are listed in their guides under [docs/methods](methods/).
