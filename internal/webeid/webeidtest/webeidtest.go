@@ -69,6 +69,7 @@ type LeafOptions struct {
 	Expired      bool
 	NotYetValid  bool
 	IssuedBy     *PKI
+	ByRoot       bool // issued directly by the root (two-certificate chain)
 }
 
 // Leaf is a certificate and its key.
@@ -127,6 +128,9 @@ func (p *PKI) NewLeaf(o LeafOptions) *Leaf {
 	issuer, ikey := p.Inter, p.interKey
 	if o.IssuedBy != nil {
 		issuer, ikey = o.IssuedBy.Inter, o.IssuedBy.interKey
+	}
+	if o.ByRoot {
+		issuer, ikey = p.Root, p.rootKey
 	}
 	if p.OCSPURL != "" {
 		t.OCSPServer = []string{p.OCSPURL}
