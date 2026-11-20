@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/tomkabel/eidbridge/internal/config"
 	"github.com/tomkabel/eidbridge/internal/version"
@@ -37,14 +38,20 @@ func run(args []string, getenv config.Getenv, stdout, stderr io.Writer) int {
 	cmd := "serve"
 	if len(rest) > 0 {
 		cmd, rest = rest[0], rest[1:]
-		// Accept global flags after the subcommand too ("serve --demo").
+		// Accept the global flags after the subcommand too ("serve --demo");
+		// everything else belongs to the subcommand ("doctor --json").
 		var pos []string
-		for len(rest) > 0 {
-			if err := fs.Parse(rest); err != nil {
-				return 2
-			}
-			if rest = fs.Args(); len(rest) > 0 {
-				pos, rest = append(pos, rest[0]), rest[1:]
+		for i := 0; i < len(rest); i++ {
+			switch a := strings.TrimLeft(rest[i], "-"); {
+			case strings.HasPrefix(rest[i], "-") && (a == "demo" || a == "demo=true"):
+				*demo = true
+			case strings.HasPrefix(rest[i], "-") && a == "root" && i+1 < len(rest):
+				*root = rest[i+1]
+				i++
+			case strings.HasPrefix(rest[i], "-") && strings.HasPrefix(a, "root="):
+				*root = strings.TrimPrefix(a, "root=")
+			default:
+				pos = append(pos, rest[i])
 			}
 		}
 		rest = pos
