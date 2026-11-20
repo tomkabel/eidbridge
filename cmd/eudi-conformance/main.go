@@ -369,7 +369,18 @@ func (h *harness) run(c testCase) (bool, string) {
 	if err != nil {
 		return false, "response: " + err.Error()
 	}
+	var ret struct {
+		RedirectURI string `json:"redirect_uri"`
+	}
+	json.NewDecoder(resp.Body).Decode(&ret)
 	resp.Body.Close()
+	if ret.RedirectURI != "" {
+		// Same-device: the wallet sends the login browser back with the
+		// response_code (OpenID4VP 1.0 §8.2).
+		if r, err := b.nr.Get(ret.RedirectURI); err == nil {
+			r.Body.Close()
+		}
+	}
 	out := h.outcome(b, id)
 	if c.Mutation == "wrong_state" {
 		// The flow must not complete with a forged state; it stays pending.

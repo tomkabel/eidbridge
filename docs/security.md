@@ -9,14 +9,14 @@ Unofficial, pre-release software. **No external security review has been done**;
 | Fake upstream success or identity substitution | Every response-verification step of the pinned RP API (callback digest, state and endResult, protocol, user challenge, chain to configured CAs only, policy OIDs, purpose, level, identity match, RSASSA-PSS signature over the rebuilt payload, offered flow type), then OCSP/CRL; unknown status fails | `internal/smartid` negative tests per step, live demo replay, mutation testing |
 | Flow takeover, code replay, open redirect | Per-flow `__Host-` cookie with constant-time binding; one-use 60 s codes held as SHA-256; failed exchanges consume the code; replay revokes the token family; exact redirect URI match; error page before redirect validation | `internal/web`, `internal/oidc`, `internal/store` tests; red-team report |
 | Push spam, enumeration, exhaustion | Notification is opt-in; local checksum validation before any request; per-IP, per-client and per-target buckets; bounded flow and code stores; 503 with `Retry-After`, never eviction | Capacity and bucket tests |
-| QR relay phishing | QR regenerated per request (elapsed seconds), refreshed every second; same-device callbacks need the original browser cookie | Disclosed residual risk: a relayed QR can still be scanned |
+| QR relay phishing | QR regenerated per request (elapsed seconds), refreshed every second; same-device callbacks need the original browser cookie (Smart-ID Web2App; EUDI same-device returns a `response_code` the login browser must present with its flow cookie, OpenID4VP 1.0 §8.2) | Disclosed residual risk: a relayed QR can still be scanned |
 | UI injection and framing | Strict CSP without inline script or style, `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`, template autoescaping, no third-party resources | Header tests on every page |
 | Mix-up | RFC 9207 `iss` in every authorization response | Authorize tests |
 | Token theft | Opaque AES-256-GCM sealed access tokens, ≤ 5 minutes, bound to process epoch and monotonic deadline; userinfo header-only | Seal and lifetime tests |
 | Demo identities in production | Mode required; production refuses demo hosts, RP identity, CAs, keys and the demo client secret; demo tokens carry `acr=demo`, `eid_env=demo`, `/demo` issuer, `demo-` kid | Configuration invariant tests |
 | Personal data in logs | Typed logging plus sink redaction that cannot be disabled | DEBUG log capture of full logins |
 
-Residual risks: account existence is observable in notification mode; cross-device QR relay; Go's garbage collector may keep copies of secrets briefly (secrets are held as byte slices and cleared, best effort); restart loses pending flows.
+Residual risks: account existence is observable in notification mode; cross-device QR relay (Smart-ID and EUDI); EUDI same-device needs the wallet to open the return link in the browser that started the login, otherwise the login does not complete; anyone who knows a flow id and the wallet request can post junk wallet responses, and a flow ends after five rejected responses; Go's garbage collector may keep copies of secrets briefly (secrets are held as byte slices and cleared, best effort); restart loses pending flows.
 
 ## What is logged at each level
 

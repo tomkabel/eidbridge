@@ -83,7 +83,11 @@ func (h *harness) Drive(t *testing.T, p authn.Pending, _ authn.StartRequest, o a
 	w := h.e.prov.Issue(walletsim.IssueOptions{})
 	switch o {
 	case authntest.Success:
-		return p.Callback(context.Background(), post(r, walletsim.VPToken(w.Present(r.Nonce, r.ClientID, walletsim.PresentOptions{})), nil), nil)
+		res := p.Callback(context.Background(), post(r, walletsim.VPToken(w.Present(r.Nonce, r.ClientID, walletsim.PresentOptions{})), nil), nil)
+		if rc := p.(*pending).ResponseCode(); rc != "" && !res.Done {
+			return p.Callback(context.Background(), url.Values{"response_code": {rc}}, nil) // the login browser returns
+		}
+		return res
 	case authntest.Refuse:
 		return p.Callback(context.Background(), url.Values{"error": {"access_denied"}, "state": {r.State}}, nil)
 	case authntest.Timeout:
@@ -91,7 +95,11 @@ func (h *harness) Drive(t *testing.T, p authn.Pending, _ authn.StartRequest, o a
 		defer h.clk.add(-6 * time.Minute)
 		return p.Poll(context.Background())
 	}
-	return p.Callback(context.Background(), post(r, walletsim.VPToken(w.Present("other-nonce", r.ClientID, walletsim.PresentOptions{})), nil), nil)
+	var res authn.Result
+	for i := 0; i < maxBadResponses; i++ {
+		res = p.Callback(context.Background(), post(r, walletsim.VPToken(w.Present("other-nonce", r.ClientID, walletsim.PresentOptions{})), nil), nil)
+	}
+	return res
 }
 
 // Story 6.1: the method passes the contract suite.
@@ -150,7 +158,7 @@ func TestResponseNegatives(t *testing.T) {
 	if res := p3.Callback(context.Background(), post(r3, walletsim.VPToken(w.Present(r3.Nonce, r3.ClientID, walletsim.PresentOptions{KBKey: stranger.HolderKey})), nil), nil); res.Identity != nil {
 		t.Fatal("holder binding bypassed")
 	}
-	// Wrong state is ignored (the flow continues), then malformed vp_tokens end it.
+	// Wrong state is ignored (the flow continues); malformed vp_tokens are refused without ending it.
 	p4, _ := h.m.Start(context.Background(), h.Requests()[0])
 	r4 := wallet(t, p4)
 	if res := p4.Callback(context.Background(), url.Values{"vp_token": {vp1}, "state": {"forged"}}, nil); res.Done {
@@ -159,7 +167,7 @@ func TestResponseNegatives(t *testing.T) {
 	for _, vp := range []string{"", "[]", `{"pid":[]}`, `{"pid":["a","b"]}`, `{"other":["x"]}`, `{"pid":["x"],"x":["y"]}`} {
 		p, _ := h.m.Start(context.Background(), h.Requests()[0])
 		r := wallet(t, p)
-		if res := p.Callback(context.Background(), post(r, vp, nil), nil); res.Identity != nil || !res.Done {
+		if res := p.Callback(context.Background(), post(r, vp, nil), nil); res.Identity != nil || res.Done || res.Err == nil {
 			t.Errorf("vp_token %q: %+v", vp, res)
 		}
 	}
@@ -186,5 +194,63 @@ func TestIdentityMapping(t *testing.T) {
 		if _, err := identityFrom(&Presentation{Claims: c}); authn.ReasonOf(err) != authn.ReasonAccountUnusable {
 			t.Errorf("%v accepted", c)
 		}
+	}
+}
+
+// Red-team #2 F3: a verified same-device response completes only when the
+// login browser returns with the response_code the wallet was given.
+func TestSameDeviceNeedsResponseCode(t *testing.T) {
+	h := newHarness(t)
+	w := h.e.prov.Issue(walletsim.IssueOptions{})
+	p, _ := h.m.Start(context.Background(), h.Requests()[1])
+	r := wallet(t, p)
+	res := p.Callback(context.Background(), post(r, walletsim.VPToken(w.Present(r.Nonce, r.ClientID, walletsim.PresentOptions{})), nil), nil)
+	rc := p.(*pending).ResponseCode()
+	if res.Done || res.Err != nil || res.Waiting != "browser" || len(rc) != 43 {
+		t.Fatalf("verified same-device response: %+v code %q", res, rc)
+	}
+	// A second wallet post cannot replace the held result.
+	if res := p.Callback(context.Background(), post(r, "x", nil), nil); res.Done || res.Err == nil {
+		t.Fatalf("second post: %+v", res)
+	}
+	for _, bad := range []url.Values{{"response_code": {"wrong"}}, {"response_code": {rc}, "state": {r.State}}, {"response_code": {rc, rc}}} {
+		if res := p.Callback(context.Background(), bad, nil); res.Done || res.Identity != nil {
+			t.Fatalf("bad browser return %v: %+v", bad, res)
+		}
+	}
+	if res := p.Callback(context.Background(), url.Values{"response_code": {rc}}, nil); !res.Done || res.Identity == nil {
+		t.Fatalf("browser return: %+v", res)
+	}
+	// QR (cross-device) still completes on the wallet response.
+	pq, _ := h.m.Start(context.Background(), h.Requests()[0])
+	rq := wallet(t, pq)
+	if res := pq.Callback(context.Background(), post(rq, walletsim.VPToken(w.Present(rq.Nonce, rq.ClientID, walletsim.PresentOptions{})), nil), nil); !res.Done || res.Identity == nil {
+		t.Fatalf("qr: %+v", res)
+	}
+}
+
+// Red-team #2 F4: junk responses do not end a flow until maxBadResponses;
+// the genuine wallet still logs in after a stranger's posts.
+func TestJunkResponsesDoNotEndFlow(t *testing.T) {
+	h := newHarness(t)
+	w := h.e.prov.Issue(walletsim.IssueOptions{})
+	p, _ := h.m.Start(context.Background(), h.Requests()[0])
+	r := wallet(t, p)
+	for i := 0; i < maxBadResponses-1; i++ {
+		if res := p.Callback(context.Background(), post(r, "junk", nil), nil); res.Done {
+			t.Fatalf("junk post %d ended the flow", i)
+		}
+	}
+	if res := p.Callback(context.Background(), post(r, walletsim.VPToken(w.Present(r.Nonce, r.ClientID, walletsim.PresentOptions{})), nil), nil); !res.Done || res.Identity == nil {
+		t.Fatalf("genuine wallet after junk: %+v", res)
+	}
+	p2, _ := h.m.Start(context.Background(), h.Requests()[0])
+	r2 := wallet(t, p2)
+	var res authn.Result
+	for i := 0; i < maxBadResponses; i++ {
+		res = p2.Callback(context.Background(), post(r2, "junk", nil), nil)
+	}
+	if !res.Done || res.Err == nil {
+		t.Fatalf("after %d bad responses: %+v", maxBadResponses, res)
 	}
 }

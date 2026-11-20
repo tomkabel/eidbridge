@@ -147,6 +147,7 @@ func (s *Server) Register(mux *http.ServeMux) {
 	h("POST "+b+"/flow/{id}/cancel", s.cancelFlow)
 	h("GET "+b+"/flow/{id}/continue", s.continueFlow)
 	h("POST "+b+"/flow/{id}/browser", s.browserResult)
+	h("GET "+b+"/flow/{id}/wallet-return", s.walletReturn)
 	h("GET "+b+"/flow/callback", s.callback)
 	h("POST "+b+"/wallet/response/{id}", s.walletResponse)
 	h("GET "+b+"/wallet/request/{id}", s.walletRequest)
@@ -932,12 +933,14 @@ func (s *Server) browserResult(w http.ResponseWriter, r *http.Request) {
 func (s *Server) walletResponse(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 256<<10)
 	f := s.flows.get(r.PathValue("id"))
-	if f == nil || r.ParseForm() != nil {
+	if f == nil || r.ParseForm() != nil || r.PostForm.Has("response_code") {
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
 		return
 	}
 	f.mu.Lock()
-	if f.state != StatePending || s.draining.Load() {
+	_, isWallet := f.pending.(requestObjecter)
+	if f.state != StatePending || s.draining.Load() || !isWallet {
+		// Non-wallet flows never see wallet responses (red-team #2 F4).
 		f.mu.Unlock()
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
 		return
@@ -948,6 +951,10 @@ func (s *Server) walletResponse(w http.ResponseWriter, r *http.Request) {
 	if res.Done {
 		s.applyLocked(f, res)
 	}
+	var code string
+	if rc, ok := f.pending.(responseCoder); ok && !res.Done && res.Err == nil {
+		code = rc.ResponseCode()
+	}
 	f.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
@@ -956,7 +963,42 @@ func (s *Server) walletResponse(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{"error":"invalid_request"}`))
 		return
 	}
+	if code != "" {
+		// Same-device: the wallet sends the user back to the login browser,
+		// which must present the code with its flow cookie (red-team #2 F3).
+		ru := s.cfg.PublicOrigin + s.base + "/flow/" + f.id + "/wallet-return?" + url.Values{"response_code": {code}}.Encode()
+		json.NewEncoder(w).Encode(map[string]string{"redirect_uri": ru})
+		return
+	}
 	w.Write([]byte(`{}`))
+}
+
+// responseCoder is implemented by wallet flows that hold a verified
+// same-device result until the login browser returns.
+type responseCoder interface{ ResponseCode() string }
+
+// walletReturn is where the wallet sends the login browser after a
+// same-device response. Only the browser holding the flow cookie can
+// complete the flow.
+func (s *Server) walletReturn(w http.ResponseWriter, r *http.Request) {
+	f, acc, _ := s.lookup(r)
+	q := r.URL.Query()
+	if f == nil || acc != accessCurrent || len(q) != 1 || len(q["response_code"]) != 1 {
+		s.restart(w, r, "restart")
+		return
+	}
+	f.mu.Lock()
+	if f.state != StatePending {
+		f.mu.Unlock()
+		s.restart(w, r, "restart")
+		return
+	}
+	res := f.pending.Callback(r.Context(), url.Values{"response_code": q["response_code"]}, nil)
+	if res.Done {
+		s.applyLocked(f, res)
+	}
+	f.mu.Unlock()
+	http.Redirect(w, r, s.base+"/flow/"+f.id+"/continue", http.StatusSeeOther)
 }
 
 // requestObjecter is implemented by wallet methods that serve a signed

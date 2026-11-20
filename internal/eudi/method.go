@@ -120,6 +120,35 @@ type pending struct {
 	issued                  time.Time
 	final                   *authn.Result
 	done                    chan struct{}
+	// Same-device: a verified result held until the login browser returns
+	// with responseCode (OpenID4VP response_code, red-team #2 F3).
+	held         *authn.Result
+	responseCode string
+	bad          int // rejected wallet responses (red-team #2 F4)
+}
+
+// maxBadResponses ends a flow after this many rejected wallet responses;
+// fewer leave it pending, so a stranger who saw the QR cannot end it with
+// one junk post.
+const maxBadResponses = 5
+
+// ResponseCode returns the code the login browser must present after a
+// verified same-device response, or "" if none is held.
+func (p *pending) ResponseCode() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.held == nil || p.final != nil {
+		return ""
+	}
+	return p.responseCode
+}
+
+func (p *pending) rejectLocked(err error) authn.Result {
+	p.bad++
+	if p.bad >= maxBadResponses {
+		return p.finishLocked(authn.Result{Err: err})
+	}
+	return authn.Result{Waiting: "wallet", Err: err}
 }
 
 func (p *pending) link() string {
@@ -175,7 +204,7 @@ func (p *pending) finishLocked(r authn.Result) authn.Result {
 		r.Identity = nil
 	}
 	p.final = &r
-	p.nonce, p.state = "", ""
+	p.nonce, p.state, p.responseCode, p.held = "", "", "", nil
 	close(p.done)
 	return r
 }
@@ -220,11 +249,22 @@ func (p *pending) Callback(ctx context.Context, q url.Values, _ []byte) authn.Re
 	if p.final != nil {
 		return authn.Result{Done: true, Err: &authn.Error{Reason: authn.ReasonUpstreamError, Detail: "flow finished"}}
 	}
+	if rc, ok := q["response_code"]; ok {
+		// Browser return of a same-device flow (the web layer passes only
+		// this parameter, from the request carrying the flow cookie).
+		if len(q) != 1 || len(rc) != 1 || p.held == nil || subtle.ConstantTimeCompare([]byte(rc[0]), []byte(p.responseCode)) != 1 {
+			return p.rejectLocked(&authn.Error{Reason: authn.ReasonVerificationFailed, Detail: "response_code mismatch"})
+		}
+		return p.finishLocked(*p.held)
+	}
 	if subtle.ConstantTimeCompare([]byte(q.Get("state")), []byte(p.state)) != 1 || len(q["state"]) != 1 {
 		return authn.Result{Waiting: "wallet", Err: &authn.Error{Reason: authn.ReasonInvalidInput, Detail: "state does not match"}}
 	}
 	if p.m.cfg.Verifier.Now().Sub(p.issued) > p.m.cfg.TTL {
 		return p.finishLocked(authn.Result{Err: &authn.Error{Reason: authn.ReasonExpired, Detail: "wallet request expired"}})
+	}
+	if p.held != nil {
+		return authn.Result{Waiting: "browser", Err: &authn.Error{Reason: authn.ReasonInvalidInput, Detail: "wallet already answered"}}
 	}
 	if e := q.Get("error"); e != "" {
 		reason := authn.ReasonUpstreamError
@@ -234,19 +274,23 @@ func (p *pending) Callback(ctx context.Context, q url.Values, _ []byte) authn.Re
 		return p.finishLocked(authn.Result{Err: &authn.Error{Reason: reason, Detail: "wallet error response"}})
 	}
 	if len(q["vp_token"]) != 1 {
-		return p.finishLocked(authn.Result{Err: vfail("vp_token missing or repeated")})
+		return p.rejectLocked(vfail("vp_token missing or repeated"))
 	}
 	var vp map[string][]string
 	if len(q.Get("vp_token")) > MaxPresentation || json.Unmarshal([]byte(q.Get("vp_token")), &vp) != nil || len(vp) != 1 || len(vp["pid"]) != 1 {
-		return p.finishLocked(authn.Result{Err: vfail("vp_token must hold exactly one pid presentation")})
+		return p.rejectLocked(vfail("vp_token must hold exactly one pid presentation"))
 	}
 	pres, err := p.m.cfg.Verifier.Verify(ctx, vp["pid"][0], p.nonce, p.m.cfg.Identity.ClientID())
 	if err != nil {
-		return p.finishLocked(authn.Result{Err: err})
+		return p.rejectLocked(err)
 	}
 	id, err := identityFrom(pres)
 	if err != nil {
 		return p.finishLocked(authn.Result{Err: err})
+	}
+	if p.flow == authn.FlowSameDevice {
+		p.held, p.responseCode = &authn.Result{Identity: id}, random()
+		return authn.Result{Waiting: "browser"}
 	}
 	return p.finishLocked(authn.Result{Identity: id})
 }
