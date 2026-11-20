@@ -1338,3 +1338,63 @@ Effort: 40+ h including container example and validation. Deferred: legally heav
 ## Verification and next work
 
 The frozen coverage proxy validates exact source AC preservation, identifiers and an acyclic earlier-first parent identifier graph; semantic execution uses packets and later parent-closure checks. It does not assess story size, legal applicability or security. Stories 5.1, 6.1, 6.2 and 8.1 are large deferred parent stories, explicitly not ready-for-dev; their listed work packets must be broken into independently verifiable child stories when activated. Epic 7 is a container of separately gated options, not one committed delivery bundle. Epic 1 produces a feasibility decision, Epic 2 a verified round-trip, Epic 3 operator adoption. Security stories revisiting shared code do so to prove distinct threat boundaries; no duplicate protocol implementation is planned.
+
+## Child-story decomposition (owner override 2026-11-20)
+
+Recorded before implementation under the [sprint-change proposal of 2026-11-20](sprint-change-proposal-2026-11-20.md). Child stories do not close their parent; the parent closes only when every original criterion has evidence. Overridden gates stay disclosed per parent.
+
+#### Child 5.1-a: Web eID token parser and validator
+
+Parse `web-eid:1.0` and `web-eid:1.1` tokens strictly (size caps, Base64, allowed `algorithm` values); validate certificate time, client-authentication purpose, disallowed policies, chain to configured CAs (1.1 intermediates as untrusted candidates only) and the signature over `hash(origin)+hash(nonce)` for ES, PS and RS algorithms. Done when each validation step has a negative test and the token parser is fuzzed.
+
+#### Child 5.1-b: Nonce, origin and browser binding
+
+Generate ≥ 256-bit nonces per flow, single use, short TTL, bound to the flow cookie; reconstruct the ASCII origin from the configured public origin only. Done when wrong origin, replayed nonce, expired nonce and other-browser submission fail.
+
+#### Child 5.1-c: Certificate status
+
+OCSP with the AIA or a designated responder through `internal/revocation`, unknown fails closed. Done when a mock-OCSP revoked certificate fails and good passes.
+
+#### Child 5.1-d: Method adapter and browser page
+
+`authn.Method` with the `browser` flow, contract suite, vendored MIT `web-eid.js`, CSP-compatible page script, CSRF through the flow form token. Done when `authntest.Run` passes and the login page posts a token through the flow.
+
+#### Child 5.1-e: Hardware interop and external review (human)
+
+Manual login with a test ID-card and the Web eID extension; external security review. Not executable in the build sandbox: recorded as NOT RUN with the gate.
+
+#### Child 6.1-a: OpenID4VP request side
+
+Signed request object by reference (`request_uri`), DCQL query for PID claims, nonce and `state` per flow, same-device link and cross-device QR, `direct_post` response endpoint bound to the flow. Done when request objects verify against the verifier key and each parameter is covered by a test.
+
+#### Child 6.1-b: SD-JWT VC verification
+
+Issuer signature against configured trust anchors, disclosure digests, key-binding JWT (`nonce`, `aud`, `iat` window, `sd_hash`), expiry, status-list check, claim ceilings (only requested claims reach tokens). Done when every step has a negative test and the VP-token parser is fuzzed.
+
+#### Child 6.1-c: mdoc verification
+
+Deferred inside the parent: ISO 18013-5 mdoc device authentication and MSO validation. Recorded as not implemented with the gate if time does not allow.
+
+#### Child 6.1-d: Method adapter, configuration and docs
+
+`authn.Method` (`same-device`, `qr`), configuration invariants (demo trust never in production), data-flow update for PID attributes, `amr` `eudi_pid`. Done when `authntest.Run` passes and a fixture wallet logs in through the issuer.
+
+#### Child 6.2-a: Simulated wallet and case catalog
+
+Wallet simulator producing valid and malformed SD-JWT VC presentations; `conformance/cases/*.yaml` with spec section links pinned by version. Done when one positive and at least ten negative cases exist.
+
+#### Child 6.2-b: Runner and reports
+
+Runner against a verifier endpoint, JUnit XML and Markdown report. Done when the run against the bridge produces both and every negative case is rejected.
+
+#### Child 8.1-a: Signing API and authentication
+
+Client-credentials authenticated `POST /api/v1/sign` and `GET /api/v1/sign/{id}`, separate from login, rate-limited, no persistence. Done when unauthenticated, wrong-client and replayed requests fail.
+
+#### Child 8.1-b: Smart-ID signature session relay and verification
+
+Relay the digest to the RP API signature session, verify the returned signature against the signer certificate (chain, non-repudiation purpose, status). Done when tampered signature, wrong digest and authentication-certificate cases fail.
+
+#### Child 8.1-c: Documentation and example
+
+`docs/signing.md` with a container-building example using an existing library; no qualified-signature claims. Done when the example runs against the fixture.
