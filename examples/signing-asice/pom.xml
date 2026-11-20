@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>ee.eidbridge.example</groupId>
+  <artifactId>signing-asice</artifactId>
+  <version>0.1.0</version>
+  <name>eidbridge signing example (ASiC-E / XAdES-B)</name>
+  <description>Example integrator: builds an ASiC-E container with the EU DSS library, signing through the eidbridge digest relay.</description>
+
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- DSS is LGPL-2.1: used only as an unmodified Maven dependency. -->
+    <dss.version>6.5.1</dss.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+      <artifactId>dss-asic-xades</artifactId>
+      <version>${dss.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+      <artifactId>dss-validation</artifactId>
+      <version>${dss.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+      <artifactId>dss-policy-jaxb</artifactId>
+      <version>${dss.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+      <artifactId>dss-utils-apache-commons</artifactId>
+      <version>${dss.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+      <artifactId>dss-crl-parser-stream</artifactId>
+      <version>${dss.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-nop</artifactId>
+      <version>2.0.16</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>signing-asice</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.4.2</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <addClasspath>true</addClasspath>
+              <classpathPrefix>lib/</classpathPrefix>
+              <mainClass>ee.eidbridge.example.Main</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.8.1</version>
+        <executions>
+          <execution>
+            <id>copy-libs</id>
+            <phase>package</phase>
+            <goals><goal>copy-dependencies</goal></goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/lib</outputDirectory>
+              <includeScope>runtime</includeScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
