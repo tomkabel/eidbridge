@@ -246,3 +246,66 @@ func TestJobsExpire(t *testing.T) {
 		t.Fatalf("expired certificate used: %d", code)
 	}
 }
+
+// Tests added for mutation survivors (gremlins, 2026-11-20).
+
+func TestDefaults(t *testing.T) {
+	h := New(Config{})
+	defer h.Close()
+	if h.cfg.PollTimeout != 30*time.Second || h.cfg.JobTTL != 5*time.Minute || h.cfg.MaxJobs != 1000 || h.cfg.PerClientPerMinute != 30 {
+		t.Fatalf("defaults %+v", h.cfg)
+	}
+}
+
+func TestDisplayText200AndPendingCode(t *testing.T) {
+	h, srv := newAPI(t, nil)
+	cert := certificate(t, h, "a:secret-a")
+	b := signBody(cert)
+	b["display_text"] = strings.Repeat("õ", 200)
+	srv.MaxWait = 2 * time.Second
+	srv.FailPolls.Store(true) // keep the job pending
+	code, out := call(h, "POST", "/api/v1/sign", "a:secret-a", b)
+	if code != 202 {
+		t.Fatalf("200 characters: %d %v", code, out)
+	}
+	_, st := call(h, "GET", "/api/v1/sign/"+out["id"].(string), "a:secret-a", nil)
+	if st["status"] != "pending" || st["verification_code"] != out["verification_code"] {
+		t.Fatalf("pending response %v", st)
+	}
+	// Retryable upstream errors do not fail the job; it completes after recovery.
+	for start, end := srv.Polls.Load(), time.Now().Add(5*time.Second); srv.Polls.Load() < start+2; {
+		if time.Now().After(end) {
+			t.Fatal("job stopped polling after a retryable upstream error")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	srv.FailPolls.Store(false)
+	if res := wait(t, h, "a:secret-a", out["id"].(string)); res["status"] != "complete" {
+		t.Fatalf("after recovery %v", res)
+	}
+}
+
+func TestRateWindowExactlyOneMinute(t *testing.T) {
+	now := time.Now()
+	h, _ := newAPI(t, func(c *Config) { c.PerClientPerMinute = 1; c.Now = func() time.Time { return now } })
+	body := map[string]string{"signer": "PNOEE-40404040009"}
+	if code, _ := call(h, "POST", "/api/v1/sign/certificate", "a:secret-a", body); code != 202 {
+		t.Fatal(code)
+	}
+	now = now.Add(time.Minute)
+	if code, _ := call(h, "POST", "/api/v1/sign/certificate", "a:secret-a", body); code != 202 {
+		t.Fatalf("after one minute: %d", code)
+	}
+}
+
+func TestFailingUpstreamIsNotHammered(t *testing.T) {
+	h, srv := newAPI(t, nil)
+	cert := certificate(t, h, "a:secret-a")
+	srv.FailPolls.Store(true)
+	before := srv.Polls.Load()
+	call(h, "POST", "/api/v1/sign", "a:secret-a", signBody(cert))
+	time.Sleep(time.Second)
+	if n := srv.Polls.Load() - before; n > 5 {
+		t.Fatalf("%d polls in one second against a failing upstream", n)
+	}
+}

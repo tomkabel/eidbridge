@@ -50,6 +50,7 @@ type LeafOptions struct {
 	ECKey        bool
 	RSABits      int  // default 2048
 	SelfIssuedBy *PKI // issue from another PKI (untrusted chain)
+	ByRoot       bool // issue directly from the root (two-certificate chain)
 }
 
 // Leaf is a generated end-entity certificate and its key.
@@ -150,6 +151,9 @@ func (p *PKI) NewLeaf(o LeafOptions) *Leaf {
 	issuer, ikey := p.Inter, p.interKey
 	if o.SelfIssuedBy != nil {
 		issuer, ikey = o.SelfIssuedBy.Inter, o.SelfIssuedBy.interKey
+	}
+	if o.ByRoot {
+		issuer, ikey = p.Root, p.rootKey
 	}
 	der, err := x509.CreateCertificate(rand.Reader, t, issuer, key.Public(), ikey)
 	if err != nil {

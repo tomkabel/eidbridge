@@ -337,11 +337,19 @@ func (h *Handler) run(j *job, verify func(context.Context, *smartid.Status) erro
 		ctx, cancel := context.WithTimeout(h.ctx, h.cfg.SessionTimeout)
 		defer cancel()
 		err := func() error {
+			backoff := 250 * time.Millisecond
 			for {
 				st, err := h.cfg.Upstream.Poll(ctx, sessionID, h.cfg.PollTimeout)
 				if err != nil {
 					var he *smartid.HTTPError
 					if errors.As(err, &he) && he.Retryable && ctx.Err() == nil {
+						// Back off so a failing upstream is not hammered.
+						select {
+						case <-time.After(backoff):
+						case <-ctx.Done():
+							return ctx.Err()
+						}
+						backoff = min(2*backoff, 5*time.Second)
 						continue
 					}
 					return err
