@@ -2,7 +2,7 @@
 project_name: eidbridge
 status: planning
 created: 2026-11-18
-updated: 2026-11-18
+updated: 2026-11-20
 ---
 
 # eidbridge project context
@@ -32,3 +32,7 @@ Use normal TLS plus rotating pins, never pin-disable as CA-disable. Persistent o
 Original source estimates total 50–51h for issues 1–18 and 42–43h for core, against the source's 40h narrative. Source dates/capacity are hypotheses. Future MID/Web eID fallback is a scope decision, not permission to bypass demand/security gates. The frozen independent coverage checker and limitations are recorded in readiness report.
 
 Source-aligned stories are parents: implementation prerequisites mean availability of the earlier execution packet, not completion of every parent acceptance check. Sink-only logging precedes the spike; full-login logging regression and legal container/template checks close later at integration/release. Use the explicit packet sequence in epics to avoid a semantic parent-closure cycle.
+
+## Owner override (2026-11-20)
+
+The project owner overrode every activation, demand, deferral and stop/replan gate on 2026-11-20; see [the override record](planning-artifacts/sprint-change-proposal-2026-11-20.md). All 30 stories are in scope in packet order, then epics 4–8. Gates are now disclosure requirements: each unmet gate is listed beside its feature and a story whose original criteria pass without the gate evidence is `done-with-disclosure`, never `done`. Original acceptance criteria, decomposition of high-effort stories, privacy/trust NFRs, the single OIDC issuer and the frozen verifier are unchanged. Publication, tagging, issue edits and outreach stay owner actions. Live evidence that was not obtained is recorded as NOT RUN.
