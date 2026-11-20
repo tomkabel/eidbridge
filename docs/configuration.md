@@ -39,6 +39,10 @@ Mode has no default. Demo mode uses the demo defaults below; production requires
 | `EIDBRIDGE_DEFAULT_LOCALE` | `en` | no | en, et, lv, lt, ru | Fallback locale. |
 | `EIDBRIDGE_REMEMBER_METHOD` | `false` | no | true or false | Offer an opt-in method preference cookie (chooser only). |
 | `EIDBRIDGE_LOG_LEVEL` | `info` | no | info or debug | Redaction applies at every level. |
+| `EIDBRIDGE_TLS_CERT_FILE` | — | no | PEM | Serve HTTPS directly (otherwise terminate TLS at a proxy). |
+| `EIDBRIDGE_TLS_KEY_FILE` | — | no | PEM, mode 0600 | Key for EIDBRIDGE_TLS_CERT_FILE. |
+| `EIDBRIDGE_MOCK_DOCUMENT` | `PNOEE-40404040009-MOCK-Q` | no | mock env only | Test document the fixture upstream uses to auto-complete device-link sessions; `manual` waits for the mock interface. |
+| `EIDBRIDGE_MOCK_LISTEN` | `127.0.0.1:0` | no | loopback only, mock env | Address of the built-in fixture upstream (RP API and automated testing interface). |
 | `EIDBRIDGE_SMARTID_ENV` | `demo` | yes | demo, production, mock | Must agree with mode; mock (fixture upstream) is demo-only. |
 | `EIDBRIDGE_SMARTID_BASE_URL` | `https://sid.demo.sk.ee/smart-id-rp` | yes |  | RP API base URL (without /v3). |
 | `EIDBRIDGE_RP_UUID` | `00000000-0000-4000-8000-000000000000` | yes |  | Relying-party UUID from your agreement. |

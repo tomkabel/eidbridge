@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/netip"
 	"net/url"
 	"os"
@@ -72,6 +73,10 @@ var Options = []Option{
 	{"EIDBRIDGE_DEFAULT_LOCALE", "en", false, "en, et, lv, lt, ru", "Fallback locale."},
 	{"EIDBRIDGE_REMEMBER_METHOD", "false", false, "true or false", "Offer an opt-in method preference cookie (chooser only)."},
 	{"EIDBRIDGE_LOG_LEVEL", "info", false, "info or debug", "Redaction applies at every level."},
+	{"EIDBRIDGE_TLS_CERT_FILE", "", false, "PEM", "Serve HTTPS directly (otherwise terminate TLS at a proxy)."},
+	{"EIDBRIDGE_TLS_KEY_FILE", "", false, "PEM, mode 0600", "Key for EIDBRIDGE_TLS_CERT_FILE."},
+	{"EIDBRIDGE_MOCK_DOCUMENT", "PNOEE-40404040009-MOCK-Q", false, "mock env only", "Test document the fixture upstream uses to auto-complete device-link sessions; `manual` waits for the mock interface."},
+	{"EIDBRIDGE_MOCK_LISTEN", "127.0.0.1:0", false, "loopback only, mock env", "Address of the built-in fixture upstream (RP API and automated testing interface)."},
 	{"EIDBRIDGE_SMARTID_ENV", "demo", true, "demo, production, mock", "Must agree with mode; mock (fixture upstream) is demo-only."},
 	{"EIDBRIDGE_SMARTID_BASE_URL", "https://sid.demo.sk.ee/smart-id-rp", true, "", "RP API base URL (without /v3)."},
 	{"EIDBRIDGE_RP_UUID", "00000000-0000-4000-8000-000000000000", true, "", "Relying-party UUID from your agreement."},
@@ -109,6 +114,8 @@ type Config struct {
 	DefaultLocale                                        string
 	RememberMethod                                       bool
 	LogDebug                                             bool
+	TLSCert, TLSKey                                      string
+	MockDocument, MockListen                             string
 	Warnings                                             []string
 	Deviations                                           []string
 
@@ -206,6 +213,11 @@ func Load(env Getenv, demoFlag bool, root string) (*Config, error) {
 	c.DefaultLocale = get("EIDBRIDGE_DEFAULT_LOCALE")
 	c.RememberMethod = get("EIDBRIDGE_REMEMBER_METHOD") == "true"
 	c.LogDebug = get("EIDBRIDGE_LOG_LEVEL") == "debug"
+	c.TLSCert, c.TLSKey = env("EIDBRIDGE_TLS_CERT_FILE"), env("EIDBRIDGE_TLS_KEY_FILE")
+	if (c.TLSCert == "") != (c.TLSKey == "") {
+		return nil, errors.New("config: EIDBRIDGE_TLS_CERT_FILE and EIDBRIDGE_TLS_KEY_FILE go together")
+	}
+	c.MockDocument, c.MockListen = get("EIDBRIDGE_MOCK_DOCUMENT"), get("EIDBRIDGE_MOCK_LISTEN")
 	c.KeyDir = get("EIDBRIDGE_KEY_DIR")
 	if c.KeyDir != "" && !filepath.IsAbs(c.KeyDir) && root != "" {
 		c.KeyDir = filepath.Join(root, c.KeyDir)
@@ -337,6 +349,9 @@ func (c *Config) smartIDInvariants() error {
 	if s.Env == "mock" {
 		if !c.Demo {
 			return errors.New("config: EIDBRIDGE_SMARTID_ENV=mock is demo-only")
+		}
+		if h, _, err := net.SplitHostPort(c.MockListen); err != nil || (h != "127.0.0.1" && h != "localhost" && h != "::1") {
+			return errors.New("config: EIDBRIDGE_MOCK_LISTEN must be a loopback address")
 		}
 		c.Warnings = append(c.Warnings, "Smart-ID uses the built-in fixture upstream (mock): synthetic identities only")
 		return nil // trust comes from the in-process fixture PKI

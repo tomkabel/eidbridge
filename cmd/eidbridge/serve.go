@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/asn1"
 	"errors"
 	"fmt"
@@ -34,14 +35,15 @@ import (
 
 // App is a fully wired bridge (also used by integration tests).
 type App struct {
-	Cfg      *config.Config
-	Log      *slog.Logger
-	Handler  http.Handler
-	Web      *web.Server
-	Provider *oidc.Provider
-	Codes    *store.Codes
-	Fixture  *smartidtest.Server
-	closers  []func()
+	Cfg         *config.Config
+	Log         *slog.Logger
+	Handler     http.Handler
+	Web         *web.Server
+	Provider    *oidc.Provider
+	Codes       *store.Codes
+	Fixture     *smartidtest.Server
+	FixtureAddr string
+	closers     []func()
 }
 
 // Close releases background resources.
@@ -151,9 +153,11 @@ func buildSmartID(cfg *config.Config, log *slog.Logger, a *App) (authn.Method, f
 	var status smartid.StatusChecker = smartid.NoStatusCheck{Reason: "disabled by configuration (demo only)"}
 	if s.Env == "mock" {
 		fx := smartidtest.NewServer()
-		fx.AutoResolve = envOr("EIDBRIDGE_MOCK_DOCUMENT", "PNOEE-40404040009-MOCK-Q")
+		if cfg.MockDocument != "manual" {
+			fx.AutoResolve = cfg.MockDocument
+		}
 		fx.MaxWait = 2 * time.Second
-		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		ln, err := net.Listen("tcp", cfg.MockListen)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -161,7 +165,7 @@ func buildSmartID(cfg *config.Config, log *slog.Logger, a *App) (authn.Method, f
 		hs.Start()
 		closer = hs.Close
 		trust, base, httpClient = smartid.NewTrustStore(fx.PKI.Root, fx.PKI.Inter), hs.URL+"/smart-id-rp", hs.Client()
-		a.Fixture = fx
+		a.Fixture, a.FixtureAddr = fx, hs.URL
 	} else if s.CertStatus == "ocsp" {
 		hosts := map[string]bool{}
 		for _, h := range s.StatusHosts {
@@ -206,13 +210,6 @@ func parseOID(s string) (asn1.ObjectIdentifier, error) {
 	return oid, nil
 }
 
-func envOr(k, d string) string {
-	if v := os.Getenv(k); v != "" {
-		return v
-	}
-	return d
-}
-
 func serve(getenv config.Getenv, demo bool, root string, stderr io.Writer) int {
 	disableCoreDumps()
 	cfg, err := config.Load(getenv, demo, root)
@@ -243,7 +240,17 @@ func serve(getenv config.Getenv, demo bool, root string, stderr io.Writer) int {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 	errc := make(chan error, 1)
-	go func() { errc <- srv.ListenAndServe() }()
+	go func() {
+		if cfg.TLSCert != "" {
+			srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+			errc <- srv.ListenAndServeTLS(cfg.TLSCert, cfg.TLSKey)
+			return
+		}
+		errc <- srv.ListenAndServe()
+	}()
+	if a.Fixture != nil {
+		log.Info("fixture upstream listening", "address", a.FixtureAddr)
+	}
 	if cfg.Demo {
 		go demoNag(log, stop)
 	}
