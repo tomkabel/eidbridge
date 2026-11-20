@@ -17,6 +17,7 @@ var (
 	DemoCAFingerprints = map[string]string{
 		"84242dd8e1a1878f76ff2b5ca0c8ef22c8a8863cf072e56a9f0dc28add96b143": "TEST of SK ID Solutions ROOT G1E",
 		"063a4e908785a2b45fba27a22d45d9f2bbaa9a382e5b103e1d1036832cee6ac2": "TEST of SK ID Solutions EID-Q 2024E",
+		"994477a5a63d1087bbcfa0d6721c401c8e1a778987503b0e202777b3c3cb1ff6": "TEST of SK ID Solutions EID-Q 2021E",
 	}
 	// ProductionHosts are the live RP API hosts. Demo refuses them.
 	ProductionHosts = map[string]bool{"rp-api.smart-id.com": true, "mid.sk.ee": true}

@@ -1,0 +1,12 @@
+{
+  "Phone": "+37201100266",
+  "Code": "60001019950",
+  "Hash": "HO+zc5qxIg8VsTVLXe8ZbzI2Rktci2dfqUP89DszXRQ=",
+  "Status": {
+    "state": "COMPLETE",
+    "result": "USER_CANCELLED",
+    "time": "2026-11-20T14:27:47",
+    "traceId": "6b003cc2c4c7cb431ef3e1223e83005e"
+  },
+  "Captured": "2026-11-20T12:27:47Z"
+}
