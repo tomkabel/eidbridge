@@ -151,7 +151,16 @@ func buildSmartID(cfg *config.Config, log *slog.Logger, a *App) (authn.Method, f
 	trust, base := s.Trust, s.BaseURL
 	httpClient := tlspin.NewClient(tlspin.Options{Pins: s.Pins.Pins, Disabled: s.Pins.Disabled})
 	var status smartid.StatusChecker = smartid.NoStatusCheck{Reason: "disabled by configuration (demo only)"}
-	if s.Env == "mock" {
+	external := s.Env == "mock" && (strings.HasPrefix(s.BaseURL, "http://127.0.0.1:") || strings.HasPrefix(s.BaseURL, "http://localhost:"))
+	if external {
+		// A standalone eidbridge-mock (Story 7.4): trust its --ca-out bundle.
+		t, err := smartid.LoadCADir(s.CADir)
+		if err != nil {
+			return nil, nil, err
+		}
+		trust, httpClient = t, &http.Client{Timeout: 130 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+		log.Info("Smart-ID uses an external mock RP API", "base_url", s.BaseURL)
+	} else if s.Env == "mock" {
 		fx := smartidtest.NewServer()
 		if cfg.MockDocument != "manual" {
 			fx.AutoResolve = cfg.MockDocument

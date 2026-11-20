@@ -5,7 +5,9 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"github.com/tomkabel/eidbridge/internal/eudi/walletsim"
+	"github.com/tomkabel/eidbridge/internal/smartid/smartidtest"
 	"github.com/tomkabel/eidbridge/internal/webeid/webeidtest"
 	"html"
 	"io"
@@ -505,5 +507,44 @@ func TestDoctorJSON(t *testing.T) {
 	}
 	if code := run([]string{"--demo", "doctor", "--bogus"}, func(k string) string { return env[k] }, &out, &errb); code != 2 {
 		t.Fatalf("bad flag exit %d", code)
+	}
+}
+
+// Story 7.4: the bridge runs against a standalone mock RP API (the server
+// eidbridge-mock serves) trusting only its CA bundle; the test approves
+// the session through the mock control API.
+func TestBridgeAgainstExternalMock(t *testing.T) {
+	fx := smartidtest.NewServer()
+	fx.MaxWait = 500 * time.Millisecond
+	hs := httptest.NewServer(fx)
+	defer hs.Close()
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "ca.pem"), append(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: fx.PKI.Root.Raw}),
+		pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: fx.PKI.Inter.Raw})...), 0o644)
+	s := newStack(t, map[string]string{"EIDBRIDGE_SMARTID_BASE_URL": hs.URL + "/smart-id-rp", "EIDBRIDGE_SMARTID_AUTH_CA_DIR": dir})
+	if s.app.Fixture != nil {
+		t.Fatal("in-process fixture started although an external mock is configured")
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 100; i++ {
+			r, err := http.Get(hs.URL + "/_mock/sessions")
+			if err == nil {
+				var l struct{ Pending []string }
+				json.NewDecoder(r.Body).Decode(&l)
+				r.Body.Close()
+				if len(l.Pending) > 0 {
+					http.Post(hs.URL+"/_mock/sessions/"+l.Pending[0]+"/complete", "", nil)
+					return
+				}
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+	}()
+	u := s.login("qr", nil)
+	<-done
+	if u.Query().Get("code") == "" {
+		t.Fatalf("redirect %s", u)
 	}
 }

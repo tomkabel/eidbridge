@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -101,6 +102,7 @@ func (s *Server) init() {
 }
 
 var (
+	reControl   = regexp.MustCompile(`^/_mock/sessions/([0-9a-f-]{36})/(complete|refuse|timeout|wrong-vc)$`)
 	reB64       = regexp.MustCompile(`^[a-zA-Z0-9+/]+={0,2}$`)
 	reSessionID = regexp.MustCompile(`^/v3/session/([0-9a-f-]{36})$`)
 )
@@ -122,6 +124,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.deviceLink(w, r)
 	case r.Method == http.MethodGet && strings.Contains(p, "/mock/device-link/callback-url/"):
 		s.callbackURL(w, p[strings.LastIndex(p, "/")+1:])
+	case r.Method == http.MethodGet && r.URL.Path == "/_mock/sessions":
+		s.listSessions(w)
+	case r.Method == http.MethodPost && reControl.MatchString(r.URL.Path):
+		m := reControl.FindStringSubmatch(r.URL.Path)
+		s.control(w, m[1], m[2], r.URL.Query().Get("document"))
 	default:
 		problem(w, http.StatusNotFound, "Not Found")
 	}
@@ -445,4 +452,45 @@ func (s *Server) SetMutate(f func(map[string]any)) {
 	s.mu.Lock()
 	s.Mutate = f
 	s.mu.Unlock()
+}
+
+// ControlDocuments maps control actions to the default scenario document.
+var ControlDocuments = map[string]string{"complete": "PNOEE-40404040009-MOCK-Q", "refuse": "PNOEE-30403039917-MOCK-Q",
+	"timeout": "PNOEE-30403039983-MOCK-Q", "wrong-vc": "PNOEE-30403039972-MOCK-Q"}
+
+// control resolves one session (POST /_mock/sessions/{id}/{action}).
+// complete accepts ?document= to choose the identity; it must be a
+// scenario with result OK.
+func (s *Server) control(w http.ResponseWriter, id, action, doc string) {
+	s.mu.Lock()
+	fs := s.sessions[id]
+	s.mu.Unlock()
+	if fs == nil {
+		problem(w, http.StatusNotFound, "no such session")
+		return
+	}
+	if doc == "" || action != "complete" {
+		doc = ControlDocuments[action]
+	}
+	if action == "complete" && s.Scenarios[doc] != "OK" {
+		problem(w, http.StatusBadRequest, "document is not an OK scenario")
+		return
+	}
+	s.resolve(fs, doc)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// listSessions returns the ids of sessions not yet resolved.
+func (s *Server) listSessions(w http.ResponseWriter) {
+	s.mu.Lock()
+	ids := []string{}
+	for id, fs := range s.sessions {
+		if !fs.resolved {
+			ids = append(ids, id)
+		}
+	}
+	s.mu.Unlock()
+	sort.Strings(ids)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"pending": ids})
 }
