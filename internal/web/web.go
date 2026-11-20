@@ -491,6 +491,7 @@ func (s *Server) start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f.method, f.offered, f.pending, f.state = methodName, flowName, p, StatePending
+	s.cfg.Log.Debug("flow started", "method", methodName, "flow", flowName, "lang", f.lang)
 	if cbValue != "" {
 		f.callback = hashOf(cbValue)
 		s.flows.indexCallback(f.callback, f.id)
@@ -556,6 +557,7 @@ func (s *Server) poll(ctx context.Context, f *flow) {
 		if ctx.Err() != nil {
 			return
 		}
+		s.cfg.Log.Debug("upstream poll", "done", res.Done, "waiting", res.Waiting, "err", res.Err)
 		if res.Done {
 			s.applyResult(f, res)
 			return
@@ -937,4 +939,21 @@ func contains(xs []string, x string) bool {
 		}
 	}
 	return false
+}
+
+// PendingUI returns the current UI of a pending flow (what the QR image
+// encodes). Integration tests and the fixture e2e driver use it in place of
+// a camera; it exposes nothing the login page does not already show.
+func (s *Server) PendingUI(flowID string) (authn.UI, bool) {
+	f := s.flows.get(flowID)
+	if f == nil {
+		return authn.UI{}, false
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.state != StatePending || f.pending == nil {
+		return authn.UI{}, false
+	}
+	ui, err := f.pending.UI(time.Now())
+	return ui, err == nil
 }

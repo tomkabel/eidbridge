@@ -1,0 +1,283 @@
+package main
+
+import (
+	"bytes"
+	"crypto/tls"
+	"encoding/base64"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/cookiejar"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/tomkabel/eidbridge/internal/clock"
+	"github.com/tomkabel/eidbridge/internal/config"
+	"github.com/tomkabel/eidbridge/internal/oidc"
+)
+
+func TestMain(m *testing.M) {
+	oidc.DemoRSABits = 2048
+	os.Exit(m.Run())
+}
+
+type lockedBuf struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (l *lockedBuf) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.Write(p)
+}
+func (l *lockedBuf) String() string { l.mu.Lock(); defer l.mu.Unlock(); return l.b.String() }
+
+type stack struct {
+	t      *testing.T
+	app    *App
+	srv    *httptest.Server
+	logs   *lockedBuf
+	issuer string
+	b      *http.Client
+	nr     *http.Client
+}
+
+const testSecret = "integration-secret-integration-secret"
+
+// newStack runs the real wiring (config.Load → Build) in demo mode with the
+// built-in fixture upstream, behind TLS, with DEBUG logging captured.
+func newStack(t *testing.T, extra map[string]string) *stack {
+	t.Helper()
+	srv := httptest.NewUnstartedServer(nil)
+	srv.StartTLS()
+	t.Cleanup(srv.Close)
+	env := map[string]string{"EIDBRIDGE_ISSUER": srv.URL, "EIDBRIDGE_SMARTID_ENV": "mock", "EIDBRIDGE_LOG_LEVEL": "debug",
+		"EIDBRIDGE_KEY_DIR": t.TempDir(), "EIDBRIDGE_DEMO_CLIENT_SECRET": testSecret, "EIDBRIDGE_DEMO_REDIRECT_URIS": "https://rp.example/cb",
+		"EIDBRIDGE_SMARTID_FLOWS": "device-link,notification"}
+	for k, v := range extra {
+		env[k] = v
+	}
+	cfg, err := config.Load(func(k string) string { return env[k] }, true, filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	logs := &lockedBuf{}
+	app, err := Build(cfg, newLogger(logs, true), clock.Real())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(app.Close)
+	srv.Config.Handler = app.Handler
+	jar, _ := cookiejar.New(nil)
+	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	s := &stack{t: t, app: app, srv: srv, logs: logs, issuer: cfg.Issuer,
+		b: &http.Client{Jar: jar, Transport: tr, CheckRedirect: func(r *http.Request, _ []*http.Request) error {
+			if r.URL.Host != strings.TrimPrefix(srv.URL, "https://") {
+				return http.ErrUseLastResponse
+			}
+			return nil
+		}},
+		nr: &http.Client{Jar: jar, Transport: tr, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
+	return s
+}
+
+var ftRe = regexp.MustCompile(`name="ft" value="([^"]+)"`)
+
+func body(r *http.Response) string { b, _ := io.ReadAll(r.Body); r.Body.Close(); return string(b) }
+
+// login performs authorize → choose → start → (fixture auto-resolves) →
+// continue and returns the client redirect.
+func (s *stack) login(flow string, form url.Values) *url.URL {
+	s.t.Helper()
+	q := url.Values{"client_id": {"demo-rp"}, "redirect_uri": {"https://rp.example/cb"}, "response_type": {"code"},
+		"scope": {"openid profile"}, "state": {"st123"}, "nonce": {"nonce123"},
+		"code_challenge": {"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"}, "code_challenge_method": {"S256"}}
+	resp, err := s.b.Get(s.issuer + "/authorize?" + q.Encode())
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	page := body(resp)
+	m := ftRe.FindStringSubmatch(page)
+	if m == nil {
+		s.t.Fatalf("no choose page: %d %.300s", resp.StatusCode, page)
+	}
+	id := strings.TrimPrefix(resp.Request.URL.Path, strings.TrimPrefix(s.issuer, s.srv.URL)+"/flow/")
+	f := url.Values{"ft": {m[1]}, "method": {"smartid"}, "flow": {flow}}
+	for k, v := range form {
+		f[k] = v
+	}
+	resp, err = s.b.PostForm(s.issuer+"/flow/"+id+"/start", f)
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	body(resp)
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		r, _ := s.b.Get(s.issuer + "/flow/" + id + "/status")
+		var st struct{ State, Next string }
+		json.NewDecoder(r.Body).Decode(&st)
+		r.Body.Close()
+		if st.Next != "" {
+			r, err := s.nr.Get(s.srv.URL + st.Next)
+			if err != nil {
+				s.t.Fatal(err)
+			}
+			r.Body.Close()
+			u, _ := url.Parse(r.Header.Get("Location"))
+			return u
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	s.t.Fatal("login did not finish")
+	return nil
+}
+
+func (s *stack) token(code string) map[string]any {
+	f := url.Values{"grant_type": {"authorization_code"}, "code": {code}, "redirect_uri": {"https://rp.example/cb"},
+		"code_verifier": {"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"}}
+	req, _ := http.NewRequest(http.MethodPost, s.issuer+"/token", strings.NewReader(f.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth("demo-rp", testSecret)
+	r, err := s.nr.Do(req)
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	var m map[string]any
+	json.NewDecoder(r.Body).Decode(&m)
+	r.Body.Close()
+	return m
+}
+
+// TestFixtureLoginEndToEndAndDebugLogsHaveNoIdentityData is the PACKET-
+// INTEGRATION run: real wiring, fixture upstream, DEBUG logging. The
+// captured logs must not contain the personal code, certificate, signature,
+// authorization code or tokens (Story 1.3 AC 2, NFR-002).
+func TestFixtureLoginEndToEndAndDebugLogsHaveNoIdentityData(t *testing.T) {
+	s := newStack(t, nil)
+	var secrets []string
+	for _, flow := range []string{"qr", "notification"} {
+		form := url.Values{}
+		if flow == "notification" {
+			form = url.Values{"country": {"EE"}, "personal_code": {"40404040009"}}
+		}
+		u := s.login(flow, form)
+		code := u.Query().Get("code")
+		if code == "" || u.Query().Get("iss") != s.issuer {
+			t.Fatalf("%s: redirect %s", flow, u)
+		}
+		tok := s.token(code)
+		idt, _ := tok["id_token"].(string)
+		at, _ := tok["access_token"].(string)
+		if idt == "" || at == "" {
+			t.Fatalf("%s: token %v", flow, tok)
+		}
+		parts := strings.Split(idt, ".")
+		cb, _ := base64.RawURLEncoding.DecodeString(parts[1])
+		var cl map[string]any
+		json.Unmarshal(cb, &cl)
+		if cl["acr"] != "demo" || cl["eid_env"] != "demo" || cl["given_name"] != "OK" {
+			t.Fatalf("%s: claims %v", flow, cl)
+		}
+		req, _ := http.NewRequest(http.MethodGet, s.issuer+"/userinfo", nil)
+		req.Header.Set("Authorization", "Bearer "+at)
+		r, _ := s.nr.Do(req)
+		if r.StatusCode != 200 {
+			t.Fatalf("%s: userinfo %d", flow, r.StatusCode)
+		}
+		r.Body.Close()
+		secrets = append(secrets, code, idt, at, parts[2], cl["sub"].(string))
+	}
+	leaf := s.app.Fixture.Leaf("PNOEE-40404040009")
+	certB64 := base64.StdEncoding.EncodeToString(leaf.Cert.Raw)
+	secrets = append(secrets, "40404040009", certB64[:40], certB64[200:240], "TEST,OK")
+	logs := s.logs.String()
+	if !strings.Contains(logs, `"level":"DEBUG"`) && !strings.Contains(logs, "DEBUG") {
+		t.Fatal("DEBUG level not active")
+	}
+	for _, sec := range secrets {
+		if sec != "" && strings.Contains(logs, sec) {
+			t.Fatalf("DEBUG logs contain identity data or a secret (%.12s…)", sec)
+		}
+	}
+	if s.app.Web.FlowCount() != 0 {
+		t.Fatalf("%d flow entries remain after delivery", s.app.Web.FlowCount())
+	}
+}
+
+// FR-005: the OIDC and web packages depend on internal/authn only, never on
+// a method package.
+func TestOIDCAndWebImportOnlyAuthn(t *testing.T) {
+	for _, pkg := range []string{"./internal/oidc", "./internal/web"} {
+		out, err := exec.Command("go", "list", "-deps", "-f", "{{.ImportPath}}", "github.com/tomkabel/eidbridge/"+strings.TrimPrefix(pkg, "./")).Output()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, line := range strings.Split(string(out), "\n") {
+			for _, bad := range []string{"/internal/smartid", "/internal/mobileid", "/internal/webeid", "/internal/eudi"} {
+				if strings.Contains(line, "eidbridge"+bad) {
+					t.Fatalf("%s depends on %s", pkg, line)
+				}
+			}
+		}
+	}
+}
+
+// Story 2.7: EIDBRIDGE_MODE=production eidbridge --demo exits non-zero with a
+// clear message; production without RP identity or key fails clearly.
+func TestProductionDemoFlagExitsNonZero(t *testing.T) {
+	var stderr bytes.Buffer
+	code := run([]string{"--demo"}, func(k string) string {
+		if k == "EIDBRIDGE_MODE" {
+			return "production"
+		}
+		return ""
+	}, io.Discard, &stderr)
+	if code == 0 || !strings.Contains(stderr.String(), "--demo conflicts with EIDBRIDGE_MODE=production") {
+		t.Fatalf("exit %d: %s", code, stderr.String())
+	}
+	stderr.Reset()
+	if code := run(nil, func(string) string { return "" }, io.Discard, &stderr); code == 0 || !strings.Contains(stderr.String(), "EIDBRIDGE_MODE is required") {
+		t.Fatalf("mode unset: %d %s", code, stderr.String())
+	}
+	stderr.Reset()
+	if code := run(nil, func(k string) string {
+		return map[string]string{"EIDBRIDGE_MODE": "production", "EIDBRIDGE_ISSUER": "https://eid.example.com"}[k]
+	}, io.Discard, &stderr); code == 0 || !strings.Contains(stderr.String(), "EIDBRIDGE_RP_UUID") || !strings.Contains(stderr.String(), "EIDBRIDGE_KEY_DIR") {
+		t.Fatalf("production without RP identity/key: %d %s", code, stderr.String())
+	}
+}
+
+func TestConfigDocsCommand(t *testing.T) {
+	var out bytes.Buffer
+	if run([]string{"config", "docs"}, func(string) string { return "" }, &out, io.Discard) != 0 || out.String() != config.Markdown() {
+		t.Fatal("config docs")
+	}
+}
+
+// Story 2.4 AC: the discovery document is valid JSON with the required
+// fields (the jq check from the source issue).
+func TestDiscoveryOverRealWiring(t *testing.T) {
+	s := newStack(t, nil)
+	r, err := s.nr.Get(s.issuer + "/.well-known/openid-configuration")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var d map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&d); err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range []string{"issuer", "authorization_endpoint", "token_endpoint", "jwks_uri", "userinfo_endpoint", "response_types_supported", "subject_types_supported", "id_token_signing_alg_values_supported"} {
+		if d[k] == nil {
+			t.Errorf("discovery missing %s", k)
+		}
+	}
+}
