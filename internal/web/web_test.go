@@ -837,3 +837,33 @@ func TestFormActionOrigin(t *testing.T) {
 		}
 	}
 }
+
+// Red-team finding F2 (2026-11-20): 303 answers from start, cancel and the
+// Web2App callback lacked the page security headers. The callback URL
+// carries the session secret digest, so Referrer-Policy and no-store matter.
+func TestRedirectResponsesCarrySecurityHeaders(t *testing.T) {
+	e := newWeb(t, wopt{})
+	b := e.browser()
+	id, page, _ := b.begin(nil)
+	check := func(name string, r *http.Response) {
+		t.Helper()
+		r.Body.Close()
+		h := r.Header
+		if h.Get("Referrer-Policy") != "no-referrer" || h.Get("Cache-Control") != "no-store" ||
+			h.Get("X-Content-Type-Options") != "nosniff" || h.Get("X-Frame-Options") != "DENY" ||
+			!strings.Contains(h.Get("Content-Security-Policy"), "frame-ancestors 'none'") {
+			t.Errorf("%s (%d) lacks security headers: %v", name, r.StatusCode, h)
+		}
+	}
+	check("start", b.start(id, page, "smartid", "qr", nil))
+	r, err := b.nr.PostForm(e.issuer+"/flow/"+id+"/cancel", url.Values{"ft": {formToken(t, page)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	check("cancel", r)
+	r, err = b.nr.Get(e.issuer + "/flow/callback?value=x&sessionSecretDigest=y&userChallengeVerifier=z")
+	if err != nil {
+		t.Fatal(err)
+	}
+	check("callback", r)
+}

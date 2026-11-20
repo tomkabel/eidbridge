@@ -131,15 +131,24 @@ func (s *Server) Close() {
 // Register mounts flow endpoints, static assets and health probes.
 func (s *Server) Register(mux *http.ServeMux) {
 	b := s.base
-	mux.HandleFunc("GET "+b+"/flow/{id}", s.page)
-	mux.HandleFunc("POST "+b+"/flow/{id}/start", s.start)
-	mux.HandleFunc("GET "+b+"/flow/{id}/qr.png", s.qr)
-	mux.HandleFunc("GET "+b+"/flow/{id}/status", s.status)
-	mux.HandleFunc("POST "+b+"/flow/{id}/cancel", s.cancelFlow)
-	mux.HandleFunc("GET "+b+"/flow/{id}/continue", s.continueFlow)
-	mux.HandleFunc("POST "+b+"/flow/{id}/browser", s.browserResult)
-	mux.HandleFunc("GET "+b+"/flow/callback", s.callback)
-	mux.HandleFunc("POST "+b+"/wallet/response/{id}", s.walletResponse)
+	// Every flow response, redirects included, carries the page security
+	// headers; the callback URL holds the upstream session secret digest
+	// (red-team finding F2).
+	h := func(pattern string, fn http.HandlerFunc) {
+		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+			securityHeaders(w)
+			fn(w, r)
+		})
+	}
+	h("GET "+b+"/flow/{id}", s.page)
+	h("POST "+b+"/flow/{id}/start", s.start)
+	h("GET "+b+"/flow/{id}/qr.png", s.qr)
+	h("GET "+b+"/flow/{id}/status", s.status)
+	h("POST "+b+"/flow/{id}/cancel", s.cancelFlow)
+	h("GET "+b+"/flow/{id}/continue", s.continueFlow)
+	h("POST "+b+"/flow/{id}/browser", s.browserResult)
+	h("GET "+b+"/flow/callback", s.callback)
+	h("POST "+b+"/wallet/response/{id}", s.walletResponse)
 	static, _ := fs.Sub(assets, "static")
 	mux.Handle("GET "+b+"/static/", http.StripPrefix(b+"/static/", s.staticHandler(http.FileServer(http.FS(static)))))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok\n")) })
