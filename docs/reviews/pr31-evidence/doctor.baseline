@@ -1,0 +1,6 @@
+--- FAIL: TestPR31DiagnosticRedaction (0.00s)
+    pr31_test.go:26: diagnostic includes a sensitive URL component
+    pr31_test.go:26: diagnostic includes a sensitive URL component
+FAIL
+FAIL	github.com/tomkabel/eidbridge/internal/doctor	0.004s
+FAIL

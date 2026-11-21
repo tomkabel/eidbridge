@@ -1,0 +1,136 @@
+/usr/lib/python3.14/site-packages/pytest_asyncio/plugin.py:306: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session". Set it to "fixture-scope" to keep the current behavior.
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+_____________ test_pr31_requires_explicit_deployment_secret[None] ______________
+
+value = None
+
+    @pytest.mark.parametrize("value", [None, "", "   ", "example-only-not-a-secret"])
+    def test_pr31_requires_explicit_deployment_secret(value):
+        env = {**os.environ, "DJANGO_SETTINGS_MODULE": "django_settings"}
+        env.pop("DJANGO_SECRET_KEY", None)
+        if value is not None:
+            env["DJANGO_SECRET_KEY"] = value
+        result = subprocess.run(
+            [sys.executable, "-c", "from django.conf import settings; print(settings.SECRET_KEY)"],
+            env=env, cwd=Path(__file__).parent, capture_output=True, text=True, check=False,
+        )
+>       assert result.returncode != 0
+E       AssertionError: assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/usr/bin/python3', '-c', 'from django.conf import settings; print(settings.SECRET_KEY)'], returncode=0, stdout='example-only-not-a-secret\n', stderr='').returncode
+
+examples/django/test_pr31_session_security.py:19: AssertionError
+_______________ test_pr31_requires_explicit_deployment_secret[] ________________
+
+value = ''
+
+    @pytest.mark.parametrize("value", [None, "", "   ", "example-only-not-a-secret"])
+    def test_pr31_requires_explicit_deployment_secret(value):
+        env = {**os.environ, "DJANGO_SETTINGS_MODULE": "django_settings"}
+        env.pop("DJANGO_SECRET_KEY", None)
+        if value is not None:
+            env["DJANGO_SECRET_KEY"] = value
+        result = subprocess.run(
+            [sys.executable, "-c", "from django.conf import settings; print(settings.SECRET_KEY)"],
+            env=env, cwd=Path(__file__).parent, capture_output=True, text=True, check=False,
+        )
+>       assert result.returncode != 0
+E       AssertionError: assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/usr/bin/python3', '-c', 'from django.conf import settings; print(settings.SECRET_KEY)'], returncode=0, stdout='example-only-not-a-secret\n', stderr='').returncode
+
+examples/django/test_pr31_session_security.py:19: AssertionError
+______________ test_pr31_requires_explicit_deployment_secret[   ] ______________
+
+value = '   '
+
+    @pytest.mark.parametrize("value", [None, "", "   ", "example-only-not-a-secret"])
+    def test_pr31_requires_explicit_deployment_secret(value):
+        env = {**os.environ, "DJANGO_SETTINGS_MODULE": "django_settings"}
+        env.pop("DJANGO_SECRET_KEY", None)
+        if value is not None:
+            env["DJANGO_SECRET_KEY"] = value
+        result = subprocess.run(
+            [sys.executable, "-c", "from django.conf import settings; print(settings.SECRET_KEY)"],
+            env=env, cwd=Path(__file__).parent, capture_output=True, text=True, check=False,
+        )
+>       assert result.returncode != 0
+E       AssertionError: assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/usr/bin/python3', '-c', 'from django.conf import settings; print(settings.SECRET_KEY)'], returncode=0, stdout='example-only-not-a-secret\n', stderr='').returncode
+
+examples/django/test_pr31_session_security.py:19: AssertionError
+___ test_pr31_requires_explicit_deployment_secret[example-only-not-a-secret] ___
+
+value = 'example-only-not-a-secret'
+
+    @pytest.mark.parametrize("value", [None, "", "   ", "example-only-not-a-secret"])
+    def test_pr31_requires_explicit_deployment_secret(value):
+        env = {**os.environ, "DJANGO_SETTINGS_MODULE": "django_settings"}
+        env.pop("DJANGO_SECRET_KEY", None)
+        if value is not None:
+            env["DJANGO_SECRET_KEY"] = value
+        result = subprocess.run(
+            [sys.executable, "-c", "from django.conf import settings; print(settings.SECRET_KEY)"],
+            env=env, cwd=Path(__file__).parent, capture_output=True, text=True, check=False,
+        )
+>       assert result.returncode != 0
+E       AssertionError: assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['/usr/bin/python3', '-c', 'from django.conf import settings; print(settings.SECRET_KEY)'], returncode=0, stdout='example-only-not-a-secret\n', stderr='').returncode
+
+examples/django/test_pr31_session_security.py:19: AssertionError
+________________ test_pr31_session_requires_server_side_record _________________
+
+tmp_path = PosixPath('/tmp/pytest-of-notroot/pytest-101/test_pr31_session_requires_ser0')
+
+    def test_pr31_session_requires_server_side_record(tmp_path):
+        env = {
+            **os.environ,
+            "DJANGO_SETTINGS_MODULE": "django_settings",
+            "DJANGO_SECRET_KEY": "pr31-fixture-" * 8,
+            "DJANGO_SESSION_DB": str(tmp_path / "sessions.sqlite3"),
+        }
+        script = """
+    import django
+    django.setup()
+    from django.conf import settings
+    from django.test import Client
+    assert settings.SECRET_KEY == 'pr31-fixture-' * 8
+    assert settings.SESSION_ENGINE == 'django.contrib.sessions.backends.db'
+    from django.core.management import call_command
+    call_command('migrate', verbosity=0)
+    from django.contrib.sessions.backends.db import SessionStore
+    client = Client(HTTP_HOST='localhost')
+    assert client.get('/me').status_code == 401
+    session = SessionStore()
+    session['sub'] = 'fixture-user'
+    session['claims'] = {'sub': 'fixture-user'}
+    session.save()
+    client.cookies[settings.SESSION_COOKIE_NAME] = session.session_key
+    assert client.get('/me').json()['sub'] == 'fixture-user'
+    session.delete()
+    assert client.get('/me').status_code == 401
+    """
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            env=env, cwd=Path(__file__).parent, capture_output=True, text=True, check=False,
+        )
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 6, in <module>
+E             assert settings.SECRET_KEY == 'pr31-fixture-' * 8
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E         AssertionError
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '-c', "\nimport django\ndjango.setup()\nfrom django.conf import settings\nf...settings.SECRET_KEY == \'pr31-fixture-\' * 8\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n').returncode
+
+examples/django/test_pr31_session_security.py:56: AssertionError
+=========================== short test summary info ============================
+FAILED examples/django/test_pr31_session_security.py::test_pr31_requires_explicit_deployment_secret[None]
+FAILED examples/django/test_pr31_session_security.py::test_pr31_requires_explicit_deployment_secret[]
+FAILED examples/django/test_pr31_session_security.py::test_pr31_requires_explicit_deployment_secret[   ]
+FAILED examples/django/test_pr31_session_security.py::test_pr31_requires_explicit_deployment_secret[example-only-not-a-secret]
+FAILED examples/django/test_pr31_session_security.py::test_pr31_session_requires_server_side_record
+5 failed in 5.92s

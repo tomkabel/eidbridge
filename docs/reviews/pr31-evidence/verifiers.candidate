@@ -1,0 +1,8 @@
+/tmp/eidbridge-pr31-remediation/pins.py: OK
+examples/django/test_pr31_session_security.py: OK
+internal/doctor/pr31_test.go: OK
+internal/eudi/pr31_test.go: OK
+internal/revocation/pr31_test.go: OK
+internal/smartid/pr31_mock_test.go: OK
+internal/smartid/pr31_level_test.go: OK
+internal/smartid/v2/pr31_test.go: OK

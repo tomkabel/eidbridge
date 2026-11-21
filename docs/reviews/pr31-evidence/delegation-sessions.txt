@@ -1,0 +1,17 @@
+django-2: 01a1fcab-f54c-7f73-81b4-52a5d042215e
+django: 01a1fca8-1c1f-7481-9117-513d9b0433eb
+doctor-2: 01a1fcab-f54c-7be3-ab91-ee27cc026f34
+doctor: 01a1fca7-f73f-78f2-997a-4e69166c72e1
+level-2: 01a1fcae-17e8-70a2-bf95-340bf98d0306
+level: 01a1fcab-5a38-7783-b88c-93f66ff02f56
+mock-2: 01a1fcac-d881-7ff2-aa44-00b2df48cea0
+mock: 01a1fcaa-476f-7921-b2be-34794c1583f6
+ocsp-2: 01a1fcab-f54c-7ee1-92a2-3e2944f74cc4
+ocsp-3: 01a1fcb1-e508-7773-a738-cfcbf16ff848
+ocsp: 01a1fca7-f73f-7490-8641-ea0e1efa09e5
+pins-2: 01a1fcb0-4496-78b1-a411-99bd659eac39
+pins: 01a1fca7-22f9-7fd2-b63c-37b60f2be3f6
+probe: 01a1fca6-915e-7282-9914-bf0bcaff6a51
+status-2: 01a1fcac-d8ac-7f90-aa1a-52da51d63b29
+status: 01a1fcaa-476f-7d10-a176-1aefe37217d6
+Model: gpt-6.1-terra; reasoning high; deadline 420s per run. Full JSONL/stderr in /tmp/eidbridge-pr31-remediation.

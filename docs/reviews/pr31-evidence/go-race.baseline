@@ -1,0 +1,47 @@
+2026/11/21 07:56:15 http: TLS handshake error from 127.0.0.1:47228: write tcp 127.0.0.1:41587->127.0.0.1:47228: use of closed network connection
+--- FAIL: TestSigningRelayThroughBridge (11.07s)
+    signing_integration_test.go:50: timeout
+FAIL
+FAIL	github.com/tomkabel/eidbridge/cmd/eidbridge	51.152s
+ok  	github.com/tomkabel/eidbridge/cmd/eidbridge-mock	4.502s
+--- FAIL: TestHarnessAgainstBridge (30.76s)
+    main_test.go:49: bridge did not become ready
+FAIL
+FAIL	github.com/tomkabel/eidbridge/cmd/eudi-conformance	31.095s
+?   	github.com/tomkabel/eidbridge/cmd/sidspike	[no test files]
+?   	github.com/tomkabel/eidbridge/examples/demo-rp	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/authn	1.221s
+?   	github.com/tomkabel/eidbridge/internal/authn/authntest	[no test files]
+?   	github.com/tomkabel/eidbridge/internal/clock	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/config	30.668s
+ok  	github.com/tomkabel/eidbridge/internal/docscheck	1.135s
+ok  	github.com/tomkabel/eidbridge/internal/doctor	5.565s
+ok  	github.com/tomkabel/eidbridge/internal/eudi	9.099s
+?   	github.com/tomkabel/eidbridge/internal/eudi/walletsim	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/jose	5.378s
+ok  	github.com/tomkabel/eidbridge/internal/logx	1.694s
+ok  	github.com/tomkabel/eidbridge/internal/mobileid	23.074s
+?   	github.com/tomkabel/eidbridge/internal/mobileid/mobileidtest	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/oidc	148.552s
+ok  	github.com/tomkabel/eidbridge/internal/revocation	4.241s
+--- FAIL: TestSignRoundTrip (12.20s)
+    signapi_test.go:109: timeout
+FAIL
+FAIL	github.com/tomkabel/eidbridge/internal/signapi	16.408s
+2026/11/21 07:56:14 httptest.Server blocked in Close after 5 seconds, waiting for connections:
+  *net.TCPConn 0xc000102110 127.0.0.1:56722 in state active
+--- FAIL: TestDisplayText200Boundary (22.40s)
+    mutation_sign_test.go:74: smartid: transport: Get "http://127.0.0.1:45857/smart-id-rp/v3/session/cfb48b4c-075b-457e-9f14-2bf4eab13436?timeoutMs=1000": context deadline exceeded
+FAIL
+FAIL	github.com/tomkabel/eidbridge/internal/smartid	88.399s
+?   	github.com/tomkabel/eidbridge/internal/smartid/smartidtest	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/smartid/v2	16.160s
+?   	github.com/tomkabel/eidbridge/internal/smartid/v2/v2test	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/store	1.278s
+ok  	github.com/tomkabel/eidbridge/internal/tlspin	1.921s
+ok  	github.com/tomkabel/eidbridge/internal/version	1.143s
+ok  	github.com/tomkabel/eidbridge/internal/web	118.340s
+ok  	github.com/tomkabel/eidbridge/internal/webeid	68.667s
+?   	github.com/tomkabel/eidbridge/internal/webeid/webeidtest	[no test files]
+?   	github.com/tomkabel/eidbridge/test/e2e	[no test files]
+FAIL
