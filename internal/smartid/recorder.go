@@ -6,7 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -61,18 +64,67 @@ type MockDeviceLink struct {
 	DisableCallbackGetRequest bool   `json:"disableCallbackGetRequest,omitempty"`
 }
 
+// mockDestination accepts the published demo endpoint or a literal loopback
+// address for local test servers. It returns whether the address is loopback.
+func mockDestination(raw string) (*url.URL, bool, error) {
+	invalid := errors.New("smartid: automated testing interface is demo-only")
+	u, err := url.Parse(raw)
+	if err != nil || u.Opaque != "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || strings.Contains(raw, "#") {
+		return nil, false, invalid
+	}
+	if raw == "https://sid.demo.sk.ee/mock" {
+		return u, false, nil
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return nil, false, invalid
+	}
+	host := u.Hostname()
+	ip := net.ParseIP(host)
+	if ip == nil || !ip.IsLoopback() {
+		return nil, false, invalid
+	}
+	authority := host
+	if strings.Contains(host, ":") {
+		authority = "[" + host + "]"
+	}
+	if port := u.Port(); port != "" {
+		p, err := strconv.Atoi(port)
+		if err != nil || p < 1 || p > 65535 {
+			return nil, false, invalid
+		}
+		authority += ":" + port
+	}
+	if u.Host != authority {
+		return nil, false, invalid
+	}
+	return u, true, nil
+}
+
+func mockClient(timeout time.Duration, loopback bool) *http.Client {
+	c := &http.Client{Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	if loopback {
+		// A local mock must never receive sensitive data through a proxy.
+		c.Transport = &http.Transport{}
+	}
+	return c
+}
+
 // MockSubmit posts a device link to the automated testing interface.
 func MockSubmit(ctx context.Context, mockBase string, m MockDeviceLink, rec *Recorder) error {
-	if !strings.HasPrefix(mockBase, "https://sid.demo.sk.ee/") && !strings.HasPrefix(mockBase, "http://127.0.0.1") {
-		return errors.New("smartid: automated testing interface is demo-only")
+	u, loopback, err := mockDestination(mockBase)
+	if err != nil {
+		return err
 	}
 	body, _ := json.Marshal(m)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(mockBase, "/")+"/device-link", bytes.NewReader(body))
+	u.Path = strings.TrimRight(u.Path, "/") + "/device-link"
+	u.RawPath = ""
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	c := &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	c := mockClient(30*time.Second, loopback)
+	defer c.CloseIdleConnections()
 	resp, err := c.Do(req)
 	if err != nil {
 		return err
@@ -89,11 +141,18 @@ func MockSubmit(ctx context.Context, mockBase string, m MockDeviceLink, rec *Rec
 // MockCallbackURL long-polls the automated testing interface for the
 // callback URL the app would open (only when DisableCallbackGetRequest).
 func MockCallbackURL(ctx context.Context, mockBase, sessionToken string, rec *Recorder) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(mockBase, "/")+"/device-link/callback-url/"+sessionToken, nil)
+	u, loopback, err := mockDestination(mockBase)
 	if err != nil {
 		return "", err
 	}
-	c := &http.Client{Timeout: 70 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	u.Path = strings.TrimRight(u.Path, "/") + "/device-link/callback-url/" + sessionToken
+	u.RawPath = ""
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return "", err
+	}
+	c := mockClient(70*time.Second, loopback)
+	defer c.CloseIdleConnections()
 	resp, err := c.Do(req)
 	if err != nil {
 		return "", err
