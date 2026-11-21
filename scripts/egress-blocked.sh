@@ -31,5 +31,5 @@ EOF
 if [ "$(id -u)" = 0 ]; then
 	unshare -n sh "${TMPDIR:-/tmp}/eidbridge-egress-inner.sh"
 else
-	sudo env "PATH=$PATH" unshare -n sh "${TMPDIR:-/tmp}/eidbridge-egress-inner.sh"
+	sudo env "PATH=$PATH" "HOME=$HOME" "GOMODCACHE=$(go env GOMODCACHE)" "GOCACHE=$(go env GOCACHE)" "GOPATH=$(go env GOPATH)" "GOTOOLCHAIN=local" unshare -n sh "${TMPDIR:-/tmp}/eidbridge-egress-inner.sh"
 fi

@@ -3,6 +3,7 @@ package web
 import (
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -17,9 +18,17 @@ import (
 func TestSessionInitTransportBounds(t *testing.T) {
 	var cancelled atomic.Bool
 	cancelled.Store(true)
+	var redirected atomic.Int64
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { redirected.Add(1) }))
+	t.Cleanup(func() {
+		target.Close()
+		if n := redirected.Load(); n != 0 {
+			t.Errorf("redirect followed: %d requests reached the redirect target", n)
+		}
+	})
 	hooks := map[string]func(http.ResponseWriter, *http.Request) bool{
 		"redirect": func(w http.ResponseWriter, r *http.Request) bool {
-			w.Header().Set("Location", "https://elsewhere.example/v3/authentication/device-link/anonymous")
+			w.Header().Set("Location", target.URL+r.URL.Path)
 			w.WriteHeader(http.StatusTemporaryRedirect)
 			return true
 		},

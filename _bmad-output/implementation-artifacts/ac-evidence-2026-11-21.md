@@ -515,7 +515,7 @@ The matrix above was produced before these commits. Each PARTIAL or MISSING item
 | 2.1 E02c (no redirects on status fetches) | MET | `internal/revocation/redirect_test.go:TestStatusFetchesRefuseRedirects` (hand mutant on CheckRedirect killed). `shareMdClientIpAddress=false` is set in `internal/smartid/client.go:184` and `sign.go`; not separately tested (inspection). |
 | 2.4 E08c (entropy, constant time) | MET except constant time by inspection | `internal/web/mutation_gaps_test.go:TestRandomValueLengths`, `internal/store/codes_test.go:TestFamilyIDLengthAndHashedCodes`; constant-time compares use `hmac.Equal` / `subtle.ConstantTimeCompare` (inspection only). |
 | 2.5 RV TestSessionInitTransportBounds | MET | `internal/web/init_transport_test.go` (redirect, oversized, 500, timeout; QR and notification; one attempt; reservation and slot released; timed-out init cancelled upstream). |
-| 2.5 RV TestCodeCapacityUnderSustainedExchange | MET | `internal/store/codes_test.go` (2 logins/s over two retention windows at cap 400). |
+| 2.5 RV TestCodeCapacityUnderSustainedExchange | PARTIAL | `internal/store/codes_test.go` covers counts, overload refusal and no eviction over two retention windows at cap 400; index memory is not measured. |
 | 2.6 egress-blocked test | MET | `scripts/egress-blocked.sh` (local run: 14 login tests PASS in a loopback-only namespace) and CI job `egress-blocked`. |
 | 3.2 CI run of the demo stack | MET once CI runs | CI job `demo-e2e` runs `scripts/e2e-demo.sh`. |
 | 3.4 A05b K_sub retirement | MET | `internal/oidc/adr_test.go:TestKSubCompromiseAndReplacementKey` now runs the full drill. |
@@ -525,6 +525,6 @@ The matrix above was produced before these commits. Each PARTIAL or MISSING item
 | 6.1-c mdoc | Deferred as the child story allows | ADR 0006. |
 | 6.2 JUnit in CI | MET once CI runs | CI job `eudi-conformance` writes and uploads JUnit and Markdown (local run 17/17). |
 | 7.3 RV TestDoctorNeverControlsReadiness | MET | `cmd/eidbridge/redteam2_regression_test.go:TestDoctorNeverControlsReadiness`. |
-| 7.4 standalone mock | MET | `cmd/eidbridge/redteam2_regression_test.go:TestBridgeAgainstStandaloneMockBinary`. |
+| 7.4 standalone mock | PARTIAL | Bridge login against the standalone binary: `TestBridgeAgainstStandaloneMockBinary` (also in the `egress-blocked` job). The IdP e2e suites (`test/e2e`, `startBridge`) still use the in-process fixture, not the standalone mock. |
 
-Sprint statuses (`sprint-status.yaml`): `done` for 1.3, 2.3, 2.6, 2.7, 2.8, 3.1, 3.6 (criteria evidenced, no overridden gate); `done-with-disclosure` for every other story, because an overridden gate in the sprint-change proposal still lacks evidence (or, for 3.5 and 5.1, the disclosed items above).
+Sprint statuses (`sprint-status.yaml`): `done` for 1.3, 2.3, 2.6, 2.7, 2.8, 3.1, 3.6 (criteria evidenced, no overridden gate); `review` for 2.5 (index memory not measured), 3.5 (Ory Kratos e2e NOT RUN) and 7.4 (IdP e2e not against the standalone mock), because an original criterion still lacks evidence; `done-with-disclosure` for every other story, whose criteria are evidenced (5.1-d and 6.1-c through the deviations their ADRs record, which the child stories allow) and whose overridden gate still lacks evidence.

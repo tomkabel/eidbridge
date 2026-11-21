@@ -18,7 +18,7 @@ development_status:
   2-2-pin-rp-api-tls-certificates-and-make-trust-anchors-configura: done-with-disclosure
   2-3-define-a-method-neutral-authenticator-interface-for-eid-back: done
   2-4-expose-eid-logins-as-a-standard-openid-connect-provider: done-with-disclosure
-  2-5-wire-eidbridge-binary-with-login-page-qr-and-web2app-flows: done-with-disclosure
+  2-5-wire-eidbridge-binary-with-login-page-qr-and-web2app-flows: review
   2-6-enforce-no-telemetry-and-zero-data-retention-by-default: done
   2-7-warn-on-demo-environment-use-and-block-demo-credentials-in-p: done
   2-8-support-smart-id-v3-notification-based-authentication-flow: done
@@ -29,7 +29,7 @@ development_status:
   3-2-ship-a-zero-config-docker-compose-demo-with-a-sample-relying: done-with-disclosure
   3-3-localize-the-login-page-for-estonian-latvian-lithuanian-engl: done-with-disclosure
   3-4-add-a-maintenance-runbook-for-upstream-api-tls-and-key-chang: done-with-disclosure
-  3-5-add-config-only-idp-integration-guides-with-e2e-tests-per-id: done-with-disclosure
+  3-5-add-config-only-idp-integration-guides-with-e2e-tests-per-id: review
   3-6-add-django-and-fastapi-examples-that-log-in-through-the-brid: done
   epic-3-retrospective: optional
 
@@ -51,7 +51,7 @@ development_status:
   7-1-provide-a-native-keycloak-identity-provider-spi-for-eidbridg: done-with-disclosure
   7-2-publish-a-minimal-python-client-for-smart-id-rp-api-v3: done-with-disclosure
   7-3-add-an-eidbridge-doctor-command-for-upstream-connectivity-ch: done-with-disclosure
-  7-4-ship-a-mock-rp-api-server-and-test-identities-for-offline-te: done-with-disclosure
+  7-4-ship-a-mock-rp-api-server-and-test-identities-for-offline-te: review
   7-5-support-legacy-smart-id-rp-api-v2-for-existing-relying-parti: done-with-disclosure
   7-6-document-or-ship-a-wordpress-login-integration-via-the-bridg: done-with-disclosure
   epic-7-retrospective: optional
@@ -66,5 +66,7 @@ last_updated: 11-21-2026 12:00
 # criterion has evidence and no overridden gate guards the story;
 # done-with-disclosure = criteria evidenced, overridden gate evidence missing
 # (listed in the proposal and in PR #31). 2-6: H-10 closed (private
-# vulnerability reporting enabled, GitHub API 2026-11-21).
+# vulnerability reporting enabled, GitHub API 2026-11-21). review = an original
+# criterion still lacks evidence: 2-5 index memory, 3-5 Ory Kratos e2e, 7-4 IdP
+# e2e against the standalone mock.
 project_key: NOKEY

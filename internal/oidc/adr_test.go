@@ -672,8 +672,15 @@ func TestKSubCompromiseAndReplacementKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	old := ks.Entries()[0]
-	if _, err := ks.Rotate(old.Alg, 0); err != nil {
+	if _, err := ks.Rotate(old.Alg, time.Hour); err != nil {
 		t.Fatal(err)
+	}
+	published := false
+	for _, j := range ks.JWKS() {
+		published = published || j.KID == old.KID
+	}
+	if !published {
+		t.Fatal("retired key not kept for its retention before revocation")
 	}
 	if err := ks.Revoke(old.KID); err != nil {
 		t.Fatal(err)
