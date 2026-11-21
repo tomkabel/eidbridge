@@ -5,6 +5,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 work=$(mktemp -d)  # 0700: the inner script and binary run as root
+trap 'rm -rf "$work"' EXIT
 bin="$work/eidbridge-integration.test"
 go test -c -o "$bin" ./cmd/eidbridge
 # Warm the module and build caches for the eidbridge-mock build that
