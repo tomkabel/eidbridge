@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -27,6 +28,53 @@ type StatusChecker struct {
 
 func unavailable(detail string) error {
 	return &authn.Error{Reason: authn.ReasonStatusUnavailable, Detail: detail}
+}
+
+func statusTimeClaims(c map[string]any, now time.Time) error {
+	claimNumber := func(name string) (float64, bool) {
+		v, present := c[name]
+		if !present {
+			return 0, false
+		}
+		n, ok := v.(json.Number)
+		if !ok {
+			return 0, false
+		}
+		f, err := n.Float64()
+		return f, err == nil && !math.IsInf(f, 0) && !math.IsNaN(f)
+	}
+
+	iat, ok := claimNumber("iat")
+	if !ok {
+		return vfail("status list iat missing or malformed")
+	}
+	exp, ok := claimNumber("exp")
+	if !ok {
+		return vfail("status list exp missing or malformed")
+	}
+	nowSeconds := float64(now.UnixNano()) / float64(time.Second)
+	if exp <= iat {
+		return vfail("status list time claims contradict")
+	}
+	if iat > nowSeconds+60 || iat < nowSeconds-(24*60*60) {
+		return vfail("status list iat outside freshness window")
+	}
+	if nowSeconds >= exp {
+		return vfail("status list expired")
+	}
+	if _, present := c["nbf"]; present {
+		n, ok := claimNumber("nbf")
+		if !ok || n > nowSeconds+60 || n > exp {
+			return vfail("status list nbf malformed or contradictory")
+		}
+	}
+	if _, present := c["ttl"]; present {
+		n, ok := claimNumber("ttl")
+		if !ok || n <= 0 || iat+n <= nowSeconds {
+			return vfail("status list ttl malformed or stale")
+		}
+	}
+	return nil
 }
 
 // Check returns nil only when the referenced entry is VALID (0).
@@ -92,7 +140,7 @@ func (s *StatusChecker) Check(ctx context.Context, ref any, trust *smartid.Trust
 	if sub, _ := c["sub"].(string); sub != r.StatusList.URI {
 		return unavailable("status list sub does not match the reference")
 	}
-	if err := timeClaims(c, now, time.Minute, false); err != nil {
+	if err := statusTimeClaims(c, now); err != nil {
 		return unavailable("status list expired or not yet valid")
 	}
 	sl, _ := c["status_list"].(map[string]any)
