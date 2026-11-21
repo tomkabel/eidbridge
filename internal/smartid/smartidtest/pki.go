@@ -116,8 +116,7 @@ func (p *PKI) NewLeaf(o LeafOptions) *Leaf {
 	}
 	var key crypto.Signer = sharedRSA()
 	if o.RSABits != 0 && o.RSABits != 2048 {
-		k, _ := rsa.GenerateKey(rand.Reader, o.RSABits)
-		key = k
+		key = sizedRSA(o.RSABits)
 	}
 	if o.ECKey {
 		k, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -170,4 +169,22 @@ func (p *PKI) IssuerKey() crypto.Signer { return p.interKey }
 func (p *PKI) PEM() []byte {
 	out := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: p.Root.Raw})
 	return append(out, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: p.Inter.Raw})...)
+}
+
+var (
+	sizedMu   sync.Mutex
+	sizedKeys = map[int]*rsa.PrivateKey{}
+)
+
+// sizedRSA caches one key per size: generating RSA-3072 per test made
+// fixture polls time out under -race on CI.
+func sizedRSA(bits int) *rsa.PrivateKey {
+	sizedMu.Lock()
+	defer sizedMu.Unlock()
+	if k := sizedKeys[bits]; k != nil {
+		return k
+	}
+	k, _ := rsa.GenerateKey(rand.Reader, bits)
+	sizedKeys[bits] = k
+	return k
 }
