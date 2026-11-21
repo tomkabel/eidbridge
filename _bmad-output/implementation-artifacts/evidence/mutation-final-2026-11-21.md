@@ -57,7 +57,6 @@ Test files: `internal/smartid/mutation_sign_test.go`, `internal/signapi/signapi_
 
 ## Open (disclosed, not justified as equivalent)
 
-- oidc subject.go:118 (pairwise-migration declaration check).
-- web web.go:262 (created-flow start window).
+- Closed on feat/final-pass: oidc subject.go:118 (TestSubjectLockMigrationMustMatch, 4 hand mutants killed) and web web.go:262 (TestCreatedFlowStartWindow, 2 killed).
 - The internal/web gremlins run did not finish, so web survivors after web.go:286 are unknown.
 - Not run on internal/mobileid or internal/webeid in this pass; their earlier results are in the files linked at the top.
