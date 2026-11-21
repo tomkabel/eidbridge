@@ -3,7 +3,7 @@
 # the CA bundle keeps the image under the 20 MB target (distroless static
 # measured 20,093,519 bytes on 2026-11-20).
 # alpine ships ca-certificates-bundle in its base image.
-FROM --platform=$BUILDPLATFORM alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc AS certs
+FROM --platform=$BUILDPLATFORM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS certs
 
 FROM scratch
 ARG TARGETPLATFORM
