@@ -117,3 +117,15 @@ func TestBucketIdleEviction(t *testing.T) {
 		t.Fatal("key not evicted after the idle time")
 	}
 }
+
+// web.go:262 – a created flow must start within 60 s, inside its deadline.
+func TestCreatedFlowStartWindow(t *testing.T) {
+	e := newWeb(t, wopt{})
+	id, _, _ := e.browser().begin(nil)
+	f := e.flow(id)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.startBy-f.created != 60*time.Second || f.deadline <= f.startBy {
+		t.Fatalf("startBy %v deadline %v after creation", f.startBy-f.created, f.deadline-f.created)
+	}
+}

@@ -331,3 +331,28 @@ func TestKeyRetentionRevokeAndOrder(t *testing.T) {
 		t.Fatal("revoking an unknown kid changed the key set")
 	}
 }
+
+// subject.go:118 – a declared migration must name this client, its old
+// sector and the K_sub version it migrates from.
+func TestSubjectLockMigrationMustMatch(t *testing.T) {
+	for name, m := range map[string]*Migration{
+		"other client":  {From: 1, To: 2, Days: 5, Clients: map[string]string{"b": "c:a"}},
+		"wrong sector":  {From: 1, To: 2, Days: 5, Clients: map[string]string{"a": "c:other"}},
+		"wrong version": {From: 3, To: 2, Days: 5, Clients: map[string]string{"a": "c:a"}},
+		"matching":      {From: 1, To: 2, Days: 5, Clients: map[string]string{"a": "c:a"}},
+	} {
+		dir := t.TempDir()
+		subs := &Subjects{Keys: map[int][]byte{1: make32(1), 2: make32(2), 3: make32(3)}, Current: 1}
+		cs := []Client{{ID: "a", SubMode: "pairwise"}}
+		if err := CheckSubjectLock(dir, cs, subs); err != nil {
+			t.Fatal(err)
+		}
+		subs.Current = 2
+		m.Started = time.Now()
+		subs.Migration = m
+		err := CheckSubjectLock(dir, cs, subs)
+		if (err == nil) != (name == "matching") {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+}
