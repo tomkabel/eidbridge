@@ -37,6 +37,8 @@ type Provider struct {
 	signerKey           *ecdsa.PrivateKey
 	// StatusURI is placed in issued credentials when set.
 	StatusURI string
+	// StatusBits is the status list entry width (1, 2, 4 or 8); 0 means 2.
+	StatusBits int
 
 	mu     sync.Mutex
 	status map[int]byte
@@ -379,10 +381,14 @@ func (p *Provider) SetStatus(idx int, v byte) {
 func (p *Provider) StatusHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p.mu.Lock()
+		bits := p.StatusBits
+		if bits == 0 {
+			bits = 2
+		}
 		n := p.next + 8
-		raw := make([]byte, (n*2+7)/8)
+		raw := make([]byte, (n*bits+7)/8)
 		for i, v := range p.status {
-			raw[i*2/8] |= (v & 3) << (uint(i*2) % 8)
+			raw[i*bits/8] |= (v & byte(1<<bits-1)) << (uint(i*bits) % 8)
 		}
 		p.mu.Unlock()
 		var zb bytes.Buffer
@@ -393,10 +399,24 @@ func (p *Provider) StatusHandler() http.Handler {
 		tok := sign(p.signerKey, map[string]any{"alg": "ES256", "typ": "statuslist+jwt",
 			"x5c": []string{base64.StdEncoding.EncodeToString(p.Signer.Raw), base64.StdEncoding.EncodeToString(p.Inter.Raw)}},
 			map[string]any{"sub": p.StatusURI, "iat": now.Unix(), "exp": now.Add(time.Hour).Unix(),
-				"status_list": map[string]any{"bits": 2, "lst": b64.EncodeToString(zb.Bytes())}})
+				"status_list": map[string]any{"bits": bits, "lst": b64.EncodeToString(zb.Bytes())}})
 		w.Header().Set("Content-Type", "application/statuslist+jwt")
 		w.Write([]byte(tok))
 	})
+}
+
+// SignerCertWithKeyUsage issues another certificate for the provider
+// signing key with the given key usage (negative tests).
+func (p *Provider) SignerCertWithKeyUsage(ku x509.KeyUsage) *x509.Certificate {
+	now := time.Now()
+	t := &x509.Certificate{SerialNumber: big.NewInt(4), Subject: pkix.Name{CommonName: "TEST PID PROVIDER KU"}, NotBefore: now.Add(-time.Hour),
+		NotAfter: now.Add(24 * time.Hour), KeyUsage: ku, BasicConstraintsValid: true}
+	d, err := x509.CreateCertificate(rand.Reader, t, p.Inter, &p.signerKey.PublicKey, p.interKey)
+	if err != nil {
+		panic(err)
+	}
+	c, _ := x509.ParseCertificate(d)
+	return c
 }
 
 // SignerKey exposes the provider signing key for negative tests that need
