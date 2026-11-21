@@ -129,3 +129,35 @@ func TestCreatedFlowStartWindow(t *testing.T) {
 		t.Fatalf("startBy %v deadline %v after creation", f.startBy-f.created, f.deadline-f.created)
 	}
 }
+
+// E08: flow IDs and callback values carry 128 bits, binding tokens 256
+// bits, all distinct per call (crypto/rand through randToken).
+func TestRandomValueLengths(t *testing.T) {
+	e := newWeb(t, wopt{})
+	b := e.browser()
+	id, _, resp := b.begin(nil)
+	if len(id) != 22 { // 16 bytes, base64url without padding
+		t.Fatalf("flow id %q is not 128 bits", id)
+	}
+	var binding string
+	for _, c := range resp.Cookies() {
+		if strings.HasPrefix(c.Name, "__Host-eidb-") {
+			v, ok := decodeCookie(c.Value)
+			if !ok {
+				t.Fatal("flow cookie does not decode")
+			}
+			binding = v.B
+		}
+	}
+	if len(binding) != 43 { // 32 bytes
+		t.Fatalf("binding token length %d, want 256 bits", len(binding))
+	}
+	seen := map[string]bool{}
+	for i := 0; i < 1000; i++ {
+		v := randToken(16)
+		if len(v) != 22 || seen[v] {
+			t.Fatalf("randToken(16) %q repeated or short", v)
+		}
+		seen[v] = true
+	}
+}

@@ -3,6 +3,8 @@ package store
 import (
 	"crypto/sha256"
 	"errors"
+	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -329,4 +331,30 @@ func TestCodeCapacityUnderSustainedExchange(t *testing.T) {
 		}
 	}
 	t.Logf("cap %d: max slots %d, refused %d of %d attempts", capacity, maxSlots, refused, int(2*window/time.Second)*2)
+}
+
+// E08: token family IDs carry 128 bits; codes are kept only as SHA-256.
+func TestFamilyIDLengthAndHashedCodes(t *testing.T) {
+	c, _ := newCodes(t, 4)
+	code := issue(t, c, "claims")
+	g, err := c.Exchange(code, ok)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(g.Family) != 22 {
+		t.Fatalf("family id %q is not 128 bits", g.Family)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, ok := c.byHash[sha256.Sum256([]byte(code))]; !ok {
+		t.Fatal("code not indexed by its SHA-256")
+	}
+	for e := range c.slots {
+		if e.hash != sha256.Sum256([]byte(code)) {
+			continue
+		}
+		if fmt.Sprintf("%v", *e) == "" || strings.Contains(fmt.Sprintf("%+v", *e), code) {
+			t.Fatal("plaintext code stored in the entry")
+		}
+	}
 }
