@@ -233,8 +233,9 @@ func (c *Client) Verify(ctx context.Context, s *Session, st *Status) (*Identity,
 	if !smartid.AuthPurpose(leaf) {
 		return nil, vfail("certificate is not an authentication certificate")
 	}
-	if smartid.LevelRank(st.Cert.CertificateLevel) == 0 || smartid.LevelRank(st.Cert.CertificateLevel) < smartid.LevelRank(c.cfg.MinCertLevel) {
-		return nil, vfail("certificate level below the required minimum")
+	level, ok := smartid.AuthenticationLevel(leaf)
+	if !ok || level != st.Cert.CertificateLevel || smartid.LevelRank(level) < smartid.LevelRank(c.cfg.MinCertLevel) {
+		return nil, vfail("certificate level invalid, mismatched, or below the required minimum")
 	}
 	idType, country, code, ok := smartid.ParseSerialNumber(smartid.SubjectAttr(leaf.Subject, oidSN))
 	if !ok {
@@ -269,7 +270,7 @@ func (c *Client) Verify(ctx context.Context, s *Session, st *Status) (*Identity,
 		return nil, &authn.Error{Reason: authn.ReasonStatusUnavailable, Detail: "certificate status unavailable", Cause: err}
 	}
 	return &Identity{IDType: idType, Country: country, Code: code, GivenName: smartid.SubjectAttr(leaf.Subject, oidGN),
-		Surname: smartid.SubjectAttr(leaf.Subject, oidSur), CertLevel: st.Cert.CertificateLevel}, nil
+		Surname: smartid.SubjectAttr(leaf.Subject, oidSur), CertLevel: level}, nil
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body []byte) ([]byte, error) {

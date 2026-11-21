@@ -132,8 +132,9 @@ func (c *Client) VerifyContext(ctx context.Context, s *Session, st *Status, cb *
 		return nil, vfail("certificate is not an authentication certificate")
 	}
 	// Step 7: level, from the response and the certificate content.
-	if levelRank(st.Cert.CertificateLevel) == 0 || levelRank(st.Cert.CertificateLevel) < levelRank(c.cfg.MinCertLevel) {
-		return nil, vfail("certificate level below the required minimum")
+	level, ok := authenticationLevel(leaf)
+	if !ok || level != st.Cert.CertificateLevel || levelRank(level) < levelRank(c.cfg.MinCertLevel) {
+		return nil, vfail("certificate level invalid, mismatched, or below the required minimum")
 	}
 	// Step 8: identity.
 	idType, country, code, ok := ParseSerialNumber(subjectAttr(leaf.Subject, oidSerialNumber))
@@ -168,7 +169,7 @@ func (c *Client) VerifyContext(ctx context.Context, s *Session, st *Status, cb *
 	return &Identity{
 		IDType: idType, Country: country, Code: code,
 		GivenName: subjectAttr(leaf.Subject, oidGivenName), Surname: subjectAttr(leaf.Subject, oidSurname),
-		DocumentNumber: st.Result.DocumentNumber, CertLevel: st.Cert.CertificateLevel,
+		DocumentNumber: st.Result.DocumentNumber, CertLevel: level,
 		FlowType: sig.FlowType, NotAfter: leaf.NotAfter,
 	}, nil
 }

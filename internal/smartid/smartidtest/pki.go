@@ -145,7 +145,8 @@ func (p *PKI) NewLeaf(o LeafOptions) *Leaf {
 	}
 	if !o.NoPolicy {
 		pol, _ := x509.OIDFromInts([]uint64{1, 3, 6, 1, 4, 1, 10015, 17, 2})
-		t.Policies = []x509.OID{pol}
+		auth, _ := x509.OIDFromInts([]uint64{0, 4, 0, 2042, 1, 2})
+		t.Policies = []x509.OID{pol, auth}
 	}
 	issuer, ikey := p.Inter, p.interKey
 	if o.SelfIssuedBy != nil {
