@@ -199,7 +199,10 @@ func TestBadRequests(t *testing.T) {
 }
 
 func TestPendingCertificateCannotSign(t *testing.T) {
-	h, _ := newAPI(t, nil)
+	h, srv := newAPI(t, nil)
+	// Keep the upstream session pending: the fixture otherwise completes the
+	// certificate choice on the first poll, which raced this request on CI.
+	srv.FailPolls.Store(true)
 	_, out := call(h, "POST", "/api/v1/sign/certificate", "a:secret-a", map[string]string{"signer": "PNOEE-40404040009"})
 	if code, _ := call(h, "POST", "/api/v1/sign", "a:secret-a", signBody(out["id"].(string))); code != 409 {
 		t.Fatalf("sign with pending certificate: %d", code)
