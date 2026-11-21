@@ -48,6 +48,7 @@ type Config struct {
 	MaxJobs            int           // global ceiling, default 1000
 	PerClientPerMinute int           // job starts per client per minute, default 30
 	Now                func() time.Time
+	SweepEvery         time.Duration // expired-job sweep interval, default 30 s
 }
 
 type job struct {
@@ -96,8 +97,30 @@ func New(cfg Config) *Handler {
 	if cfg.Log == nil {
 		cfg.Log = slog.New(slog.DiscardHandler)
 	}
+	if cfg.SweepEvery <= 0 {
+		cfg.SweepEvery = 30 * time.Second
+	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Handler{cfg: cfg, jobs: map[string]*job{}, window: map[string][]time.Time{}, ctx: ctx, cancel: cancel}
+	h := &Handler{cfg: cfg, jobs: map[string]*job{}, window: map[string][]time.Time{}, ctx: ctx, cancel: cancel}
+	// Expired jobs (certificates, signatures) leave memory on time, not
+	// only on the next API call (privacy audit F2).
+	h.wg.Add(1)
+	go func() {
+		defer h.wg.Done()
+		t := time.NewTicker(cfg.SweepEvery)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				h.mu.Lock()
+				h.sweep()
+				h.mu.Unlock()
+			}
+		}
+	}()
+	return h
 }
 
 // Close stops upstream polling and drops every job.

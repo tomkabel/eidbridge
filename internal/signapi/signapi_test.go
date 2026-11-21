@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -337,4 +338,28 @@ func TestRetryAfterAndControlCharacters(t *testing.T) {
 			t.Errorf("%q: %d", txt, code)
 		}
 	}
+}
+
+// Privacy audit F2: expired jobs are swept without further API calls.
+func TestExpiredJobsSweptInBackground(t *testing.T) {
+	var mu sync.Mutex
+	now := time.Now()
+	h, _ := newAPI(t, func(c *Config) {
+		c.SweepEvery = 5 * time.Millisecond
+		c.Now = func() time.Time { mu.Lock(); defer mu.Unlock(); return now }
+	})
+	certificate(t, h, "a:secret-a")
+	mu.Lock()
+	now = now.Add(6 * time.Minute)
+	mu.Unlock()
+	for i := 0; i < 200; i++ {
+		h.mu.Lock()
+		n := len(h.jobs)
+		h.mu.Unlock()
+		if n == 0 {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("expired job still held")
 }
