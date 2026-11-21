@@ -1,15 +1,24 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"encoding/pem"
+	"html"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	doctorpkg "github.com/tomkabel/eidbridge/internal/doctor"
 	"github.com/tomkabel/eidbridge/internal/eudi/walletsim"
+	"github.com/tomkabel/eidbridge/internal/smartid/smartidtest"
+	"github.com/tomkabel/eidbridge/internal/webeid/webeidtest"
 )
 
 var authQ = url.Values{"client_id": {"demo-rp"}, "redirect_uri": {"https://rp.example/cb"}, "response_type": {"code"},
@@ -115,5 +124,61 @@ func TestBaseHeaders(t *testing.T) {
 	baseHeaders(http.NotFoundHandler(), true).ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
 	if rec.Header().Get("Strict-Transport-Security") != "max-age=31536000" {
 		t.Fatalf("HSTS missing with own TLS: %v", rec.Header())
+	}
+}
+
+// 5.1-b: a Web eID token posted from a browser without the flow cookie is
+// refused and leaves the flow untouched; the login browser still completes.
+func TestWebEIDTokenNeedsFlowCookie(t *testing.T) {
+	s := newStack(t, map[string]string{"EIDBRIDGE_METHODS": "smartid,webeid", "EIDBRIDGE_WEBEID_ENV": "mock"})
+	resp, err := s.b.Get(s.issuer + "/authorize?" + authQ.Encode())
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := body(resp)
+	id := strings.TrimPrefix(resp.Request.URL.Path, strings.TrimPrefix(s.issuer, s.srv.URL)+"/flow/")
+	ft := ftRe.FindStringSubmatch(page)[1]
+	r, _ := s.b.PostForm(s.issuer+"/flow/"+id+"/start", url.Values{"ft": {ft}, "method": {"webeid"}, "flow": {"browser"}})
+	pending := body(r)
+	challenge := html.UnescapeString(regexp.MustCompile(`data-challenge="([^"]+)"`).FindStringSubmatch(pending)[1])
+	tok := webeidFixture.NewLeaf(webeidtest.LeafOptions{}).Token("ES384", s.srv.URL, challenge)
+	stranger := &http.Client{Transport: s.nr.Transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	r, _ = stranger.PostForm(s.issuer+"/flow/"+id+"/browser", url.Values{"ft": {ft}, "token": {string(tok)}})
+	r.Body.Close()
+	if st := s.flowState(id); !strings.HasPrefix(st, "pending") {
+		t.Fatalf("token from a browser without the cookie changed the flow: %s", st)
+	}
+	r, _ = s.nr.PostForm(s.issuer+"/flow/"+id+"/browser", url.Values{"ft": {ft}, "token": {string(tok)}})
+	r.Body.Close()
+	r, _ = s.nr.Get(s.issuer + "/flow/" + id + "/continue")
+	r.Body.Close()
+	if u, _ := url.Parse(r.Header.Get("Location")); u == nil || u.Query().Get("code") == "" {
+		t.Fatalf("login browser got no code: %v", r.Header.Get("Location"))
+	}
+}
+
+// TestDoctorNeverControlsReadiness (epics 7.3 RV): with the upstream down,
+// doctor reports FAIL while /readyz stays ready – readiness is local
+// configuration, key load and drain state only.
+func TestDoctorNeverControlsReadiness(t *testing.T) {
+	fx := smartidtest.NewServer()
+	hs := httptest.NewServer(fx)
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "ca.pem"), append(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: fx.PKI.Root.Raw}),
+		pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: fx.PKI.Inter.Raw})...), 0o644)
+	s := newStack(t, map[string]string{"EIDBRIDGE_SMARTID_BASE_URL": hs.URL + "/smart-id-rp", "EIDBRIDGE_SMARTID_AUTH_CA_DIR": dir})
+	down := "https://" + strings.TrimPrefix(hs.URL, "http://") + "/smart-id-rp"
+	hs.Close() // upstream outage
+	res := doctorpkg.Run(context.Background(), []doctorpkg.Target{{Component: "smartid", Env: "demo", BaseURL: down, PinsDisabled: true}}, nil, time.Now())
+	if len(res) != 1 || res[0].Status != "FAIL" {
+		t.Fatalf("doctor during outage: %+v", res)
+	}
+	r, err := s.nr.Get(s.srv.URL + "/readyz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Body.Close()
+	if r.StatusCode != 200 {
+		t.Fatalf("readyz %d during upstream outage", r.StatusCode)
 	}
 }

@@ -52,6 +52,9 @@ type Server struct {
 
 	// FailPolls makes every session poll answer HTTP 500.
 	FailPolls atomic.Bool
+	// CreateHook, if set, answers session creation instead of the fixture
+	// when it returns true (transport-failure tests). Creates still counts.
+	CreateHook func(w http.ResponseWriter, r *http.Request) bool
 
 	Polls       atomic.Int64
 	Creates     atomic.Int64
@@ -183,6 +186,13 @@ func uuid() string {
 }
 
 func (s *Server) create(w http.ResponseWriter, r *http.Request, target string) {
+	if s.CreateHook != nil {
+		s.Creates.Add(1)
+		if s.CreateHook(w, r) {
+			return
+		}
+		s.Creates.Add(-1)
+	}
 	var req authReq
 	body, _ := io.ReadAll(io.LimitReader(r.Body, 64<<10))
 	if err := json.Unmarshal(body, &req); err != nil {
