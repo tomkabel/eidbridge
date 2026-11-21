@@ -46,6 +46,14 @@ type cached struct {
 	expires time.Time
 }
 
+type ocspResult struct {
+	err     error
+	expires time.Time
+
+	// fallback is true only when OCSP could not provide a usable response.
+	fallback bool
+}
+
 func (c *Checker) defaults() {
 	if c.Timeout == 0 {
 		c.Timeout = 5 * time.Second
@@ -84,8 +92,9 @@ func (c *Checker) Check(ctx context.Context, leaf, issuer *x509.Certificate) err
 		return e.err
 	}
 	c.mu.Unlock()
-	err, until := c.ocsp(ctx, leaf, issuer)
-	if err != nil && !errors.Is(err, c.revoked()) && c.CRLFallback {
+	ocsp := c.ocsp(ctx, leaf, issuer)
+	err, until := ocsp.err, ocsp.expires
+	if err != nil && ocsp.fallback && c.CRLFallback {
 		if cerr, cuntil := c.crl(ctx, leaf, issuer); cerr == nil || errors.Is(cerr, c.revoked()) {
 			err, until = cerr, cuntil
 		} else {
@@ -135,27 +144,30 @@ func (c *Checker) fetch(ctx context.Context, req *http.Request) ([]byte, error) 
 	return b, nil
 }
 
-func (c *Checker) ocsp(ctx context.Context, leaf, issuer *x509.Certificate) (error, time.Time) {
+func (c *Checker) ocsp(ctx context.Context, leaf, issuer *x509.Certificate) ocspResult {
 	if len(leaf.OCSPServer) == 0 {
-		return errors.New("revocation: certificate has no OCSP responder"), time.Time{}
+		return ocspResult{err: errors.New("revocation: certificate has no OCSP responder"), fallback: true}
 	}
 	u, err := c.allowed(leaf.OCSPServer[0])
 	if err != nil {
-		return err, time.Time{}
+		return ocspResult{err: err}
 	}
 	body, err := ocsp.CreateRequest(leaf, issuer, &ocsp.RequestOptions{Hash: crypto.SHA256})
 	if err != nil {
-		return err, time.Time{}
+		return ocspResult{err: err}
 	}
 	req, _ := http.NewRequest(http.MethodPost, u.String(), bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/ocsp-request")
 	raw, err := c.fetch(ctx, req)
 	if err != nil {
-		return err, time.Time{}
+		return ocspResult{err: err, fallback: true}
 	}
 	r, err := ocsp.ParseResponseForCert(raw, leaf, issuer)
 	if err != nil {
-		return fmt.Errorf("revocation: ocsp response: %w", err), time.Time{}
+		return ocspResult{
+			err:      fmt.Errorf("revocation: ocsp response: %w", err),
+			fallback: !isOCSPValidationError(err),
+		}
 	}
 	if r.Certificate != nil && !r.Certificate.Equal(issuer) {
 		// Delegated responder: must be issued by the CA and carry OCSPSigning.
@@ -164,13 +176,13 @@ func (c *Checker) ocsp(ctx context.Context, leaf, issuer *x509.Certificate) (err
 			ok = ok || u == x509.ExtKeyUsageOCSPSigning
 		}
 		if !ok {
-			return errors.New("revocation: delegated OCSP responder lacks OCSPSigning"), time.Time{}
+			return ocspResult{err: errors.New("revocation: delegated OCSP responder lacks OCSPSigning")}
 		}
 	}
 	now := c.Now()
 	if r.ThisUpdate.After(now.Add(5*time.Minute)) || now.Sub(r.ThisUpdate) > c.MaxAge ||
 		(!r.NextUpdate.IsZero() && now.After(r.NextUpdate)) {
-		return errors.New("revocation: stale OCSP response"), time.Time{}
+		return ocspResult{err: errors.New("revocation: stale OCSP response")}
 	}
 	until := now.Add(5 * time.Minute)
 	if !r.NextUpdate.IsZero() && r.NextUpdate.Before(until) {
@@ -178,11 +190,31 @@ func (c *Checker) ocsp(ctx context.Context, leaf, issuer *x509.Certificate) (err
 	}
 	switch r.Status {
 	case ocsp.Good:
-		return nil, until
+		return ocspResult{expires: until}
 	case ocsp.Revoked:
-		return c.revoked(), until
+		return ocspResult{err: c.revoked(), expires: until}
 	}
-	return errors.New("revocation: OCSP status unknown"), time.Time{}
+	return ocspResult{err: errors.New("revocation: OCSP status unknown"), expires: until}
+}
+
+func isOCSPValidationError(err error) bool {
+	var responseErr ocsp.ResponseError
+	if errors.As(err, &responseErr) {
+		return true
+	}
+	var parseErr ocsp.ParseError
+	if errors.As(err, &parseErr) {
+		// These errors describe a structurally unusable response and may use
+		// CRL fallback. Treat every other (including unknown future) ParseError
+		// as terminal because it may represent failed response validation.
+		switch parseErr {
+		case "trailing data in OCSP response", "bad OCSP response type", "OCSP response contains bad number of responses":
+			return false
+		default:
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Checker) crl(ctx context.Context, leaf, issuer *x509.Certificate) (error, time.Time) {

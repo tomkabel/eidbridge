@@ -19,24 +19,29 @@ import (
 )
 
 type responder struct {
-	pki    *smartidtest.PKI
-	status int
-	this   time.Time
-	next   time.Time
-	signer *smartidtest.PKI // sign with another CA
-	hits   atomic.Int64
-	crl    []byte
-	code   int
+	pki      *smartidtest.PKI
+	status   int
+	this     time.Time
+	next     time.Time
+	signer   *smartidtest.PKI // sign with another CA
+	hits     atomic.Int64
+	crl      []byte
+	response []byte
+	code     int
 }
 
 func (r *responder) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.hits.Add(1)
-	if r.code != 0 {
+	if r.code != 0 && req.Method != http.MethodGet {
 		w.WriteHeader(r.code)
 		return
 	}
 	if req.Method == http.MethodGet {
 		w.Write(r.crl)
+		return
+	}
+	if r.response != nil {
+		w.Write(r.response)
 		return
 	}
 	signer := r.pki
@@ -184,6 +189,98 @@ func TestCRLFallback(t *testing.T) {
 	r.crl = []byte("garbage")
 	if err := c5.Check(context.Background(), leaf5, iss); err == nil || !strings.Contains(err.Error(), "crl") {
 		t.Fatalf("garbage crl: %v", err)
+	}
+}
+
+func TestPR31FallbackOnlyWhenOCSPCannotProvideAResponse(t *testing.T) {
+	p := smartidtest.NewPKI("pr31-fallback")
+	now := time.Now()
+	cases := []struct {
+		name     string
+		ocspPath bool
+		setup    func(*responder)
+	}{
+		{name: "missing endpoint", ocspPath: false},
+		{name: "transport response failure", ocspPath: true, setup: func(r *responder) { r.code = http.StatusServiceUnavailable }},
+		{name: "malformed response", ocspPath: true, setup: func(r *responder) { r.response = []byte("malformed OCSP") }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &responder{pki: p}
+			if tc.setup != nil {
+				tc.setup(r)
+			}
+			c, leaf, issuer := setup(t, r, tc.ocspPath)
+			r.crl = crlFor(t, p, nil, now.Add(-time.Minute), now.Add(time.Hour))
+			if err := c.Check(context.Background(), leaf, issuer); err != nil {
+				t.Fatalf("valid CRL fallback: %v", err)
+			}
+			wantHits := int64(2)
+			if !tc.ocspPath {
+				wantHits = 1
+			}
+			if hits := r.hits.Load(); hits != wantHits {
+				t.Fatalf("requests %d, want %d", hits, wantHits)
+			}
+		})
+	}
+}
+
+func TestPR31DefinitiveAndValidationFailuresDoNotFallback(t *testing.T) {
+	p := smartidtest.NewPKI("pr31-terminal")
+	other := smartidtest.NewPKI("pr31-other")
+	now := time.Now()
+	cases := []struct {
+		name   string
+		status int
+		signer *smartidtest.PKI
+		this   time.Time
+		next   time.Time
+	}{
+		{name: "unknown", status: ocsp.Unknown, this: now.Add(-time.Minute), next: now.Add(time.Hour)},
+		{name: "revoked", status: ocsp.Revoked, this: now.Add(-time.Minute), next: now.Add(time.Hour)},
+		{name: "wrong signer", status: ocsp.Good, signer: other, this: now.Add(-time.Minute), next: now.Add(time.Hour)},
+		{name: "stale", status: ocsp.Good, this: now.Add(-72 * time.Hour), next: now.Add(time.Hour)},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &responder{pki: p, status: tc.status, signer: tc.signer, this: tc.this, next: tc.next}
+			c, leaf, issuer := setup(t, r, true)
+			r.crl = crlFor(t, p, nil, now.Add(-time.Minute), now.Add(time.Hour))
+			if err := c.Check(context.Background(), leaf, issuer); err == nil {
+				t.Fatal("accepted OCSP failure with a good CRL available")
+			}
+			if hits := r.hits.Load(); hits != 1 {
+				t.Fatalf("terminal OCSP result made %d requests, want one", hits)
+			}
+		})
+	}
+}
+
+func TestOCSPParseErrorFallbackClassification(t *testing.T) {
+	for _, message := range []string{
+		"trailing data in OCSP response",
+		"bad OCSP response type",
+		"OCSP response contains bad number of responses",
+	} {
+		if isOCSPValidationError(ocsp.ParseError(message)) {
+			t.Errorf("structural parse error classified as validation failure: %s", message)
+		}
+	}
+	for _, message := range []string{
+		"no response matching the supplied certificate",
+		"invalid responder name",
+		"invalid responder key hash",
+		"invalid responder id tag",
+		"bad signature on embedded certificate: x509: ECDSA verification failure",
+		"bad OCSP signature: x509: ECDSA verification failure",
+		"unsupported critical extension",
+		"unsupported issuer hash algorithm",
+		"unexpected future OCSP parse failure",
+	} {
+		if !isOCSPValidationError(ocsp.ParseError(message)) {
+			t.Errorf("validation parse error allowed to fall back: %s", message)
+		}
 	}
 }
 
