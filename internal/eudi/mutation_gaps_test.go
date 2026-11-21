@@ -193,3 +193,43 @@ func TestUndisclosedArrayElementDropped(t *testing.T) {
 }
 
 func jsonNum(n int64) json.Number { return json.Number(strconv.FormatInt(n, 10)) }
+
+func TestMethodDefaultsAndTTLBoundary(t *testing.T) {
+	h := newHarness(t)
+	id, _ := NewSelfSignedIdentity("bridge.example")
+	m, err := NewMethod(MethodConfig{Identity: id, Verifier: h.e.v, Flows: []string{authn.FlowQR}, IsDemo: true})
+	if err != nil || m.cfg.TTL != 5*time.Minute || m.cfg.LongPoll != 10*time.Second {
+		t.Fatalf("defaults %+v %v", m.cfg, err)
+	}
+	w := h.e.prov.Issue(walletsim.IssueOptions{})
+	p, _ := h.m.Start(context.Background(), h.Requests()[0])
+	r := wallet(t, p)
+	h.clk.add(h.m.cfg.TTL) // exactly TTL: still valid
+	if res := p.Callback(context.Background(), post(r, walletsim.VPToken(w.Present(r.Nonce, r.ClientID, walletsim.PresentOptions{IAT: h.clk.now()})), nil), nil); !res.Done || res.Identity == nil {
+		t.Fatalf("response exactly at TTL: %+v", res)
+	}
+	if again := p.Poll(context.Background()); again.Identity != nil || again.Err == nil {
+		t.Fatalf("identity delivered twice: %+v", again)
+	}
+	p2, _ := h.m.Start(context.Background(), h.Requests()[0])
+	h.clk.add(h.m.cfg.TTL)
+	if res := p2.Poll(context.Background()); res.Done && res.Err != nil {
+		t.Fatalf("poll exactly at TTL expired the flow: %+v", res)
+	}
+	h.clk.add(time.Nanosecond)
+	if res := p2.Poll(context.Background()); !res.Done || authn.ReasonOf(res.Err) != authn.ReasonExpired {
+		t.Fatalf("poll after TTL: %+v", res)
+	}
+}
+
+func TestIdentifierLength(t *testing.T) {
+	for n, ok := range map[int]bool{64: true, 65: false} {
+		p := &Presentation{Claims: map[string]any{"personal_administrative_number": strings.Repeat("1", n), "issuing_country": "ee"}}
+		if _, err := identityFrom(p); (err == nil) != ok {
+			t.Errorf("code length %d: %v", n, err)
+		}
+	}
+	if _, err := identityFrom(&Presentation{Claims: map[string]any{"personal_administrative_number": "1", "issuing_country": "EST"}}); err == nil {
+		t.Error("three-letter country accepted")
+	}
+}
