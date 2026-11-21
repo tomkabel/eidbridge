@@ -280,6 +280,9 @@ func FuzzParseStatus(f *testing.F) {
 	sy := newSynth(&testing.T{}, FlowQR, smartidtest.LeafOptions{})
 	good, _ := json.Marshal(sy.st)
 	f.Add(good)
+	// One fresh session for every input (key generation per input made the
+	// fuzzer stall); its challenge is unpredictable to the fuzzer.
+	s2 := newSynth(&testing.T{}, FlowQR, smartidtest.LeafOptions{})
 	f.Fuzz(func(t *testing.T, b []byte) {
 		st, err := ParseStatus(b)
 		if err != nil {
@@ -287,9 +290,7 @@ func FuzzParseStatus(f *testing.F) {
 		}
 		if st.State == "COMPLETE" {
 			_ = Outcome(st)
-			// A fuzzed body must never verify against a fresh session: the
-			// challenge is unpredictable to the fuzzer.
-			s2 := newSynth(t, FlowQR, smartidtest.LeafOptions{})
+			// A fuzzed body must never verify against the fresh session.
 			if id, err := s2.c.Verify(s2.s, st, nil); err == nil || id != nil {
 				t.Fatalf("fuzzed status verified")
 			}

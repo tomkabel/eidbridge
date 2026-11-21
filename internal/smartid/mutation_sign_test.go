@@ -186,3 +186,14 @@ func TestFinishZeroesSessionSecrets(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadCADirExtensions(t *testing.T) {
+	for _, ext := range []string{".pem", ".crt", ".cer"} {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, "ca"+ext), testPKI.PEM(), 0o644)
+		ts, err := LoadCADir(dir)
+		if err != nil || ts.Empty() {
+			t.Errorf("%s not loaded: %v", ext, err)
+		}
+	}
+}
