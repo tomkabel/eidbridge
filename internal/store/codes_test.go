@@ -230,3 +230,32 @@ func TestCodeEntropy(t *testing.T) {
 		t.Fatalf("code length %d", len(code))
 	}
 }
+
+// Privacy audit F1: expired codes and tombstones (and their claim sets)
+// are dropped by the periodic sweeper, not only under capacity pressure.
+func TestSweeperDropsExpiredEntries(t *testing.T) {
+	c, clk := newCodes(t, 10)
+	issue(t, c, "claims")
+	code := issue(t, c, "claims2")
+	c.Exchange(code, ok)
+	if c.Len() != 2 {
+		t.Fatalf("len %d", c.Len())
+	}
+	stop := c.StartSweeper(5 * time.Millisecond)
+	defer stop()
+	clk.Advance(61 * time.Second) // the unexchanged code expires; the tombstone lives on
+	waitLen(t, c, 1)
+	clk.Advance(5*time.Minute + 30*time.Second)
+	waitLen(t, c, 0)
+}
+
+func waitLen(t *testing.T, c *Codes, n int) {
+	t.Helper()
+	for i := 0; i < 200; i++ {
+		if c.Len() == n {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("len %d, want %d", c.Len(), n)
+}

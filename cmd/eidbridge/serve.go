@@ -90,6 +90,7 @@ func Build(cfg *config.Config, log *slog.Logger, clk clock.Clock) (*App, error) 
 		return nil, err
 	}
 	a.Codes = store.NewCodes(store.CodesConfig{Cap: cfg.CodeCap, CodeTTL: 60 * time.Second, TombstoneTTL: cfg.AccessTokenTTL + cfg.ClockSkew, Clock: clk})
+	a.closers = append(a.closers, a.Codes.StartSweeper(time.Second))
 	prov, err := oidc.New(oidc.Config{Issuer: cfg.Issuer, Demo: cfg.Demo, Clients: cfg.Clients, Keys: ks, Subjects: cfg.Subjects,
 		AccessTokenTTL: cfg.AccessTokenTTL, CodeTTL: 60 * time.Second, ClockSkew: cfg.ClockSkew, MethodACR: cfg.MethodACR,
 		Methods: reg.Names(), Clock: clk, Codes: a.Codes})

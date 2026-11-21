@@ -215,6 +215,30 @@ func (c *Codes) RevokeAll() {
 	}
 }
 
+// Len reports stored entries without sweeping (tests and metrics).
+func (c *Codes) Len() int { c.mu.Lock(); defer c.mu.Unlock(); return len(c.slots) }
+
+// StartSweeper sweeps every interval until the returned stop is called, so
+// expired codes, tombstones and their claim sets leave memory on time
+// (privacy audit F1), not only under capacity pressure.
+func (c *Codes) StartSweeper(interval time.Duration) (stop func()) {
+	done := make(chan struct{})
+	var once sync.Once
+	go func() {
+		t := time.NewTicker(interval)
+		defer t.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-t.C:
+				c.Sweep()
+			}
+		}
+	}()
+	return func() { once.Do(func() { close(done) }) }
+}
+
 // Sweep drops expired entries.
 func (c *Codes) Sweep() { c.mu.Lock(); c.sweepLocked(); c.mu.Unlock() }
 
