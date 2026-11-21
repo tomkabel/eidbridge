@@ -114,3 +114,10 @@ func randID() string {
 	}
 	return string(out)
 }
+
+// SetLeaf replaces the certificate used for a serial number.
+func (s *Server) SetLeaf(serial string, l *smartidtest.Leaf) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.leaves[serial] = l
+}
