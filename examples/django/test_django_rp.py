@@ -1,4 +1,3 @@
-import os
 import urllib.parse
 
 import pytest
@@ -6,15 +5,12 @@ from conftest_bridge import drive_login
 
 
 @pytest.fixture()
-def rp(bridge, monkeypatch):
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
+def rp(bridge, monkeypatch, django_session_db):
     monkeypatch.setenv("OIDC_DISCOVERY_URL", bridge["discovery"])
     monkeypatch.setenv("OIDC_CLIENT_ID", bridge["client_id"])
     monkeypatch.setenv("OIDC_CLIENT_SECRET", bridge["client_secret"])
     monkeypatch.setenv("OIDC_REDIRECT_URI", bridge["redirect_uri"])
     monkeypatch.delenv("PRODUCTION", raising=False)
-    import django
-    django.setup()
     import django_rp
     django_rp.configure()
     from django.test import Client

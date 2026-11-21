@@ -1,7 +1,6 @@
 """Minimal Django relying party for eidbridge. Plain OIDC via Authlib: no eID code.
 
-Run: DJANGO_SETTINGS_MODULE=django_settings OIDC_DISCOVERY_URL=... OIDC_CLIENT_ID=... \
-     OIDC_CLIENT_SECRET=... python -m django runserver
+See examples/README.md for local setup, migrations and startup.
 (this module is the URLconf; call configure() once, or import it after the env is set)
 """
 import html
