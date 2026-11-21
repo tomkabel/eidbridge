@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"html"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -180,5 +182,44 @@ func TestDoctorNeverControlsReadiness(t *testing.T) {
 	r.Body.Close()
 	if r.StatusCode != 200 {
 		t.Fatalf("readyz %d during upstream outage", r.StatusCode)
+	}
+}
+
+// Story 7.4: the bridge logs in against the standalone eidbridge-mock
+// process (built and started here), trusting only the CA bundle it writes.
+func TestBridgeAgainstStandaloneMockBinary(t *testing.T) {
+	dir := t.TempDir()
+	bin := filepath.Join(dir, "eidbridge-mock")
+	if out, err := exec.Command("go", "build", "-o", bin, "../eidbridge-mock").CombinedOutput(); err != nil {
+		t.Skipf("cannot build eidbridge-mock: %v %s", err, out)
+	}
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	ln.Close()
+	caDir := filepath.Join(dir, "ca")
+	os.Mkdir(caDir, 0o755)
+	cmd := exec.Command(bin, "--listen", addr, "--ca-out", filepath.Join(caDir, "ca.pem"), "--auto", "PNOEE-40404040009-MOCK-Q")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { cmd.Process.Kill(); cmd.Wait() })
+	for i := 0; i < 100; i++ {
+		if _, err := os.Stat(filepath.Join(caDir, "ca.pem")); err == nil {
+			if c, err := net.Dial("tcp", addr); err == nil {
+				c.Close()
+				break
+			}
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	s := newStack(t, map[string]string{"EIDBRIDGE_SMARTID_BASE_URL": "http://" + addr + "/smart-id-rp", "EIDBRIDGE_SMARTID_AUTH_CA_DIR": caDir})
+	if s.app.Fixture != nil {
+		t.Fatal("in-process fixture started although the standalone mock is configured")
+	}
+	if u := s.login("qr", nil); u.Query().Get("code") == "" {
+		t.Fatalf("redirect %s", u)
 	}
 }
