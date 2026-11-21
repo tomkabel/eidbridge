@@ -1,0 +1,6 @@
+id: wrong-nonce
+title: Key-binding JWT carries a nonce from another request (replay)
+expect: reject
+mutation: kb_nonce
+spec:
+  - {doc: "OpenID4VP 1.0", section: "B.3.6 Presentation Response (nonce)", url: "https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#appendix-B.3.6"}

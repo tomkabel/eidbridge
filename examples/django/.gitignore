@@ -1,0 +1,4 @@
+sessions.sqlite3
+sessions.sqlite3-journal
+sessions.sqlite3-wal
+sessions.sqlite3-shm

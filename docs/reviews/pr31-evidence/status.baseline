@@ -1,0 +1,16 @@
+--- FAIL: TestPR31StatusFreshness (0.04s)
+    --- FAIL: TestPR31StatusFreshness/missing_expiration (0.01s)
+        pr31_test.go:59: expected status unavailable, got <nil>
+    --- FAIL: TestPR31StatusFreshness/missing_issuance (0.00s)
+        pr31_test.go:59: expected status unavailable, got <nil>
+    --- FAIL: TestPR31StatusFreshness/expired_now (0.00s)
+        pr31_test.go:59: expected status unavailable, got <nil>
+    --- FAIL: TestPR31StatusFreshness/older_than_local_cap (0.00s)
+        pr31_test.go:59: expected status unavailable, got <nil>
+    --- FAIL: TestPR31StatusFreshness/ttl_replay (0.00s)
+        pr31_test.go:59: expected status unavailable, got <nil>
+    --- FAIL: TestPR31StatusFreshness/invalid_ttl (0.00s)
+        pr31_test.go:59: expected status unavailable, got <nil>
+FAIL
+FAIL	github.com/tomkabel/eidbridge/internal/eudi	0.043s
+FAIL

@@ -10,3 +10,23 @@ paths = [
   '''^tools/verify_bmad_artifacts\.py$''',
   '''^_bmad/_config/files-manifest\.csv$''',
 ]
+
+# Recorded public-demo exchanges (sid.demo.sk.ee, SK published test accounts).
+# They contain the sessionSecret/sessionToken of completed, expired demo
+# sessions, needed to recompute authCode and callback digests offline. They
+# grant nothing. Scoped to generic-api-key in that directory only.
+[[allowlists]]
+description = "Spent Smart-ID demo session fixtures"
+targetRules = ["generic-api-key"]
+paths = [
+  '''^internal/smartid/testdata/live/''',
+]
+
+# Synthetic JWT (signature bytes "signature…", demo test code) used to
+# prove the log redactor removes tokens. Scoped to the jwt rule there.
+[[allowlists]]
+description = "Synthetic JWT in the redaction test"
+targetRules = ["jwt"]
+paths = [
+  '''^internal/logx/logx_test\.go$''',
+]

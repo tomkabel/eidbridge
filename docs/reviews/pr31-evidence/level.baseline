@@ -1,0 +1,14 @@
+--- FAIL: TestPR31V3CertificateLevelBoundToPolicies (0.10s)
+    --- FAIL: TestPR31V3CertificateLevelBoundToPolicies/unsigned_upgrade (0.01s)
+        pr31_level_test.go:54: accepted level unsupported by signed certificate policies
+    --- FAIL: TestPR31V3CertificateLevelBoundToPolicies/unknown_policies (0.01s)
+        pr31_level_test.go:54: accepted level unsupported by signed certificate policies
+    --- FAIL: TestPR31V3CertificateLevelBoundToPolicies/conflicting (0.01s)
+        pr31_level_test.go:54: accepted level unsupported by signed certificate policies
+FAIL
+FAIL	github.com/tomkabel/eidbridge/internal/smartid	0.111s
+--- FAIL: TestPR31V2RejectsUnsignedLevelUpgrade (0.36s)
+    pr31_test.go:47: qualified minimum accepted an advanced certificate labeled qualified
+FAIL
+FAIL	github.com/tomkabel/eidbridge/internal/smartid/v2	0.365s
+FAIL

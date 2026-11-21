@@ -1,0 +1,6 @@
+id: tampered-issuer-jwt
+title: Issuer-signed JWT payload changed after signing
+expect: reject
+mutation: tampered_issuer
+spec:
+  - {doc: "RFC 9901", section: "7.1 Verification of the SD-JWT (signature)", url: "https://www.rfc-editor.org/rfc/rfc9901#section-7.1"}

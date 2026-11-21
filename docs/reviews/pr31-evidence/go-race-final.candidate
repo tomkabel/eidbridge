@@ -1,0 +1,31 @@
+ok  	github.com/tomkabel/eidbridge/cmd/eidbridge	8.847s
+ok  	github.com/tomkabel/eidbridge/cmd/eidbridge-mock	(cached)
+ok  	github.com/tomkabel/eidbridge/cmd/eudi-conformance	(cached)
+?   	github.com/tomkabel/eidbridge/cmd/sidspike	[no test files]
+?   	github.com/tomkabel/eidbridge/examples/demo-rp	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/authn	(cached)
+?   	github.com/tomkabel/eidbridge/internal/authn/authntest	[no test files]
+?   	github.com/tomkabel/eidbridge/internal/clock	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/config	(cached)
+ok  	github.com/tomkabel/eidbridge/internal/docscheck	(cached)
+ok  	github.com/tomkabel/eidbridge/internal/doctor	(cached)
+ok  	github.com/tomkabel/eidbridge/internal/eudi	3.013s
+?   	github.com/tomkabel/eidbridge/internal/eudi/walletsim	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/jose	(cached)
+ok  	github.com/tomkabel/eidbridge/internal/logx	(cached)
+ok  	github.com/tomkabel/eidbridge/internal/mobileid	6.738s
+?   	github.com/tomkabel/eidbridge/internal/mobileid/mobileidtest	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/oidc	(cached)
+ok  	github.com/tomkabel/eidbridge/internal/revocation	1.740s
+ok  	github.com/tomkabel/eidbridge/internal/signapi	(cached)
+ok  	github.com/tomkabel/eidbridge/internal/smartid	12.227s
+?   	github.com/tomkabel/eidbridge/internal/smartid/smartidtest	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/smartid/v2	(cached)
+?   	github.com/tomkabel/eidbridge/internal/smartid/v2/v2test	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/store	(cached)
+ok  	github.com/tomkabel/eidbridge/internal/tlspin	(cached)
+ok  	github.com/tomkabel/eidbridge/internal/version	(cached)
+ok  	github.com/tomkabel/eidbridge/internal/web	(cached)
+ok  	github.com/tomkabel/eidbridge/internal/webeid	12.594s
+?   	github.com/tomkabel/eidbridge/internal/webeid/webeidtest	[no test files]
+?   	github.com/tomkabel/eidbridge/test/e2e	[no test files]

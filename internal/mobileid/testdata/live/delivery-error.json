@@ -1,0 +1,12 @@
+{
+  "Phone": "+37207110066",
+  "Code": "60001019947",
+  "Hash": "tx3mPIPG9zFh6tiFHAJVuoLF0oLBgJN9cOQxXv2uPgA=",
+  "Status": {
+    "state": "COMPLETE",
+    "result": "DELIVERY_ERROR",
+    "time": "2026-11-20T14:27:47",
+    "traceId": "6b003cc3eee4b13642c9244db2ccc602"
+  },
+  "Captured": "2026-11-20T12:27:47Z"
+}

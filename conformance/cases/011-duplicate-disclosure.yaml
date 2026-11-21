@@ -1,0 +1,6 @@
+id: duplicate-disclosure
+title: The same disclosure presented twice
+expect: reject
+mutation: duplicate_disclosure
+spec:
+  - {doc: "RFC 9901", section: "7.1 Verification of the SD-JWT", url: "https://www.rfc-editor.org/rfc/rfc9901#section-7.1"}

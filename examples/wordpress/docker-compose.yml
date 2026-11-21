@@ -1,0 +1,120 @@
+# WordPress logs in through eidbridge (demo mode, built-in fixture upstream).
+# Everything uses host networking on ports 18480-18482 so the browser side
+# (the test driver) and the WordPress back channel reach the bridge at the same
+# http://localhost:18480 origin:
+#   18480 eidbridge   18481 WordPress   18482 MariaDB
+# Run it with ./run-e2e.sh (it generates WP_CLIENT_SECRET and checks the plugin
+# zip hash); see docs/idp/wordpress.md.
+services:
+  # Writes the bridge client registry into a volume, owned by the bridge uid.
+  bridge-conf:
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+    network_mode: none
+    environment:
+      WP_CLIENT_SECRET: "${WP_CLIENT_SECRET:?set WP_CLIENT_SECRET (40+ random characters), or use ./run-e2e.sh}"
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        umask 077
+        printf '[{"client_id":"wordpress","client_secret":"%s","token_endpoint_auth_method":"client_secret_post","redirect_uris":["http://localhost:18481/wp-admin/admin-ajax.php?action=openid-connect-authorize"],"sub_mode":"pairwise"}]' "$$WP_CLIENT_SECRET" > /conf/clients.json
+        chown 65532:65532 /conf/clients.json
+        chmod 0600 /conf/clients.json
+    volumes: [bridge-conf:/conf]
+
+  eidbridge:
+    build:
+      context: ../..
+      secrets: [extra_ca]
+    command: ["serve", "--demo"]
+    network_mode: host
+    environment:
+      EIDBRIDGE_LISTEN: "127.0.0.1:18480"
+      EIDBRIDGE_ISSUER: "http://localhost:18480"
+      EIDBRIDGE_SMARTID_ENV: "mock"
+      EIDBRIDGE_SMARTID_CERT_STATUS: "none"
+      EIDBRIDGE_KEY_DIR: "/data/demo-keys"
+      EIDBRIDGE_CLIENTS_FILE: "/conf/clients.json"
+      EIDBRIDGE_LOG_LEVEL: "${EIDBRIDGE_LOG_LEVEL:-info}"
+    volumes: [bridge-conf:/conf:ro]
+    tmpfs:
+      - /data:uid=65532,gid=65532,mode=0700
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      bridge-conf: {condition: service_completed_successfully}
+
+  db:
+    image: mariadb:11.4.13@sha256:a8992b5e5404d11e03c54a31d0c1bdea3fd116d283aa6d1a627551f29045309b
+    network_mode: host
+    command: ["--port=18482", "--bind-address=127.0.0.1"]
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: wordpress-example-db-password
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    tmpfs: [/var/lib/mysql]
+
+  wordpress:
+    image: wordpress:7.1.5-php8.4-apache@sha256:9ad529b57c01fd71f161f331f638b83ef50ac7f095095d52bb222b7bc3b4d10b
+    network_mode: host
+    # The official image listens on 80; move it to 18481.
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        sed -i 's/Listen 80/Listen 18481/' /etc/apache2/ports.conf
+        sed -i 's/<VirtualHost \*:80>/<VirtualHost *:18481>/' /etc/apache2/sites-available/000-default.conf
+        exec docker-entrypoint.sh apache2-foreground
+    environment: &wp-env
+      WORDPRESS_DB_HOST: "127.0.0.1:18482"
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress-example-db-password
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_HOME', 'http://localhost:18481');
+        define('WP_SITEURL', 'http://localhost:18481');
+    volumes: [wp:/var/www/html]
+    depends_on:
+      db: {condition: service_healthy}
+
+  # One-shot: WP-CLI installs WordPress, installs and configures the plugin.
+  # e2e.py also runs it with --entrypoint wp for assertions.
+  provision:
+    image: wordpress:cli-2.12.0-php8.4@sha256:10719513e86fe417166a315cc9421bd9cfedaaaef728ea25af1e20f3d9a09c68
+    network_mode: host
+    user: "33:33"
+    working_dir: /var/www/html
+    entrypoint: ["sh", "/provision/provision.sh"]
+    environment:
+      <<: *wp-env
+      WP_CLIENT_SECRET: "${WP_CLIENT_SECRET:?}"
+      PLUGIN_ZIP: /cache/daggerhart-openid-connect-generic.3.11.5.zip
+      HOME: /tmp
+    volumes:
+      - wp:/var/www/html
+      - ./provision:/provision:ro
+      - ./mu-plugins:/mu-plugins-src:ro
+      - ./.cache:/cache:ro
+    depends_on:
+      db: {condition: service_healthy}
+      wordpress: {condition: service_started}
+      eidbridge: {condition: service_started}
+
+volumes:
+  bridge-conf:
+  wp:
+
+secrets:
+  # Optional CA bundle for builds behind a TLS-intercepting proxy; empty by default.
+  # Locally: EXTRA_CA_FILE=$HOME/.ccr/ca-bundle.crt
+  extra_ca:
+    file: ${EXTRA_CA_FILE:-/dev/null}

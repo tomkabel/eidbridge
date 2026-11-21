@@ -1,0 +1,5 @@
+{{template "top" .}}
+<h1>{{call .T (printf "outcome.%s" .State)}}</h1>
+{{if ne .State "verified"}}<p>{{call .T (printf "reason.%s" .Reason)}}</p>{{end}}
+<p><a class="button primary" id="continue" href="{{.Base}}/flow/{{.FlowID}}/continue">{{call .T "action.return"}}</a></p>
+{{template "bottom" .}}

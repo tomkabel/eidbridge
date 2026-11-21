@@ -1,0 +1,11 @@
+{
+  "Expected": "PNOEE-30403039917",
+  "Hash": "qB2rulrrAaLrxImsq+BAPB7ls23KJ8SRYwwneLM2HOMs0H0tEWFdy+J4bOvn14+GYS4A0H1NGm9lB+HgHQ1ouw==",
+  "Captured": "2026-11-20T18:26:12Z",
+  "Status": {
+    "state": "COMPLETE",
+    "result": {
+      "endResult": "USER_REFUSED"
+    }
+  }
+}

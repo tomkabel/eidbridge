@@ -1,0 +1,51 @@
+name: Live demo upstream check
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      bogus_pin:
+        description: "Force a pin mismatch to test the alerting path"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - name: TLS pin check (demo)
+        env:
+          BOGUS_PIN: ${{ inputs.bogus_pin }}
+        run: sh scripts/pin-check.sh demo
+      - name: Live tests
+        env:
+          EIDBRIDGE_LIVE: "1"
+        run: go test -count=1 -run 'TestLive' ./... -v
+      - name: Open or update upstream-change issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          prefix="Nightly upstream check failed"
+          gh label create upstream-change --force >/dev/null
+          failed="$(gh run view "${{ github.run_id }}" --json jobs --jq '[.jobs[].steps[] | select(.conclusion=="failure") | .name] | join(", ")' 2>/dev/null || echo unknown)"
+          existing="$(gh issue list --label upstream-change --state open --search "$prefix in:title" --json number --jq '.[0].number // empty')"
+          if [ -z "$existing" ]; then
+            gh issue create --label upstream-change --title "$prefix" \
+              --body "Run: $RUN_URL
+          Failing steps: $failed"
+          else
+            gh issue comment "$existing" --body "Failed again: $RUN_URL (steps: $failed)"
+          fi

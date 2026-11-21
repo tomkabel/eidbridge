@@ -1,0 +1,65 @@
+go vet ./...
+go test -race -count=1 ./...
+ok  	github.com/tomkabel/eidbridge/cmd/eidbridge	15.694s
+ok  	github.com/tomkabel/eidbridge/cmd/eidbridge-mock	3.041s
+ok  	github.com/tomkabel/eidbridge/cmd/eudi-conformance	43.971s
+?   	github.com/tomkabel/eidbridge/cmd/sidspike	[no test files]
+?   	github.com/tomkabel/eidbridge/examples/demo-rp	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/authn	1.083s
+?   	github.com/tomkabel/eidbridge/internal/authn/authntest	[no test files]
+?   	github.com/tomkabel/eidbridge/internal/clock	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/config	8.824s
+ok  	github.com/tomkabel/eidbridge/internal/docscheck	1.094s
+ok  	github.com/tomkabel/eidbridge/internal/doctor	2.710s
+ok  	github.com/tomkabel/eidbridge/internal/eudi	3.764s
+?   	github.com/tomkabel/eidbridge/internal/eudi/walletsim	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/jose	5.599s
+ok  	github.com/tomkabel/eidbridge/internal/logx	1.206s
+ok  	github.com/tomkabel/eidbridge/internal/mobileid	9.080s
+?   	github.com/tomkabel/eidbridge/internal/mobileid/mobileidtest	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/oidc	45.761s
+ok  	github.com/tomkabel/eidbridge/internal/revocation	1.656s
+ok  	github.com/tomkabel/eidbridge/internal/signapi	6.440s
+ok  	github.com/tomkabel/eidbridge/internal/smartid	25.162s
+?   	github.com/tomkabel/eidbridge/internal/smartid/smartidtest	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/smartid/v2	4.217s
+?   	github.com/tomkabel/eidbridge/internal/smartid/v2/v2test	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/store	1.041s
+ok  	github.com/tomkabel/eidbridge/internal/tlspin	1.325s
+ok  	github.com/tomkabel/eidbridge/internal/version	1.049s
+ok  	github.com/tomkabel/eidbridge/internal/web	35.990s
+ok  	github.com/tomkabel/eidbridge/internal/webeid	27.088s
+?   	github.com/tomkabel/eidbridge/internal/webeid/webeidtest	[no test files]
+?   	github.com/tomkabel/eidbridge/test/e2e	[no test files]
+/tmp/eidbridge-pr31-remediation/bin/go-licenses check ./... --disallowed_types=forbidden,restricted,reciprocal,unknown
+python3 scripts/check_spec_pins.py
+spec-pins check: PASS (0 problems)
+python3 tools/check-arch-trace
+findings=82 rows=82 open=0 errors=0
+  [PASS] word-budget: 1723 prose words outside tables (budget 1900)
+  [PASS] decision-index: header ok=True, ADR rows=10 (need >=10)
+  [PASS] adr-schema: all ADRs use the four lead-ins
+  [PASS] threat-first: threat model at 7288, ADR-001 at 9909
+  [PASS] adj-moved: ADJ in architecture=False, ADJ table in source-reconciliation=True
+  [PASS] ops-moved: removed from architecture=True, present in PRD=True
+  [PASS] glossary: glossary covers required terms
+  [PASS] links: FR/Q references linked
+  [PASS] no-process-notes: no planning-task notes
+  [PASS] layout-list: layout list items=13
+  [PASS] diagram-leadin: lead-in before mermaid ok
+  [PASS] release-template: per-release table template present
+  [PASS] spelling: US spelling, no and/or
+  [PASS] code-literals: literals in code format
+  [PASS] source-defined: source defined in Status
+  [PASS] ambiguous: four ambiguous items resolved
+  [PASS] serial-comma: serial commas present
+  [PASS] mermaid: 1 diagram(s) rendered
+  [PASS] lifecycle-table: missing rows [], rows with empty cells []
+  [PASS] state-table: columns ok=True, incomplete rows=[], missing inputs=[], rows=23
+  [PASS] capacity-model: capacity rows missing: []
+  [PASS] config-matrix: config invariants missing: []
+  [PASS] constraints-list: Constraints list in Context and boundaries
+  [PASS] dedupe: wallet binding list x0, 80-100 hours x0 (each at most once)
+  [PASS] status-caveat: security-review caveat lives in Status
+  [PASS] q02-preserved: Q-02 caveat mentions=9 (keep >=3)
+  [PASS] prose-rewrites: flagged phrases rewritten

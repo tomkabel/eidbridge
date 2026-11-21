@@ -1,0 +1,10 @@
+{
+  "name": "mock-callback-url",
+  "method": "GET",
+  "path": "/mock/device-link/callback-url/{sessionToken}",
+  "status": 200,
+  "response": {
+    "callbackUrl": "https://localhost/flow/callback?value=QTyCXWBxY9fDQJz_BnrNbA\u0026sessionSecretDigest=EyET-2oUqeZ0h6MpkHolVz3g9whe6HELIHJrIdNg-sU\u0026userChallengeVerifier=JX1a4c46QXVJMrbBDuDeHqd5p4jiGKD3YgDo4v9k_Os",
+    "browserCookie": "__Host-eidb-test=eidbridgecapture"
+  }
+}

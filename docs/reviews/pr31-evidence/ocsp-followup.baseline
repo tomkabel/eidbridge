@@ -1,0 +1,5 @@
+--- FAIL: TestPR31OCSPSignatureParseErrorIsTerminal (0.00s)
+    pr31_validation_test.go:17: security validation error classified as malformed transport data: bad OCSP signature: x509: ECDSA verification failure
+FAIL
+FAIL	github.com/tomkabel/eidbridge/internal/revocation	0.007s
+FAIL

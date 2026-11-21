@@ -1,0 +1,12 @@
+{
+  "Phone": "+37200000266",
+  "Code": "60001019939",
+  "Hash": "kA0YKLKAX6Cm6nAeN/xvg5OUGUSjIMeTCPp6psAb470=",
+  "Status": {
+    "state": "COMPLETE",
+    "result": "NOT_MID_CLIENT",
+    "time": "2026-11-20T14:27:47",
+    "traceId": "6b003cc35964a65b2168b2cff98ae73a"
+  },
+  "Captured": "2026-11-20T12:27:47Z"
+}

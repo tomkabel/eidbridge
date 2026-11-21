@@ -1,0 +1,6 @@
+id: untrusted-issuer
+title: Credential issued by a PID provider outside the verifier's trust
+expect: reject
+mutation: untrusted_issuer
+spec:
+  - {doc: "SD-JWT VC -27", section: "Issuer-signed JWT verification (x5c)", url: "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-27"}

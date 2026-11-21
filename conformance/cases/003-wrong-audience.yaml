@@ -1,0 +1,6 @@
+id: wrong-audience
+title: Key-binding aud is another verifier's client identifier
+expect: reject
+mutation: kb_aud
+spec:
+  - {doc: "OpenID4VP 1.0", section: "B.3.6 Presentation Response (aud)", url: "https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#appendix-B.3.6"}

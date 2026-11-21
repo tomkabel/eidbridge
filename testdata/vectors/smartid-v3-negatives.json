@@ -1,0 +1,21 @@
+{
+  "description": "Mutations of live demo captures (internal/smartid/testdata/live) that a verifier must refuse. Shared by the Go verifier and the Python client. 'path' is a dotted path into the session-status JSON; 'set' replaces the value, 'delete' removes it, 'flip' changes the first character of a Base64 string.",
+  "cases": [
+    {"name": "endResult USER_REFUSED", "fixture": "qr-ok", "path": "result.endResult", "set": "USER_REFUSED", "reason": "refused"},
+    {"name": "unknown endResult", "fixture": "qr-ok", "path": "result.endResult", "set": "MAYBE", "reason": "unknown_end_result"},
+    {"name": "signatureProtocol not ACSP_V2", "fixture": "qr-ok", "path": "signatureProtocol", "set": "RAW_DIGEST_SIGNATURE", "reason": "verification_failed"},
+    {"name": "signature value tampered", "fixture": "qr-ok", "path": "signature.value", "flip": true, "reason": "verification_failed"},
+    {"name": "serverRandom changed", "fixture": "qr-ok", "path": "signature.serverRandom", "set": "P3UygfCL/KKtubiGwP0pDzkX", "reason": "verification_failed"},
+    {"name": "flowType differs from the offered flow", "fixture": "qr-ok", "path": "signature.flowType", "set": "Web2App", "reason": "verification_failed"},
+    {"name": "interaction not offered", "fixture": "qr-ok", "path": "interactionTypeUsed", "set": "confirmationMessage", "reason": "verification_failed"},
+    {"name": "signature algorithm not rsassa-pss", "fixture": "qr-ok", "path": "signature.signatureAlgorithm", "set": "sha512WithRSAEncryption", "reason": "verification_failed"},
+    {"name": "salt length not hash length", "fixture": "qr-ok", "path": "signature.signatureAlgorithmParameters.saltLength", "set": 32, "reason": "verification_failed"},
+    {"name": "MGF1 hash differs", "fixture": "qr-ok", "path": "signature.signatureAlgorithmParameters.maskGenAlgorithm.parameters.hashAlgorithm", "set": "SHA-256", "reason": "verification_failed"},
+    {"name": "certificate level below QUALIFIED", "fixture": "qr-ok", "path": "cert.certificateLevel", "set": "ADVANCED", "reason": "verification_failed"},
+    {"name": "certificate missing", "fixture": "qr-ok", "path": "cert", "delete": true, "reason": "verification_failed"},
+    {"name": "certificate garbage", "fixture": "qr-ok", "path": "cert.value", "set": "AAAA", "reason": "verification_failed"},
+    {"name": "documentNumber of someone else", "fixture": "qr-ok", "path": "result.documentNumber", "set": "PNOEE-30303039914-MOCK-Q", "reason": "identity_mismatch"},
+    {"name": "malformed userChallenge", "fixture": "qr-ok", "path": "signature.userChallenge", "set": "short", "reason": "verification_failed"},
+    {"name": "wrong-VC end result", "fixture": "notification-wrong-vc", "reason": "wrong_code"}
+  ]
+}

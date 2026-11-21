@@ -1,0 +1,174 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then echo "gofmt needed on:"; echo "$out"; exit 1; fi
+      - run: go vet ./...
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - run: go test -race -count=1 ./...
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - name: build
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: go build -trimpath -o /tmp/eidbridge ./cmd/eidbridge
+
+  licenses:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      # If the v2.0.1 tag does not exist, switch to @latest.
+      - run: go install github.com/google/go-licenses/v2@v2.0.1
+      - run: go-licenses check ./... --disallowed_types=forbidden,restricted,reciprocal,unknown
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - run: go install github.com/zricethezav/gitleaks/v8@latest
+      - run: gitleaks git --redact --no-banner .
+
+  spec-pins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - run: python3 scripts/check_spec_pins.py
+
+  arch-trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - run: python3 tools/check-arch-trace
+
+  pii-logging-grep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: review raw identity logging calls
+        run: |
+          echo "review: raw identity logging calls"
+          hits="$(grep -rn "personalCode\|IDCode" internal/ | grep -v logx | grep -v _test.go || true)"
+          [ -n "$hits" ] && echo "$hits"
+          bad="$(printf '%s\n' "$hits" | grep -E 'slog\.|log\.' || true)"
+          if [ -n "$bad" ]; then
+            echo "FAIL: identity values appear in logging calls:"
+            echo "$bad"
+            exit 1
+          fi
+          echo "none found"
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0; the example tests build and run the bridge
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: install and test
+        run: |
+          reqs="$(find examples -name 'requirements*.txt' 2>/dev/null || true)"
+          if [ -z "$reqs" ] && [ ! -f python/pyproject.toml ]; then
+            echo "no python examples or package yet; skipping"
+            exit 0
+          fi
+          python3 -m pip install --quiet pytest
+          for r in $reqs; do python3 -m pip install --quiet -r "$r"; done
+          if [ -f python/pyproject.toml ]; then python3 -m pip install --quiet ./python; fi
+          targets=""
+          [ -d examples ] && targets="$targets examples"
+          [ -d python ] && targets="$targets python"
+          pytest -q $targets
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - run: docker build -t eidbridge:ci .
+      - name: check size and user
+        run: |
+          size="$(docker image inspect eidbridge:ci --format '{{.Size}}')"
+          user="$(docker image inspect eidbridge:ci --format '{{.Config.User}}')"
+          echo "size=$size user=$user"
+          if [ "$size" -gt 20000000 ]; then echo "image larger than 20000000 bytes"; exit 1; fi
+          case "$user" in ""|0|root|0:*|root:*) echo "image runs as root"; exit 1;; esac
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: configuration reference is generated from the code
+        run: go run ./cmd/eidbridge config docs | diff -u docs/configuration.md -
+      - name: diagrams render
+        run: scripts/check_mermaid.sh docs/data-flow.md
+
+  idp-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - name: Keycloak (two majors), authentik, Zitadel against the bridge fixture
+        run: go test -tags e2e -count=1 -v ./test/e2e/...

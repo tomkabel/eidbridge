@@ -1,0 +1,5 @@
+ok  	github.com/tomkabel/eidbridge/internal/doctor	0.016s
+ok  	github.com/tomkabel/eidbridge/internal/eudi	0.073s
+ok  	github.com/tomkabel/eidbridge/internal/revocation	0.444s
+ok  	github.com/tomkabel/eidbridge/internal/smartid	0.506s
+ok  	github.com/tomkabel/eidbridge/internal/smartid/v2	0.717s

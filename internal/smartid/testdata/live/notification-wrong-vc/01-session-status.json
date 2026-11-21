@@ -1,0 +1,12 @@
+{
+  "name": "session-status",
+  "method": "GET",
+  "path": "/v3/session/3fccf4af-eb60-47b5-baed-4de47d1e7f5c?timeoutMs=10000",
+  "status": 200,
+  "response": {
+    "state": "COMPLETE",
+    "result": {
+      "endResult": "WRONG_VC"
+    }
+  }
+}

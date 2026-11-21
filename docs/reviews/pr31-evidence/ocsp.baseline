@@ -1,0 +1,6 @@
+--- FAIL: TestPR31UnknownIsTerminal (0.06s)
+    pr31_test.go:19: accepted an issuer-signed OCSP unknown status
+    pr31_test.go:22: terminal status made 2 requests, want one OCSP request
+FAIL
+FAIL	github.com/tomkabel/eidbridge/internal/revocation	0.062s
+FAIL

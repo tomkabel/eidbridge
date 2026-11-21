@@ -1,0 +1,12 @@
+{
+  "name": "session-status",
+  "method": "GET",
+  "path": "/v3/session/98a63b6f-d586-47c9-a963-7524f9d96783?timeoutMs=10000",
+  "status": 200,
+  "response": {
+    "state": "COMPLETE",
+    "result": {
+      "endResult": "USER_REFUSED"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+id: issuer-typ
+title: Issuer-signed JWT typ is not dc+sd-jwt
+expect: reject
+mutation: issuer_typ
+spec:
+  - {doc: "SD-JWT VC -27", section: "Media type (typ header)", url: "https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-27"}

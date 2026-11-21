@@ -1,0 +1,46 @@
+# Demo stack: the bridge in demo mode against its built-in fixture upstream
+# (no Smart-ID account or network access needed) and a sample relying party.
+#   docker compose up --build   then open http://localhost:8081
+# For the real Smart-ID demo environment, set EIDBRIDGE_SMARTID_ENV=demo and
+# use a Smart-ID demo app account (see README).
+services:
+  eidbridge:
+    build:
+      context: .
+      secrets: [extra_ca]
+    command: ["serve", "--demo"]
+    environment:
+      EIDBRIDGE_LISTEN: ":8080"
+      EIDBRIDGE_ISSUER: "http://localhost:8080"
+      EIDBRIDGE_SMARTID_ENV: "${EIDBRIDGE_SMARTID_ENV:-mock}"
+      EIDBRIDGE_SMARTID_CERT_STATUS: "none"
+      EIDBRIDGE_KEY_DIR: "/data/demo-keys"
+      EIDBRIDGE_DEMO_REDIRECT_URIS: "http://localhost:8081/callback"
+      EIDBRIDGE_LOG_LEVEL: "${EIDBRIDGE_LOG_LEVEL:-info}"
+    tmpfs:
+      - /data:uid=65532,gid=65532,mode=0700
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    ports: ["127.0.0.1:8080:8080"]
+  demo-rp:
+    build:
+      context: .
+      dockerfile: examples/demo-rp/Dockerfile
+      secrets: [extra_ca]
+    environment:
+      ISSUER: "http://localhost:8080/demo"
+      BACKCHANNEL_HOST: "eidbridge:8080"
+      PUBLIC_URL: "http://localhost:8081"
+      PRODUCTION: "${PRODUCTION:-0}"
+    restart: on-failure
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    ports: ["127.0.0.1:8081:8081"]
+    depends_on: [eidbridge]
+
+secrets:
+  # Optional CA bundle for builds behind a TLS-intercepting proxy; empty by default.
+  extra_ca:
+    file: ${EXTRA_CA_FILE:-/dev/null}

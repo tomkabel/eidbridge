@@ -1,0 +1,10 @@
+{
+  "name": "mock-device-link",
+  "method": "POST",
+  "path": "/mock/device-link",
+  "status": 200,
+  "request": {
+    "documentNumber": "PNOEE-40404040009-MOCK-Q",
+    "deviceLink": "https://sid.demo.sk.ee/device-link?deviceLinkType=QR\u0026elapsedSeconds=0\u0026sessionToken=MEFmTRScfFOzbmCduaYWSXGC\u0026sessionType=auth\u0026version=1.0\u0026lang=eng\u0026authCode=kAXfxH1RXHvDtV1Qgh2VJETr-t5hFUrHBPsAxDTjEvk"
+  }
+}

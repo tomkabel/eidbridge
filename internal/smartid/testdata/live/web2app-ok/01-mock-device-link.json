@@ -1,0 +1,12 @@
+{
+  "name": "mock-device-link",
+  "method": "POST",
+  "path": "/mock/device-link",
+  "status": 200,
+  "request": {
+    "documentNumber": "PNOEE-40404040009-MOCK-Q",
+    "deviceLink": "https://sid.demo.sk.ee/device-link?deviceLinkType=Web2App\u0026sessionToken=TX9oZVPlbMqbXgfgCJIZZg0W\u0026sessionType=auth\u0026version=1.0\u0026lang=eng\u0026authCode=y4ezhBJ2ATDbXuALfHq1Nh_bG3rMuWeriRxEt1OKuXM",
+    "browserCookie": "__Host-eidb-test=eidbridgecapture",
+    "disableCallbackGetRequest": true
+  }
+}

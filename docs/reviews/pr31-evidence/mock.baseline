@@ -1,0 +1,11 @@
+--- FAIL: TestPR31MockDestination (0.01s)
+    pr31_mock_test.go:33: invalid base reached HTTP handling: <nil>
+    pr31_mock_test.go:33: invalid base reached HTTP handling: Post "http://127.0.0.1.example.invalid/device-link": dial tcp: lookup 127.0.0.1.example.invalid: no such host
+    pr31_mock_test.go:33: invalid base reached HTTP handling: <nil>
+    pr31_mock_test.go:33: invalid base reached HTTP handling: <nil>
+    pr31_mock_test.go:37: invalid destination generated a network request
+    pr31_mock_test.go:44: MockSubmit followed or accepted a redirect
+    pr31_mock_test.go:47: MockCallbackURL followed or accepted a redirect
+FAIL
+FAIL	github.com/tomkabel/eidbridge/internal/smartid	0.019s
+FAIL

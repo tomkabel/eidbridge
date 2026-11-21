@@ -1,0 +1,35 @@
+ok  	github.com/tomkabel/eidbridge/cmd/eidbridge	17.926s
+ok  	github.com/tomkabel/eidbridge/cmd/eidbridge-mock	1.354s
+ok  	github.com/tomkabel/eidbridge/cmd/eudi-conformance	40.013s
+?   	github.com/tomkabel/eidbridge/cmd/sidspike	[no test files]
+?   	github.com/tomkabel/eidbridge/examples/demo-rp	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/authn	1.049s
+?   	github.com/tomkabel/eidbridge/internal/authn/authntest	[no test files]
+?   	github.com/tomkabel/eidbridge/internal/clock	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/config	8.270s
+ok  	github.com/tomkabel/eidbridge/internal/docscheck	1.039s
+ok  	github.com/tomkabel/eidbridge/internal/doctor	2.052s
+ok  	github.com/tomkabel/eidbridge/internal/eudi	3.190s
+?   	github.com/tomkabel/eidbridge/internal/eudi/walletsim	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/jose	6.383s
+ok  	github.com/tomkabel/eidbridge/internal/logx	1.124s
+ok  	github.com/tomkabel/eidbridge/internal/mobileid	12.607s
+?   	github.com/tomkabel/eidbridge/internal/mobileid/mobileidtest	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/oidc	37.781s
+--- FAIL: TestPR31OCSPSignatureParseErrorIsTerminal (0.00s)
+    pr31_validation_test.go:17: security validation error classified as malformed transport data: bad OCSP signature: x509: ECDSA verification failure
+FAIL
+FAIL	github.com/tomkabel/eidbridge/internal/revocation	1.401s
+ok  	github.com/tomkabel/eidbridge/internal/signapi	4.776s
+ok  	github.com/tomkabel/eidbridge/internal/smartid	26.547s
+?   	github.com/tomkabel/eidbridge/internal/smartid/smartidtest	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/smartid/v2	6.067s
+?   	github.com/tomkabel/eidbridge/internal/smartid/v2/v2test	[no test files]
+ok  	github.com/tomkabel/eidbridge/internal/store	1.093s
+ok  	github.com/tomkabel/eidbridge/internal/tlspin	1.418s
+ok  	github.com/tomkabel/eidbridge/internal/version	1.063s
+ok  	github.com/tomkabel/eidbridge/internal/web	31.006s
+ok  	github.com/tomkabel/eidbridge/internal/webeid	19.900s
+?   	github.com/tomkabel/eidbridge/internal/webeid/webeidtest	[no test files]
+?   	github.com/tomkabel/eidbridge/test/e2e	[no test files]
+FAIL

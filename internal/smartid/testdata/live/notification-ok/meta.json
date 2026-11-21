@@ -1,0 +1,11 @@
+{
+  "captured": "2026-11-20T00:32:10Z",
+  "source": "sid.demo.sk.ee public demo RP with SK automated testing interface; published demo test account",
+  "flow": "Notification",
+  "rpChallenge": "/sMxykTVUmFIl/rzClfqJ3IeFTIBm1aGFcQbqKpq5Jg=",
+  "interactions": "W3siZGlzcGxheVRleHQ2MCI6ImVpZGJyaWRnZSBsaXZlIHRlc3QiLCJ0eXBlIjoiZGlzcGxheVRleHRBbmRQSU4ifV0=",
+  "initialCallbackUrl": "",
+  "expectedIdentity": "PNOEE-40504040001",
+  "vc": "1848",
+  "verifyReason": "OK"
+}

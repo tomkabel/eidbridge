@@ -1,0 +1,7 @@
+id: valid-pid
+title: Valid PID presentation with key binding
+expect: accept
+mutation: none
+spec:
+  - {doc: "OpenID4VP 1.0", section: "8.1 Response Parameters", url: "https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-8.1"}
+  - {doc: "RFC 9901", section: "7 Verification and Processing", url: "https://www.rfc-editor.org/rfc/rfc9901#section-7"}

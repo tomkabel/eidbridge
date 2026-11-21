@@ -1,0 +1,2 @@
+This is a synthetic sample document for the eidbridge signing example.
+It carries no personal data.
