@@ -7,6 +7,9 @@ cd "$(dirname "$0")/.."
 work=$(mktemp -d)  # 0700: the inner script and binary run as root
 bin="$work/eidbridge-integration.test"
 go test -c -o "$bin" ./cmd/eidbridge
+# Warm the module and build caches for the eidbridge-mock build that
+# TestBridgeAgainstStandaloneMockBinary runs offline.
+go build -buildvcs=false -o "$work/eidbridge-mock" ./cmd/eidbridge-mock
 cat > "$work/eidbridge-egress-inner.sh" <<EOF
 set -eu
 python3 - <<'PY'
