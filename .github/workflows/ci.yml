@@ -162,9 +162,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      - run: scripts/e2e-demo.sh
+      - name: run the demo stack and a scripted login
+        # An empty extra-CA secret inside the project: compose's default
+        # (/dev/null) needs a buildx fs.read entitlement on current runners.
+        run: |
+          : > .ci-empty-ca.pem
+          EXTRA_CA_FILE=$PWD/.ci-empty-ca.pem scripts/e2e-demo.sh
       - if: always()
-        run: docker compose down -v
+        run: EXTRA_CA_FILE=$PWD/.ci-empty-ca.pem docker compose down -v
 
   eudi-conformance:
     # Story 6.2: run the case catalog against the built bridge and keep the
