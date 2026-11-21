@@ -8,9 +8,13 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"net/url"
+	"syscall"
 	"time"
 
 	"github.com/tomkabel/eidbridge/internal/tlspin"
@@ -74,6 +78,10 @@ func checkTarget(ctx context.Context, t Target, now time.Time) Result {
 		return r
 	}
 	r.Host = u.Host
+	if (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" {
+		r.Detail = "invalid base URL"
+		return r
+	}
 	var state *tls.ConnectionState
 	cfg := &tls.Config{MinVersion: tls.VersionTLS12, RootCAs: t.Roots}
 	cfg.VerifyConnection = func(cs tls.ConnectionState) error {
@@ -82,12 +90,16 @@ func checkTarget(ctx context.Context, t Target, now time.Time) Result {
 	}
 	hc := &http.Client{Timeout: 15 * time.Second, Transport: &http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: cfg},
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	req, _ := http.NewRequestWithContext(ctx, http.MethodHead, t.BaseURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, t.BaseURL, nil)
+	if err != nil {
+		r.Detail = "invalid base URL or request"
+		return r
+	}
 	start := time.Now()
 	resp, err := hc.Do(req)
 	r.RTTMillis = time.Since(start).Milliseconds()
 	if err != nil {
-		r.Detail = "connection failed: " + err.Error()
+		r.Detail = "connection failed: " + connectionFailure(err)
 		return r
 	}
 	resp.Body.Close()
@@ -119,6 +131,44 @@ func checkTarget(ctx context.Context, t Target, now time.Time) Result {
 		r.Detail = joinDetail(r.Detail, "pins disabled")
 	}
 	return r
+}
+
+// connectionFailure returns only fixed strings: even nested transport and
+// certificate errors may contain URLs, paths, credentials, or server data.
+func connectionFailure(err error) string {
+	var dnsErr *net.DNSError
+	var certErr *tls.CertificateVerificationError
+	var unknownAuthority x509.UnknownAuthorityError
+	var hostname x509.HostnameError
+	var invalidCert x509.CertificateInvalidError
+	var recordErr tls.RecordHeaderError
+	var netErr net.Error
+	switch {
+	case errors.Is(err, context.Canceled):
+		return "request canceled"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "timeout"
+	case errors.As(err, &dnsErr):
+		return "DNS lookup failed"
+	case errors.As(err, &hostname):
+		return "certificate hostname mismatch"
+	case errors.As(err, &unknownAuthority):
+		return "certificate authority not trusted"
+	case errors.As(err, &invalidCert), errors.As(err, &certErr):
+		return "certificate verification failed"
+	case errors.As(err, &recordErr):
+		return "TLS handshake failed"
+	case errors.Is(err, syscall.ECONNREFUSED):
+		return "connection refused"
+	case errors.Is(err, syscall.ECONNRESET):
+		return "connection reset"
+	case errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF):
+		return "connection closed unexpectedly"
+	case errors.As(err, &netErr) && netErr.Timeout():
+		return "timeout"
+	default:
+		return "transport error"
+	}
 }
 
 func joinDetail(a, b string) string {
