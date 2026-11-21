@@ -6,58 +6,67 @@ tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 planning_status: draft
 development_status:
-  epic-1: backlog
-  1-1-add-unofficial-project-notice-trademark-policy-and-clean-roo: backlog
-  1-2-scaffold-go-module-with-ci-licence-checks-and-release-automa: backlog
-  1-3-redact-personal-identity-codes-at-the-log-sink: backlog
-  1-4-spike-smart-id-v3-device-link-login-against-the-public-demo: backlog
+  epic-1: done-with-disclosure
+  1-1-add-unofficial-project-notice-trademark-policy-and-clean-roo: done-with-disclosure
+  1-2-scaffold-go-module-with-ci-licence-checks-and-release-automa: done-with-disclosure
+  1-3-redact-personal-identity-codes-at-the-log-sink: done
+  1-4-spike-smart-id-v3-device-link-login-against-the-public-demo: done-with-disclosure
   epic-1-retrospective: optional
 
-  epic-2: backlog
-  2-1-implement-smart-id-rp-api-v3-client-with-signature-verificat: backlog
-  2-2-pin-rp-api-tls-certificates-and-make-trust-anchors-configura: backlog
-  2-3-define-a-method-neutral-authenticator-interface-for-eid-back: backlog
-  2-4-expose-eid-logins-as-a-standard-openid-connect-provider: backlog
-  2-5-wire-eidbridge-binary-with-login-page-qr-and-web2app-flows: backlog
-  2-6-enforce-no-telemetry-and-zero-data-retention-by-default: backlog
-  2-7-warn-on-demo-environment-use-and-block-demo-credentials-in-p: backlog
-  2-8-support-smart-id-v3-notification-based-authentication-flow: backlog
+  epic-2: done-with-disclosure
+  2-1-implement-smart-id-rp-api-v3-client-with-signature-verificat: done-with-disclosure
+  2-2-pin-rp-api-tls-certificates-and-make-trust-anchors-configura: done-with-disclosure
+  2-3-define-a-method-neutral-authenticator-interface-for-eid-back: done
+  2-4-expose-eid-logins-as-a-standard-openid-connect-provider: done-with-disclosure
+  2-5-wire-eidbridge-binary-with-login-page-qr-and-web2app-flows: review
+  2-6-enforce-no-telemetry-and-zero-data-retention-by-default: done
+  2-7-warn-on-demo-environment-use-and-block-demo-credentials-in-p: done
+  2-8-support-smart-id-v3-notification-based-authentication-flow: done
   epic-2-retrospective: optional
 
-  epic-3: backlog
-  3-1-document-end-to-end-personal-data-flow-for-integrator-dpias: backlog
-  3-2-ship-a-zero-config-docker-compose-demo-with-a-sample-relying: backlog
-  3-3-localize-the-login-page-for-estonian-latvian-lithuanian-engl: backlog
-  3-4-add-a-maintenance-runbook-for-upstream-api-tls-and-key-chang: backlog
-  3-5-add-config-only-idp-integration-guides-with-e2e-tests-per-id: backlog
-  3-6-add-django-and-fastapi-examples-that-log-in-through-the-brid: backlog
+  epic-3: done-with-disclosure
+  3-1-document-end-to-end-personal-data-flow-for-integrator-dpias: done
+  3-2-ship-a-zero-config-docker-compose-demo-with-a-sample-relying: done-with-disclosure
+  3-3-localize-the-login-page-for-estonian-latvian-lithuanian-engl: done-with-disclosure
+  3-4-add-a-maintenance-runbook-for-upstream-api-tls-and-key-chang: done-with-disclosure
+  3-5-add-config-only-idp-integration-guides-with-e2e-tests-per-id: review
+  3-6-add-django-and-fastapi-examples-that-log-in-through-the-brid: done
   epic-3-retrospective: optional
 
-  epic-4: backlog
-  4-1-let-users-choose-among-multiple-enabled-eid-methods: backlog
-  4-2-add-mobile-id-authentication-via-the-mid-rest-api: backlog
+  epic-4: done-with-disclosure
+  4-1-let-users-choose-among-multiple-enabled-eid-methods: done-with-disclosure
+  4-2-add-mobile-id-authentication-via-the-mid-rest-api: done-with-disclosure
   epic-4-retrospective: optional
 
-  epic-5: backlog
-  5-1-add-id-card-login-via-web-eid-token-validation-in-go: backlog
+  epic-5: done-with-disclosure
+  5-1-add-id-card-login-via-web-eid-token-validation-in-go: done-with-disclosure
   epic-5-retrospective: optional
 
-  epic-6: backlog
-  6-1-accept-eudi-wallet-presentations-via-openid4vp-as-a-login-me: backlog
-  6-2-build-an-eudi-wallet-relying-party-conformance-test-harness: backlog
+  epic-6: done-with-disclosure
+  6-1-accept-eudi-wallet-presentations-via-openid4vp-as-a-login-me: done-with-disclosure
+  6-2-build-an-eudi-wallet-relying-party-conformance-test-harness: done-with-disclosure
   epic-6-retrospective: optional
 
-  epic-7: backlog
-  7-1-provide-a-native-keycloak-identity-provider-spi-for-eidbridg: backlog
-  7-2-publish-a-minimal-python-client-for-smart-id-rp-api-v3: backlog
-  7-3-add-an-eidbridge-doctor-command-for-upstream-connectivity-ch: backlog
-  7-4-ship-a-mock-rp-api-server-and-test-identities-for-offline-te: backlog
-  7-5-support-legacy-smart-id-rp-api-v2-for-existing-relying-parti: backlog
-  7-6-document-or-ship-a-wordpress-login-integration-via-the-bridg: backlog
+  epic-7: done-with-disclosure
+  7-1-provide-a-native-keycloak-identity-provider-spi-for-eidbridg: done-with-disclosure
+  7-2-publish-a-minimal-python-client-for-smart-id-rp-api-v3: done-with-disclosure
+  7-3-add-an-eidbridge-doctor-command-for-upstream-connectivity-ch: done-with-disclosure
+  7-4-ship-a-mock-rp-api-server-and-test-identities-for-offline-te: review
+  7-5-support-legacy-smart-id-rp-api-v2-for-existing-relying-parti: done-with-disclosure
+  7-6-document-or-ship-a-wordpress-login-integration-via-the-bridg: done-with-disclosure
   epic-7-retrospective: optional
 
-  epic-8: backlog
-  8-1-support-document-signing-sessions-alongside-authentication: backlog
+  epic-8: done-with-disclosure
+  8-1-support-document-signing-sessions-alongside-authentication: done-with-disclosure
   epic-8-retrospective: optional
-last_updated: 11-18-2026 11:25
+last_updated: 11-21-2026 12:00
+# 2026-11-21: statuses from _bmad-output/implementation-artifacts/ac-evidence-2026-11-21.md
+# (per-criterion evidence) and the gate table in
+# planning-artifacts/sprint-change-proposal-2026-11-20.md. done = every original
+# criterion has evidence and no overridden gate guards the story;
+# done-with-disclosure = criteria evidenced, overridden gate evidence missing
+# (listed in the proposal and in PR #31). 2-6: H-10 closed (private
+# vulnerability reporting enabled, GitHub API 2026-11-21). review = an original
+# criterion still lacks evidence: 2-5 index memory, 3-5 Ory Kratos e2e, 7-4 IdP
+# e2e against the standalone mock.
 project_key: NOKEY

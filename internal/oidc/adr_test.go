@@ -632,4 +632,95 @@ func TestKSubCompromiseAndReplacementKey(t *testing.T) {
 	// A K_sub compromise is handled by a new version plus a declared
 	// migration window: declared clients get previous_sub until relinked.
 	TestSubKeyVersionMigration(t)
+
+	// The full drill (A05): v1 in service; v2 with a declared migration;
+	// then v1 retired – its key removed and the declaration dropped – and the
+	// bridge still starts, issues v2 subjects and no previous_sub.
+	dir := t.TempDir()
+	cs := []Client{{ID: "basic", SubMode: "pairwise"}}
+	v1 := &Subjects{Keys: map[int][]byte{1: make32(1)}, Current: 1}
+	if err := CheckSubjectLock(dir, cs, v1); err != nil {
+		t.Fatal(err)
+	}
+	mig := &Subjects{Keys: map[int][]byte{1: make32(1), 2: make32(2)}, Current: 2,
+		Migration: &Migration{From: 1, To: 2, Started: time.Now(), Days: 30, Clients: map[string]string{"basic": "c:basic"}}}
+	if err := mig.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if err := CheckSubjectLock(dir, cs, mig); err != nil {
+		t.Fatalf("declared migration refused: %v", err)
+	}
+	retired := &Subjects{Keys: map[int][]byte{2: make32(2)}, Current: 2}
+	if err := retired.Validate(); err != nil {
+		t.Fatalf("retired configuration invalid: %v", err)
+	}
+	if err := CheckSubjectLock(dir, cs, retired); err != nil {
+		t.Fatalf("restart after retiring v1 refused: %v", err)
+	}
+	if _, err := retired.Sub(1, "c:basic", "PNO", "EE", "40404040009"); err == nil {
+		t.Fatal("retired K_sub version still derives subjects")
+	}
+	// Going back to v1 without a declaration is refused.
+	if err := CheckSubjectLock(dir, cs, v1); err == nil {
+		t.Fatal("silent return to the retired version accepted")
+	}
+
+	// Emergency signing-key revocation first activates a replacement key:
+	// after Rotate + Revoke the JWKS has a usable key and not the old one.
+	ks, err := LoadKeys(t.TempDir(), true, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := ks.Entries()[0]
+	if _, err := ks.Rotate(old.Alg, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	published := false
+	for _, j := range ks.JWKS() {
+		published = published || j.KID == old.KID
+	}
+	if !published {
+		t.Fatal("retired key not kept for its retention before revocation")
+	}
+	if err := ks.Revoke(old.KID); err != nil {
+		t.Fatal(err)
+	}
+	for _, j := range ks.JWKS() {
+		if j.KID == old.KID {
+			t.Fatal("revoked key still published")
+		}
+	}
+	if len(ks.JWKS()) == 0 {
+		t.Fatal("no replacement key active")
+	}
+}
+
+// Revoking the active key directly (no prior Rotate) must activate a
+// replacement for the same algorithm before the old key disappears.
+func TestRevokeActiveKeyActivatesReplacement(t *testing.T) {
+	ks, err := LoadKeys(t.TempDir(), true, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var old KeyEntry
+	for _, e := range ks.Entries() {
+		if e.Status == "active" {
+			old = e
+		}
+	}
+	if old.KID == "" {
+		t.Fatal("no active key loaded")
+	}
+	if err := ks.Revoke(old.KID); err != nil {
+		t.Fatal(err)
+	}
+	for _, j := range ks.JWKS() {
+		if j.KID == old.KID {
+			t.Fatal("revoked key still published")
+		}
+	}
+	k, ok := ks.Active(old.Alg)
+	if !ok || k == nil {
+		t.Fatalf("no active %s key after revoking the active one", old.Alg)
+	}
 }

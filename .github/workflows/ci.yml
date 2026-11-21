@@ -147,6 +147,49 @@ jobs:
           if [ "$size" -gt 20000000 ]; then echo "image larger than 20000000 bytes"; exit 1; fi
           case "$user" in ""|0|root|0:*|root:*) echo "image runs as root"; exit 1;; esac
 
+  egress-blocked:
+    # NFR-004: every method's fixture login succeeds with only loopback.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - run: scripts/egress-blocked.sh
+
+  demo-e2e:
+    # Story 3.2: clean build of the demo compose stack and a scripted login.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: run the demo stack and a scripted login
+        # An empty extra-CA secret inside the project: compose's default
+        # (/dev/null) needs a buildx fs.read entitlement on current runners.
+        run: |
+          : > .ci-empty-ca.pem
+          EXTRA_CA_FILE=$PWD/.ci-empty-ca.pem scripts/e2e-demo.sh
+      - if: always()
+        run: EXTRA_CA_FILE=$PWD/.ci-empty-ca.pem docker compose down -v
+
+  eudi-conformance:
+    # Story 6.2: run the case catalog against the built bridge and keep the
+    # JUnit report.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+      - run: go build -o /tmp/eidbridge ./cmd/eidbridge
+      - run: go run ./cmd/eudi-conformance -bridge-bin /tmp/eidbridge -root . -junit eudi-conformance-junit.xml -md eudi-conformance-report.md
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: eudi-conformance
+          path: |
+            eudi-conformance-junit.xml
+            eudi-conformance-report.md
+
   docs:
     runs-on: ubuntu-latest
     steps:

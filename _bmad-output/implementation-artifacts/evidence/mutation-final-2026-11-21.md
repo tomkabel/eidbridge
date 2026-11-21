@@ -51,13 +51,12 @@ Test files: `internal/smartid/mutation_sign_test.go`, `internal/signapi/signapi_
 | oidc provider.go:667 `len(h) > 7` | boundary | Equivalent: a header of exactly "Bearer " leaves an empty token, which is refused. |
 | oidc sealed.go:66 `s.current++` | ++ → -- | Equivalent: any new version differs from the old one, and the key map is replaced. |
 | oidc sealed.go:103 `len(tok) > 8192` | boundary | DoS cap; genuine tokens are far shorter. |
-| oidc subject.go:118 | migration declaration negation | Not triaged in time. Migration is a startup-time operator declaration, covered by the existing migration tests; listed as open. |
+| oidc subject.go:118 | migration declaration negation | **Closed 2026-11-21:** TestSubjectLockMigrationMustMatch (4 hand mutants killed). |
 | web limits.go:64 `>` → `>=` | clamp at Burst | Equivalent: clamping an equal value changes nothing. |
-| web access.go, render.go, other web.go lines | drain grace timing, QR image drawing, locale links, chooser defaults | UI rendering and timing, not verification. web.go:262 (`startBy` = now + 60 s, the start window) was not triaged and is listed as open. |
+| web access.go, render.go, other web.go lines | drain grace timing, QR image drawing, locale links, chooser defaults | UI rendering and timing, not verification. web.go:262 (`startBy`, the start window) **closed 2026-11-21:** TestCreatedFlowStartWindow (2 hand mutants killed). |
 
 ## Open (disclosed, not justified as equivalent)
 
-- oidc subject.go:118 (pairwise-migration declaration check).
-- web web.go:262 (created-flow start window).
+- Closed on feat/final-pass: oidc subject.go:118 (TestSubjectLockMigrationMustMatch, 4 hand mutants killed) and web web.go:262 (TestCreatedFlowStartWindow, 2 killed).
 - The internal/web gremlins run did not finish, so web survivors after web.go:286 are unknown.
 - Not run on internal/mobileid or internal/webeid in this pass; their earlier results are in the files linked at the top.

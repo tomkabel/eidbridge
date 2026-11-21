@@ -1,7 +1,10 @@
 package store
 
 import (
+	"crypto/sha256"
 	"errors"
+	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -258,4 +261,100 @@ func waitLen(t *testing.T, c *Codes, n int) {
 		time.Sleep(5 * time.Millisecond)
 	}
 	t.Fatalf("len %d, want %d", c.Len(), n)
+}
+
+// TestCodeCapacityUnderSustainedExchange (epics 2.5 RV): at a steady login
+// rate over more than a full retention window, reservations + codes +
+// tombstones never exceed the cap, every index stays the size of the slot
+// set, overload is refused with ErrFull and never evicts replay state, and
+// every earlier code still replays as invalid_grant while its tombstone lives.
+func TestCodeCapacityUnderSustainedExchange(t *testing.T) {
+	const capacity = 400
+	c, clk := newCodes(t, capacity)
+	window := 5*time.Minute + 30*time.Second // TombstoneTTL in newCodes
+	type issued struct {
+		code string
+		at   time.Duration
+	}
+	var live []issued
+	maxSlots, refused := 0, 0
+	for step := time.Duration(0); step < 2*window; step += time.Second {
+		for i := 0; i < 2; i++ { // 2 logins a second: 660 tombstones would be needed, cap is 400
+			r, err := c.Reserve(time.Minute)
+			if errors.Is(err, ErrFull) {
+				refused++
+				continue
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			code, _ := r.Issue("claims", "b")
+			if _, err := c.Exchange(code, ok); err != nil {
+				t.Fatal(err)
+			}
+			live = append(live, issued{code, step})
+		}
+		c.mu.Lock()
+		n := len(c.slots)
+		if len(c.byHash) != n || len(c.families) > n {
+			c.mu.Unlock()
+			t.Fatalf("indexes diverge from slots: slots %d byHash %d families %d", n, len(c.byHash), len(c.families))
+		}
+		c.mu.Unlock()
+		if n > maxSlots {
+			maxSlots = n
+		}
+		r, l, tb := c.Counts()
+		if r+l+tb > capacity {
+			t.Fatalf("%d entries over cap %d", r+l+tb, capacity)
+		}
+		clk.Advance(time.Second)
+	}
+	if maxSlots != capacity || refused == 0 {
+		t.Fatalf("overload not reached: max %d, refused %d", maxSlots, refused)
+	}
+	// Replay state was never evicted: every code issued within the window
+	// still replays as invalid grant and flags its family.
+	now := 2 * window
+	for _, is := range live {
+		if now-is.at >= window {
+			continue
+		}
+		c.mu.Lock()
+		_, held := c.byHash[sha256.Sum256([]byte(is.code))]
+		c.mu.Unlock()
+		if !held {
+			t.Fatalf("tombstone of a code issued %v ago was evicted", now-is.at)
+		}
+		if _, err := c.Exchange(is.code, ok); !errors.Is(err, ErrInvalidGrant) {
+			t.Fatalf("replay of a code issued %v ago: %v", now-is.at, err)
+		}
+	}
+	t.Logf("cap %d: max slots %d, refused %d of %d attempts", capacity, maxSlots, refused, int(2*window/time.Second)*2)
+}
+
+// E08: token family IDs carry 128 bits; codes are kept only as SHA-256.
+func TestFamilyIDLengthAndHashedCodes(t *testing.T) {
+	c, _ := newCodes(t, 4)
+	code := issue(t, c, "claims")
+	g, err := c.Exchange(code, ok)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(g.Family) != 22 {
+		t.Fatalf("family id %q is not 128 bits", g.Family)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, ok := c.byHash[sha256.Sum256([]byte(code))]; !ok {
+		t.Fatal("code not indexed by its SHA-256")
+	}
+	for e := range c.slots {
+		if e.hash != sha256.Sum256([]byte(code)) {
+			continue
+		}
+		if fmt.Sprintf("%v", *e) == "" || strings.Contains(fmt.Sprintf("%+v", *e), code) {
+			t.Fatal("plaintext code stored in the entry")
+		}
+	}
 }
