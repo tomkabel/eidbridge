@@ -694,3 +694,33 @@ func TestKSubCompromiseAndReplacementKey(t *testing.T) {
 		t.Fatal("no replacement key active")
 	}
 }
+
+// Revoking the active key directly (no prior Rotate) must activate a
+// replacement for the same algorithm before the old key disappears.
+func TestRevokeActiveKeyActivatesReplacement(t *testing.T) {
+	ks, err := LoadKeys(t.TempDir(), true, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var old KeyEntry
+	for _, e := range ks.Entries() {
+		if e.Status == "active" {
+			old = e
+		}
+	}
+	if old.KID == "" {
+		t.Fatal("no active key loaded")
+	}
+	if err := ks.Revoke(old.KID); err != nil {
+		t.Fatal(err)
+	}
+	for _, j := range ks.JWKS() {
+		if j.KID == old.KID {
+			t.Fatal("revoked key still published")
+		}
+	}
+	k, ok := ks.Active(old.Alg)
+	if !ok || k == nil {
+		t.Fatalf("no active %s key after revoking the active one", old.Alg)
+	}
+}

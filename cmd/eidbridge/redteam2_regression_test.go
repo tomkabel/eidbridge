@@ -190,7 +190,7 @@ func TestDoctorNeverControlsReadiness(t *testing.T) {
 func TestBridgeAgainstStandaloneMockBinary(t *testing.T) {
 	dir := t.TempDir()
 	bin := filepath.Join(dir, "eidbridge-mock")
-	if out, err := exec.Command("go", "build", "-o", bin, "../eidbridge-mock").CombinedOutput(); err != nil {
+	if out, err := exec.Command("go", "build", "-buildvcs=false", "-o", bin, "../eidbridge-mock").CombinedOutput(); err != nil {
 		t.Fatalf("cannot build eidbridge-mock: %v %s", err, out)
 	}
 	ln, err := net.Listen("tcp", "127.0.0.1:0")

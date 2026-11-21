@@ -4,9 +4,10 @@
 # network namespace (needs root or `sudo`; CI runs it with sudo).
 set -eu
 cd "$(dirname "$0")/.."
-bin="${TMPDIR:-/tmp}/eidbridge-integration.test"
+work=$(mktemp -d)  # 0700: the inner script and binary run as root
+bin="$work/eidbridge-integration.test"
 go test -c -o "$bin" ./cmd/eidbridge
-cat > "${TMPDIR:-/tmp}/eidbridge-egress-inner.sh" <<EOF
+cat > "$work/eidbridge-egress-inner.sh" <<EOF
 set -eu
 python3 - <<'PY'
 import fcntl, socket, struct
@@ -24,12 +25,13 @@ PY
 cd "$PWD/cmd/eidbridge"
 # Every login test with fixture upstreams; live tests skip without EIDBRIDGE_LIVE.
 rc=0
-"$bin" -test.count=1 -test.v -test.run 'Login|Wallet|EUDI|WebEID|Signing|Mock|MobileID|Discovery|Headers' > "${TMPDIR:-/tmp}/eidbridge-egress.out" 2>&1 || rc=\$?
-grep -E '^(--- |PASS|FAIL|ok)' "${TMPDIR:-/tmp}/eidbridge-egress.out"
+"$bin" -test.count=1 -test.v -test.run 'Login|Wallet|EUDI|WebEID|Signing|Mock|MobileID|Discovery|Headers' > "$work/eidbridge-egress.out" 2>&1 || rc=\$?
+grep -E '^(--- |PASS|FAIL|ok)' "$work/eidbridge-egress.out"
+[ \$rc = 0 ] || tail -n 60 "$work/eidbridge-egress.out"
 exit \$rc
 EOF
 if [ "$(id -u)" = 0 ]; then
-	unshare -n sh "${TMPDIR:-/tmp}/eidbridge-egress-inner.sh"
+	unshare -n sh "$work/eidbridge-egress-inner.sh"
 else
-	sudo env "PATH=$PATH" "HOME=$HOME" "GOMODCACHE=$(go env GOMODCACHE)" "GOCACHE=$(go env GOCACHE)" "GOPATH=$(go env GOPATH)" "GOTOOLCHAIN=local" unshare -n sh "${TMPDIR:-/tmp}/eidbridge-egress-inner.sh"
+	sudo env "PATH=$PATH" "HOME=$HOME" "GOMODCACHE=$(go env GOMODCACHE)" "GOCACHE=$(go env GOCACHE)" "GOPATH=$(go env GOPATH)" "GOTOOLCHAIN=$(go env GOTOOLCHAIN)" unshare -n sh "$work/eidbridge-egress-inner.sh"
 fi
